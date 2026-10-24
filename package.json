@@ -3,8 +3,10 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --test backend/tests/*.test.js",
-    "test:parts": "node --test backend/tests/part*.test.js",
+    "test": "node backend/scripts/runTests.js",
+    "test:step0": "node backend/scripts/runTests.js tests/step0_verification.test.js",
+    "test:parts": "node backend/scripts/runTests.js tests/part*.test.js",
+    "clean:dev": "node backend/scripts/cleanDevDatabase.js",
     "check:hardcoded": "node backend/scripts/checkHardcoded.js",
     "seed:admin": "node -e \"import('./backend/scripts/seedAdmin.js').then(m => m.seedAdmin()).then(() => process.exit(0))\"",
     "seed:demo": "node backend/scripts/seedDemoAccounts.js",

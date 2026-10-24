@@ -4,8 +4,23 @@
 // interactive mouse parallax, and multi-depth sunlit fireflies
 // ============================================
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+
+const getIsReducedMotion = () => {
+  try {
+    const media = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const stored = typeof localStorage !== 'undefined' && localStorage.getItem('mindcare_reduce_motion') === 'true';
+    const isLowEndHardware = typeof navigator !== 'undefined' && (
+      (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) ||
+      (navigator.deviceMemory && navigator.deviceMemory <= 2)
+    );
+    return Boolean(media || stored || isLowEndHardware);
+  } catch (_) {
+    return false;
+  }
+};
+
 
 export default function InnerWorldCanvas({
   mode = 'hero',             // 'hero' | 'panel' | 'breathing' | 'ambient'
@@ -17,6 +32,29 @@ export default function InnerWorldCanvas({
   moodColor = null
 }) {
   const mountRef = useRef(null);
+  const [reducedMotion, setReducedMotion] = useState(getIsReducedMotion);
+
+  useEffect(() => {
+    const handleMediaChange = () => setReducedMotion(getIsReducedMotion());
+    const handleCustomChange = (e) => {
+      if (e?.detail?.reduceMotion !== undefined) {
+        setReducedMotion(Boolean(e.detail.reduceMotion));
+      } else {
+        setReducedMotion(getIsReducedMotion());
+      }
+    };
+
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      mediaQuery.addEventListener('change', handleMediaChange);
+      window.addEventListener('mindcare-motion-preference-changed', handleCustomChange);
+      return () => {
+        mediaQuery.removeEventListener('change', handleMediaChange);
+        window.removeEventListener('mindcare-motion-preference-changed', handleCustomChange);
+      };
+    }
+  }, []);
+
   const stateRef = useRef({
     growth: Math.max(0.2, Math.min(1.0, growthLevel)),
     breathingPhase,
@@ -67,6 +105,7 @@ export default function InnerWorldCanvas({
   }, [rippleTrigger]);
 
   useEffect(() => {
+    if (reducedMotion) return;
     const container = mountRef.current;
     if (!container) return;
 
@@ -504,8 +543,16 @@ export default function InnerWorldCanvas({
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
+      worldGroup.traverse((child) => {
+        if (child.isMesh) {
+          child.geometry?.dispose();
+          if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+          else child.material?.dispose();
+        }
+      });
       if (renderer) {
         renderer.dispose();
+        renderer.forceContextLoss?.();
         if (renderer.domElement && renderer.domElement.parentNode) {
           renderer.domElement.parentNode.removeChild(renderer.domElement);
         }
@@ -521,7 +568,33 @@ export default function InnerWorldCanvas({
       auraHaloMat.dispose();
       pGeo.dispose();
     };
-  }, [mode]);
+  }, [mode, reducedMotion]);
+
+  if (reducedMotion) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          minHeight: '260px',
+          borderRadius: '20px',
+          background: 'radial-gradient(circle at 50% 60%, rgba(116, 198, 157, 0.28) 0%, rgba(243, 246, 241, 0.95) 70%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+          textAlign: 'center',
+          border: '1px solid var(--border-subtle)'
+        }}
+        title="Sanctuary Garden (Static Mode)"
+      >
+        <span style={{ fontSize: '3.2rem', marginBottom: '8px' }}>🌳</span>
+        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1.05rem' }}>Your Living Sanctuary Tree</div>
+        <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Static visual mode active for sensory comfort and battery conservation.</div>
+      </div>
+    );
+  }
 
   return (
     <div

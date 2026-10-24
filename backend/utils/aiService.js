@@ -4,22 +4,27 @@
 // ============================================
 
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { filterOutput, BLOCKED_WORDS } from './blockedWords.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../.env') });
 dotenv.config();
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const REQUEST_TIMEOUT_MS = 8000; // 8 s per spec
+const REQUEST_TIMEOUT_MS = 12000; // 12 s for external LLM
 
-// Per-user rate limit: max 3 welcome messages per hour
+// Per-user rate limit: generous in dev/test to allow repeatedly generating fresh messages
 const welcomeRateMap = new Map(); // userId → [timestamp, ...]
-const WELCOME_RATE_LIMIT = 3;
+const WELCOME_RATE_LIMIT = process.env.NODE_ENV === 'production' ? 20 : 200;
 const WELCOME_RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 // Session cache: cacheKey → { message, cachedAt }
 const welcomeSessionCache = new Map();
-const SESSION_CACHE_TTL_MS = 30 * 60 * 1000; // 30 min
+const SESSION_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min default if session caching requested
 
 /**
  * Sanitize a user name so it is safe to embed as data in an LLM prompt.
@@ -71,7 +76,11 @@ function getRandomFallback(name) {
  * Make a single OpenRouter request with timeout.
  * Returns the trimmed content string or null on any error.
  */
-async function callOpenRouter(model, messages, maxTokens = 200, temperature = 0.85) {
+/**
+ * Make a single OpenRouter request with timeout.
+ * Returns the trimmed content string or null on any error.
+ */
+async function callOpenRouter(model, messages, maxTokens = 600, temperature = 0.85) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -83,19 +92,29 @@ async function callOpenRouter(model, messages, maxTokens = 200, temperature = 0.
         'X-Title': 'MindCare Sanctuary',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens
+      }),
       signal: controller.signal
     });
     clearTimeout(timeoutId);
     if (!response.ok) return null;
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content?.trim();
+    let content = data.choices?.[0]?.message?.content?.trim();
+    if (!content && data.choices?.[0]?.message?.reasoning) {
+      // If model put output in reasoning block, extract last sentences
+      const lines = data.choices[0].message.reasoning.split('\n').filter(Boolean);
+      content = lines[lines.length - 1]?.replace(/^["']|["']$/g, '').trim();
+    }
     return content && content.length > 10
       ? content.replace(/^["']|["']$/g, '').trim()
       : null;
   } catch (err) {
     clearTimeout(timeoutId);
-    console.warn(`[aiService] Model ${model} error: ${err.message}`);
+    console.warn(`[aiService] Model ${model} error: ${err.message} (${err.name})`);
     return null;
   }
 }
@@ -135,18 +154,20 @@ export const aiService = {
     const systemPrompt =
       `You are MindCare Sanctuary's welcoming companion writing a warm, soothing welcome note ` +
       `for a young adult member aged 20-25.\n\nRules:\n` +
-      `1. The member's first name is provided in the user turn as a data label. Address them warmly.\n` +
+      `1. You MUST address the member directly by their first name (${safeName}) in the first sentence.\n` +
       `2. Write exactly 2-3 soothing, spacious sentences.\n` +
       `3. Acknowledge the richness and intensity of young adulthood with uplifting hope and grounding presence.\n` +
       `4. NEVER use any of these words or their variants: suicide, self-harm, depression, anxiety, ` +
       `stress, panic, disorder, trauma, abuse, harassment, mental illness, hopeless, helpless, worthless.\n` +
       `5. Return ONLY the message text. No quotes, no commentary, no disclaimers.`;
 
-    const userPrompt = `Member first name: ${safeName}\nPlease write a fresh, unique encouraging welcome note.`;
+    const userPrompt = `Member first name: ${safeName}\nPlease write a fresh, unique encouraging welcome note addressing ${safeName} warmly.`;
 
     const models = [
-      process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3.5-lightning:free',
-      process.env.OPENROUTER_FALLBACK_MODEL || 'liquid/lfm-2.5-2.6b:free'
+      'liquid/lfm-2.5-2.6b:free',
+      'nvidia/nemotron-3.5-lightning:free',
+      'google/gemma-4-26b-a4b-it:free',
+      process.env.OPENROUTER_MODEL || 'openrouter/auto'
     ];
 
     let generated = null;
@@ -155,13 +176,44 @@ export const aiService = {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ]);
-      if (result) { generated = result; break; }
+      if (!result) continue;
+
+      const lower = result.toLowerCase();
+      const hasBlocked = BLOCKED_WORDS.some(w => lower.includes(w.toLowerCase()));
+
+      if (!hasBlocked) {
+        generated = result;
+        break;
+      }
+
+      // One stricter retry
+      const strictSystem = systemPrompt +
+        '\n\nIMPORTANT: Your previous response contained a flagged word. ' +
+        'Rewrite without any of the blocked words listed above.';
+      const retry = await callOpenRouter(model, [
+        { role: 'system', content: strictSystem },
+        { role: 'user', content: userPrompt }
+      ]);
+
+      if (retry) {
+        const lowerRetry = retry.toLowerCase();
+        const retryHasBlocked = BLOCKED_WORDS.some(w => lowerRetry.includes(w.toLowerCase()));
+        if (!retryHasBlocked) {
+          generated = retry;
+          break;
+        }
+      }
     }
 
     // 5. Apply output filter; use fallback if filter removes all content
-    const message = generated
+    let message = generated
       ? (filterOutput(generated, []) || getRandomFallback(safeName))
       : getRandomFallback(safeName);
+
+    // Guarantee member name is always present
+    if (safeName && safeName !== 'Friend' && !message.toLowerCase().includes(safeName.toLowerCase())) {
+      message = `Welcome, ${safeName}. ${message}`;
+    }
 
     // 6. Store in session cache
     if (userId && sessionId) {
@@ -211,16 +263,16 @@ export const aiService = {
       const result = await callOpenRouter(model, messages, 250, 0.8);
       if (!result) continue;
 
-      const filtered = filterOutput(result, userWordsSeen);
-
-      // Check if filtered reply still contains unintroduced blocked words
-      const lowerFiltered = filtered.toLowerCase();
-      const stillHasBlocked = BLOCKED_WORDS.some(w => {
+      // Check if raw LLM output contains any unintroduced blocked words
+      const lowerRaw = result.toLowerCase();
+      const hasBlocked = BLOCKED_WORDS.some(w => {
         const introduced = userWordsSeen.some(uw => w.includes(uw) || uw.includes(w));
-        return !introduced && lowerFiltered.includes(w.toLowerCase());
+        return !introduced && lowerRaw.includes(w.toLowerCase());
       });
 
-      if (!stillHasBlocked) return filtered;
+      if (!hasBlocked) {
+        return filterOutput(result, userWordsSeen);
+      }
 
       // One stricter retry
       const strictSystem = systemPrompt +
@@ -233,8 +285,7 @@ export const aiService = {
       ], 250, 0.7);
 
       if (retry) {
-        const retryFiltered = filterOutput(retry, userWordsSeen);
-        return retryFiltered || null; // null → caller uses safe canned reply
+        return filterOutput(retry, userWordsSeen);
       }
     }
 

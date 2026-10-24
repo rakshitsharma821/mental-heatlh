@@ -137,6 +137,11 @@ async function runPart1Tests() {
 
     // 5. Admin Login requires Admin ID + Password + Confidential Access Code
     // First, let's provision an admin through Super Admin
+    await db.query(`
+      INSERT INTO users (id, public_id, email, password_hash, salt, recovery_key_hash, full_name, role, status)
+      VALUES ('super_admin_test_root', 'ADM-ROOT', 'root@mindcare.test', 'h', 's', 'r', 'Root Admin', 'super_admin', 'active')
+      ON CONFLICT (id) DO NOTHING;
+    `);
     const superAdminToken = jwt.sign({ id: 'super_admin_test_root', role: 'super_admin' }, JWT_SECRET);
     const newAdminEmail = `admin_part1_${rand}@mindcare.test`;
     const provAdminRes = await request('POST', '/api/admin/create-admin', {

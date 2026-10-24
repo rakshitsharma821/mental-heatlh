@@ -4,7 +4,7 @@
 
 import express from 'express';
 import { communityController } from '../controllers/communityController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -27,6 +27,6 @@ router.post('/peer-match/request', authenticateToken, communityController.reques
 router.get('/peer-match/status', authenticateToken, communityController.getPeerMatchStatus);
 router.post('/peer-match/leave', authenticateToken, communityController.leavePeerMatch);
 router.post('/peer-match/block', authenticateToken, communityController.blockPeerMatch);
-router.post('/admin/features', authenticateToken, communityController.setFeatureFlag);
+router.post('/admin/features', authenticateToken, requireAdmin, communityController.setFeatureFlag);
 
 export default router;

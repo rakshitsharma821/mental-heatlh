@@ -13,7 +13,7 @@ export const assessmentController = {
     try {
       const userId = req.user?.id;
       if (userId) {
-        NotificationService.setServerFocusMode(userId, true);
+        await NotificationService.setServerFocusMode(userId, true);
       }
       return res.json({ success: true, message: 'Questionnaire focus mode active. All notifications silenced on server.' });
     } catch (err) {
@@ -21,11 +21,23 @@ export const assessmentController = {
     }
   },
 
+  heartbeatFocusMode: async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (userId) {
+        await NotificationService.setServerFocusMode(userId, true);
+      }
+      return res.json({ success: true, message: 'Questionnaire focus mode refreshed.' });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: 'Failed to refresh focus mode.' });
+    }
+  },
+
   endFocusMode: async (req, res) => {
     try {
       const userId = req.user?.id;
       if (userId) {
-        NotificationService.setServerFocusMode(userId, false);
+        await NotificationService.setServerFocusMode(userId, false);
       }
       return res.json({ success: true, message: 'Questionnaire focus mode deactivated.' });
     } catch (err) {
@@ -47,8 +59,9 @@ export const assessmentController = {
       }
       userName = userName || 'Friend';
 
-      // Use a session-level cache key from the token iat or userId
-      const sessionId = req.user?.iat ? String(req.user.iat) : (userId ? String(userId) : null);
+      // If fresh requested (default), skip cache to generate a brand new message each time
+      const forceFresh = req.query.fresh !== 'false';
+      const sessionId = forceFresh ? null : (req.user?.iat ? String(req.user.iat) : (userId ? String(userId) : null));
       const result = await aiService.generateWelcomeMessage(userName, userId, sessionId);
       return res.json(result);
     } catch (err) {
@@ -89,7 +102,7 @@ export const assessmentController = {
 
       // If user is logged in, optionally increment mindfulness score and update stress index
       if (userId) {
-        NotificationService.setServerFocusMode(userId, false);
+        await NotificationService.setServerFocusMode(userId, false);
         await db.query(`
           UPDATE users
           SET mindfulness_score = mindfulness_score + 10, updated_at = CURRENT_TIMESTAMP

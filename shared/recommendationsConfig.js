@@ -3,10 +3,12 @@
 // Single Source of Truth for Activity Recommendations per Score Band
 // ============================================
 
+import { SCORE_BANDS } from './questionnaireBands.js';
+
 export const RECOMMENDATIONS_CONFIG = {
   low: {
     band: 'low',
-    title: 'Steady Rhythm',
+    title: SCORE_BANDS.low.title,
     themeColor: '#52b788',
     summary: 'Steady baseline resilience with room for restorative grounding.',
     activities: {
@@ -30,7 +32,7 @@ export const RECOMMENDATIONS_CONFIG = {
   },
   moderate: {
     band: 'moderate',
-    title: 'Rest & Reset',
+    title: SCORE_BANDS.moderate.title,
     themeColor: '#d97706',
     summary: 'Accumulated stress or fatigue calling for intentional relief.',
     activities: {
@@ -54,7 +56,7 @@ export const RECOMMENDATIONS_CONFIG = {
   },
   high: {
     band: 'high',
-    title: 'Care & Comfort',
+    title: SCORE_BANDS.high.title,
     themeColor: '#b91c1c',
     summary: 'High emotional load; gentle somatic ease and professional care ready.',
     activities: {

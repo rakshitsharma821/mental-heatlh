@@ -64,7 +64,7 @@ export default function TherapistDashboard() {
   const [activeClientSession, setActiveClientSession] = useState({ id: 'guest', name: 'Sanctuary Member' });
 
   // Clinical Treatment Plan State
-  const [targetClientId, setTargetClientId] = useState('client_user_test_01');
+  const [targetClientId, setTargetClientId] = useState('');
   const [requiresEvaluation, setRequiresEvaluation] = useState(false);
   const [evaluationSummary, setEvaluationSummary] = useState('');
   const [clinicalNotes, setClinicalNotes] = useState('');
@@ -203,7 +203,7 @@ export default function TherapistDashboard() {
     setRequests(ClinicalConsentService.getSessionRequests());
 
     if (consent.accessGranted) {
-      ClinicalConsentService.recordAuditAccess('Dr. Sarah Vance, PsyD');
+      ClinicalConsentService.recordAuditAccess(user?.name || profileData?.full_name || 'Clinician');
     }
 
     // Fetch active treatment plan
@@ -417,7 +417,7 @@ export default function TherapistDashboard() {
 
   const therapist = profileData
     ? {
-        name: profileData.full_name || 'Dr. Sarah Vance, PsyD',
+        name: profileData?.full_name || user?.name || 'Licensed Clinician',
         title: profileData.title || 'Licensed Clinical Psychologist',
         license: profileData.license_number || 'RCI-CR-28491'
       }
@@ -916,7 +916,7 @@ export default function TherapistDashboard() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
                       <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', margin: 0 }}>
-                        📅 Assigned Clinical Sessions ({assignedSessions.length > 0 ? assignedSessions.length : requests.length})
+                        📅 Assigned Clinical Sessions ({assignedSessions.length})
                       </h3>
                       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
                         Directly assigned client consultation requests under clinical coordination
@@ -929,11 +929,11 @@ export default function TherapistDashboard() {
                     )}
                   </div>
 
-                  {assignedSessions.length === 0 && requests.length === 0 ? (
+                  {assignedSessions.length === 0 ? (
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>No pending session requests at this time.</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {(assignedSessions.length > 0 ? assignedSessions : requests).map(session => {
+                      {assignedSessions.map(session => {
                         const isAssigned = session.status === 'assigned';
                         const isConfirmed = session.status === 'confirmed';
                         const isAccepted = session.status === 'therapist_accepted';

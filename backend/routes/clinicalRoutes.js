@@ -22,11 +22,12 @@ const upload = multer({
 });
 
 // Public / General clinical routes
-router.get('/therapist', clinicalController.getTherapist);
+// Public clinician endpoints removed - therapists listed ONLY to authenticated clients
+router.get('/therapist', (req, res) => res.status(404).json({ success: false, message: 'Endpoint not found' }));
+router.get('/therapists', (req, res) => res.status(404).json({ success: false, message: 'Endpoint not found' }));
 router.get('/availability', clinicalController.getAvailability);
-router.get('/directory', clinicalController.getDirectory);
-router.get('/therapists', clinicalController.getDirectory);
-router.get('/therapists/:therapistId/availability', clinicalController.getTherapistAvailability);
+router.get('/directory', authenticateToken, clinicalController.getDirectory);
+router.get('/therapists/:therapistId/availability', authenticateToken, clinicalController.getTherapistAvailability);
 router.get('/rtc-config', clinicalController.getRtcConfig);
 router.post('/book', clinicalController.submitBooking);
 

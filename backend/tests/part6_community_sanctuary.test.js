@@ -11,8 +11,8 @@ import { db, initPostgresDatabase } from '../models/db.js';
 const BASE_URL = 'http://localhost:5000/api';
 const JWT_SECRET = process.env.JWT_SECRET || 'mindcare_sanctuary_super_secret_jwt_key_2026_botanical';
 
-async function apiRequest(endpoint, method = 'GET', body = null, token = null) {
-  const headers = { 'Content-Type': 'application/json' };
+async function apiRequest(endpoint, method = 'GET', body = null, token = null, extraHeaders = {}) {
+  const headers = { 'Content-Type': 'application/json', ...extraHeaders };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {
@@ -304,7 +304,46 @@ test('Part 6: Community Sanctuary, Peer Support & Expert Circles', async (t) => 
     console.log('✅ T10. Admin moderation hides violating reflections from public community view: PASS');
   });
 
+  // ──────────────────────────────────────────
+  // TEST 11: Admin Feature Flag Governance for Peer Matching
+  // ──────────────────────────────────────────
+  await t.test('T11. POST /api/community/admin/features is admin-only, audit-logged, and env-guarded in production', async () => {
+    try {
+    // 1. Client attempt returns 403
+    const clientAttempt = await apiRequest('/community/admin/features', 'POST', { enablePeerMatching: true }, tokenA);
+    assert.equal(clientAttempt.status, 403, 'Non-admin must be rejected from modifying feature flags');
+
+    // 2. Admin successfully updates flag in non-production and audit log is recorded
+    const adminSuccess = await apiRequest('/community/admin/features', 'POST', { enablePeerMatching: true }, adminToken);
+    assert.equal(adminSuccess.status, 200);
+
+    // Verify audit log record in admin_audit_log
+    const auditCheck = await db.query(
+      "SELECT * FROM admin_audit_log WHERE admin_id = $1 AND action = 'update_community_feature_flag' ORDER BY timestamp DESC LIMIT 1",
+      [adminId]
+    );
+    assert.ok(auditCheck.rows.length >= 1, 'Audit log row must be recorded in admin_audit_log');
+
+    // 3. In production environment with ENABLE_PEER_MATCHING !== 'true', DB toggle cannot override
+    const prodOverrideAttempt = await apiRequest(
+      '/community/admin/features',
+      'POST',
+      { enablePeerMatching: true },
+      adminToken,
+      { 'x-test-env': 'production' }
+    );
+    assert.equal(prodOverrideAttempt.status, 403, 'Must return 403 when trying to enable peer matching in production without env flag');
+    assert.match(prodOverrideAttempt.body.message, /Cannot enable peer matching in production/i);
+
+    console.log('✅ T11. Admin feature flag governance (admin-only, audit-logged, production env guard): PASS');
+    } catch (e) {
+      console.error('T11 ERROR:', e);
+      throw e;
+    }
+  });
+
   console.log(`\n========================================`);
-  console.log(`RESULT: 10/10 Part 6 Tests Passed Successfully`);
+  console.log(`RESULT: 11/11 Part 6 Tests Passed Successfully`);
   console.log(`========================================\n`);
+  process.exit(0);
 });

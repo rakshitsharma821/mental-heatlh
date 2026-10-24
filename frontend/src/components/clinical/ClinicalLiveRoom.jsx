@@ -14,7 +14,7 @@ export default function ClinicalLiveRoom({
   onClose,
   roomId = 'sanctuary_session_default',
   initialMode = 'video', // 'video' | 'voice' | 'chat'
-  peerName = 'Dr. Sarah Vance, PsyD',
+  peerName = 'Licensed Practitioner',
   peerRole = 'Licensed Clinical Psychologist'
 }) {
   const { user } = useAuth();

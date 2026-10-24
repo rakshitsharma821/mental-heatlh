@@ -45,7 +45,7 @@ test('Part 7: Opt-In Notifications, Quiet Hours & Focus Mode', async (t) => {
   // Seed test users
   await db.query(`
     INSERT INTO users (id, public_id, email, password_hash, salt, recovery_key_hash, full_name, role, status)
-    VALUES 
+    VALUES
       ($1, $2, $3, 'hash', 'salt', 'rec_hash', 'Quiet Client', 'client', 'active'),
       ($4, $5, $6, 'hash', 'salt', 'rec_hash', 'Dr. Quiet', 'therapist', 'active'),
       ($7, $8, $9, 'hash', 'salt', 'rec_hash', 'Admin Auditor', 'admin', 'active')
@@ -152,7 +152,7 @@ test('Part 7: Opt-In Notifications, Quiet Hours & Focus Mode', async (t) => {
   await t.test('T5. Quiet hours window withholds routine notifications during sleep while exempting reminders', async () => {
     // 23:30 is within 22:00 - 07:00
     const nighttimeDate = new Date('2026-10-24T23:30:00+05:30');
-    
+
     // 1. Routine status notification is HELD during quiet hours
     const routineRes = await apiRequest('/notifications/dispatch', 'POST', {
       userId: clientId,
@@ -194,16 +194,25 @@ test('Part 7: Opt-In Notifications, Quiet Hours & Focus Mode', async (t) => {
   });
 
   // ──────────────────────────────────────────
-  // TEST 7: Questionnaire Focus Mode Shield (Server-Side Enforced)
+  // TEST 7: Questionnaire Focus Mode Shield (Server-Side Enforced & Queued)
   // ──────────────────────────────────────────
-  await t.test('T7. Active questionnaire focus mode strictly silences incoming alerts on server', async () => {
+  await t.test('T7. Active questionnaire focus mode strictly silences incoming alerts on server and queues them', async () => {
     const afternoonDate = new Date('2026-10-24T15:00:00+05:30');
 
     // Activate server-side focus mode via API
     const focusStartRes = await apiRequest('/assessment/focus-start', 'POST', {}, clientToken);
     assert.equal(focusStartRes.status, 200);
 
-    // Dispatch without passing client flag — server must automatically silence it
+    // Verify DB persistence in user_focus_sessions
+    const sessionRes = await db.query('SELECT * FROM user_focus_sessions WHERE user_id = $1', [clientId]);
+    assert.ok(sessionRes.rows.length > 0, 'user_focus_sessions must have an entry in DB');
+    assert.ok(new Date(sessionRes.rows[0].expires_at) > new Date(), 'Focus session must have unexpired TTL');
+
+    // Verify heartbeat refreshes TTL
+    const heartbeatRes = await apiRequest('/assessment/focus-heartbeat', 'POST', {}, clientToken);
+    assert.equal(heartbeatRes.status, 200);
+
+    // Dispatch without passing client flag — server must automatically silence AND queue it
     const dispatchDuringFocus = await apiRequest('/notifications/dispatch', 'POST', {
       userId: clientId,
       title: 'Focus Interruption',
@@ -215,13 +224,26 @@ test('Part 7: Opt-In Notifications, Quiet Hours & Focus Mode', async (t) => {
 
     assert.equal(dispatchDuringFocus.status, 200);
     assert.equal(dispatchDuringFocus.body.delivered, false);
+    assert.equal(dispatchDuringFocus.body.queued, true);
     assert.equal(dispatchDuringFocus.body.reason, 'silenced_focus_mode');
 
-    // Deactivate server-side focus mode
+    // Verify queued in queued_notifications table
+    const queuedRows = await db.query('SELECT * FROM queued_notifications WHERE user_id = $1', [clientId]);
+    assert.ok(queuedRows.rows.length >= 1, 'Notification must be stored in queued_notifications');
+
+    // Deactivate server-side focus mode — this must drain queued notifications
     const focusEndRes = await apiRequest('/assessment/focus-end', 'POST', {}, clientToken);
     assert.equal(focusEndRes.status, 200);
 
-    // After focus mode ends, dispatch goes through
+    // Verify queued table is drained
+    const drainedRows = await db.query('SELECT * FROM queued_notifications WHERE user_id = $1', [clientId]);
+    assert.equal(drainedRows.rows.length, 0, 'Queued notifications must be drained upon focus end');
+
+    // Verify delivered to client's notifications list
+    const clientNotifs = await apiRequest('/notifications', 'GET', null, clientToken);
+    assert.ok(clientNotifs.body.notifications.some(n => n.title === 'Focus Interruption'), 'Drained notification must be delivered');
+
+    // After focus mode ends, new direct dispatch goes through
     const dispatchAfterFocus = await apiRequest('/notifications/dispatch', 'POST', {
       userId: clientId,
       title: 'Welcome Back',
@@ -231,7 +253,32 @@ test('Part 7: Opt-In Notifications, Quiet Hours & Focus Mode', async (t) => {
     }, clientToken);
 
     assert.equal(dispatchAfterFocus.body.delivered, true);
-    console.log('✅ T7. Server-enforced questionnaire focus mode strictly silences incoming alerts: PASS');
+    console.log('✅ T7. Server-enforced questionnaire focus mode silences, queues, and drains on end: PASS');
+  });
+
+  // ──────────────────────────────────────────
+  // TEST 7b: DPDP Time-Based Retention (3-Year Retention Policy & IP Masking)
+  // ──────────────────────────────────────────
+  await t.test('T7b. Consent audit retains entries within 3 years and prunes older records with subnet masking', async () => {
+    // Insert an audit row from 4 years ago and an audit row from 1 year ago
+    await db.query(`
+      INSERT INTO notification_consent_audit (id, user_id, action, previous_opt_in, new_opt_in, consent_timestamp, client_ip, user_agent)
+      VALUES
+        ('nca_old_4yr', $1, 'opt_in', false, true, CURRENT_TIMESTAMP - interval '4 years', '192.168.1.0/24', 'OldBrowser/1.0'),
+        ('nca_recent_1yr', $1, 'update_preferences', true, true, CURRENT_TIMESTAMP - interval '1 year', '192.168.1.0/24', 'RecentBrowser/2.0')
+      ON CONFLICT (id) DO NOTHING
+    `, [clientId]);
+
+    // Trigger updatePreferences which executes retention pruning
+    await apiRequest('/notifications/preferences', 'PUT', { optIn: true }, clientToken);
+
+    // Verify 4-year row was pruned and 1-year row was preserved
+    const checkOld = await db.query('SELECT id FROM notification_consent_audit WHERE id = $1', ['nca_old_4yr']);
+    const checkRecent = await db.query('SELECT id FROM notification_consent_audit WHERE id = $1', ['nca_recent_1yr']);
+
+    assert.equal(checkOld.rows.length, 0, 'Audit row older than 3 years must be pruned');
+    assert.equal(checkRecent.rows.length, 1, 'Audit row within 3 years must be retained');
+    console.log('✅ T7b. 3-year DPDP time-based retention policy verified: PASS');
   });
 
   // ──────────────────────────────────────────
@@ -302,10 +349,11 @@ test('Part 7: Opt-In Notifications, Quiet Hours & Focus Mode', async (t) => {
   });
 
     console.log('\n========================================');
-    console.log('RESULT: 10/10 Part 7 Tests Passed Successfully');
+    console.log('RESULT: 11/11 Part 7 Tests Passed Successfully');
     console.log('========================================\n');
+    process.exit(0);
   } catch (err) {
     console.error('FATAL TEST ERROR:', err);
-    throw err;
+    process.exit(1);
   }
 });

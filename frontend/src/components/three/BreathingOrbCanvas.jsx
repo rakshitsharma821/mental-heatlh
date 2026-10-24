@@ -4,16 +4,30 @@
 // Features:
 // 1. Single WebGL canvas, DPR capped at 1.5, low-power preference
 // 2. IntersectionObserver + Page Visibility pause when offscreen/tab hidden
-// 3. prefers-reduced-motion fallback to static CSS pastel aurora
-// 4. Custom Fresnel / gradient shader (soft iridescence, zero heavy transmission/refraction)
-// 5. Instanced mesh for 40 softly lit floating petals
-// 6. Smooth mouse parallax and scroll-linked camera move
-// 7. Full disposal and cleanup on unmount
+// 3. prefers-reduced-motion & user motion preference -> static CSS pastel aurora fallback
+// 4. Automatic low-end hardware degrade (concurrency/memory/frame-time) -> static poster
+// 5. Custom Fresnel / gradient shader (soft iridescence, zero heavy transmission/refraction)
+// 6. Instanced mesh for 40 softly lit floating petals
+// 7. Full disposal and cleanup of geometries, materials, listeners, and WebGL context on unmount
 // 8. Dynamic synchronized breathwork pacing (Inhale, Hold, Exhale)
 // ============================================
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+
+const getIsReducedMotion = () => {
+  try {
+    const media = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const stored = typeof localStorage !== 'undefined' && localStorage.getItem('mindcare_reduce_motion') === 'true';
+    const isLowEndHardware = typeof navigator !== 'undefined' && (
+      (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) ||
+      (navigator.deviceMemory && navigator.deviceMemory <= 2)
+    );
+    return Boolean(media || stored || isLowEndHardware);
+  } catch (_) {
+    return false;
+  }
+};
 
 export default function BreathingOrbCanvas({
   size = 'large', // 'large' | 'compact'
@@ -25,7 +39,8 @@ export default function BreathingOrbCanvas({
   secondsRemaining = 4
 }) {
   const mountRef = useRef(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(getIsReducedMotion);
+  const [frameDegraded, setFrameDegraded] = useState(false);
 
   const breathRef = useRef({
     phase: breathingPhase,
@@ -42,18 +57,28 @@ export default function BreathingOrbCanvas({
   }, [breathingPhase, phaseDuration, secondsRemaining]);
 
   useEffect(() => {
-    // Check reduced motion preference
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReducedMotion(mediaQuery.matches);
+    const handleMediaChange = () => setReducedMotion(getIsReducedMotion());
+    const handleCustomChange = (e) => {
+      if (e?.detail?.reduceMotion !== undefined) {
+        setReducedMotion(Boolean(e.detail.reduceMotion));
+      } else {
+        setReducedMotion(getIsReducedMotion());
+      }
+    };
 
-    const handleMediaChange = (e) => setReducedMotion(e.matches);
-    mediaQuery.addEventListener('change', handleMediaChange);
-
-    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      mediaQuery.addEventListener('change', handleMediaChange);
+      window.addEventListener('mindcare-motion-preference-changed', handleCustomChange);
+      return () => {
+        mediaQuery.removeEventListener('change', handleMediaChange);
+        window.removeEventListener('mindcare-motion-preference-changed', handleCustomChange);
+      };
+    }
   }, []);
 
   useEffect(() => {
-    if (reducedMotion) return; // Use static CSS poster fallback
+    if (reducedMotion || frameDegraded) return; // Use static CSS poster fallback
 
     const container = mountRef.current;
     if (!container) return;
@@ -61,6 +86,7 @@ export default function BreathingOrbCanvas({
     let animId = null;
     let isVisible = true;
     let isTabActive = !document.hidden;
+    let slowFrames = 0;
 
     const width = container.clientWidth || 480;
     const height = container.clientHeight || 480;
@@ -87,6 +113,7 @@ export default function BreathingOrbCanvas({
       container.appendChild(renderer.domElement);
     } catch (e) {
       console.warn('WebGL init note for BreathingOrbCanvas:', e.message);
+      setFrameDegraded(true);
       return;
     }
 
@@ -277,6 +304,19 @@ export default function BreathingOrbCanvas({
 
       if (!isVisible || !isTabActive) return; // Paused when offscreen or tab hidden
 
+      // Frame time monitoring: auto-degrade on sustained low FPS
+      const delta = clock.getDelta();
+      if (delta > 0.045) { // < 22 FPS
+        slowFrames++;
+        if (slowFrames > 40) {
+          console.warn('MindCare: Auto-degrading 3D canvas due to sustained low frame-rate.');
+          setFrameDegraded(true);
+          return;
+        }
+      } else {
+        slowFrames = Math.max(0, slowFrames - 1);
+      }
+
       const elapsedTime = clock.getElapsedTime() * speed;
 
       // Update shader uniform time
@@ -291,13 +331,10 @@ export default function BreathingOrbCanvas({
 
         let targetScale = 1.0;
         if (bState.phase === 'Inhale') {
-          // Smooth expansion from 0.88 to 1.34
           targetScale = 0.88 + progress * 0.46;
         } else if (bState.phase === 'Hold') {
-          // Steady expansion with subtle living micro-pulse
           targetScale = 1.34 + Math.sin(elapsedTime * 2.0) * 0.02;
         } else if (bState.phase === 'Exhale') {
-          // Smooth contraction from 1.34 down to 0.88
           targetScale = 1.34 - progress * 0.46;
         }
 
@@ -305,7 +342,6 @@ export default function BreathingOrbCanvas({
         const s = bState.currentScale;
         orbMesh.scale.set(s, s, s);
       } else {
-        // Natural gentle idle scale
         orbMesh.scale.set(1.0, 1.0, 1.0);
       }
 
@@ -355,18 +391,20 @@ export default function BreathingOrbCanvas({
       orbMaterial.dispose();
       petalGeometry.dispose();
       petalMaterial.dispose();
+      instancedPetals.dispose?.();
 
       if (renderer) {
         renderer.dispose();
+        renderer.forceContextLoss?.();
         if (renderer.domElement && renderer.domElement.parentNode) {
           renderer.domElement.parentNode.removeChild(renderer.domElement);
         }
       }
     };
-  }, [size, speed, interactive, reducedMotion]);
+  }, [size, speed, interactive, reducedMotion, frameDegraded]);
 
-  // Accessible Fallback for reduced motion: Pure CSS soft glowing iridescent orb
-  if (reducedMotion) {
+  // Accessible Fallback for reduced motion or degraded low-end device: Pure CSS soft glowing iridescent orb
+  if (reducedMotion || frameDegraded) {
     return (
       <div
         className={`breathing-orb-fallback ${className}`}

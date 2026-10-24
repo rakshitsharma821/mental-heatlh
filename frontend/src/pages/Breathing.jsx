@@ -1,58 +1,56 @@
 // ============================================
 // MindCare Sanctuary — Guided 3D Breathwork
 // Powered by BreathingOrbCanvas (Single WebGL canvas)
-// Patterns: 4-7-8 Deep Relaxation, Box Breathing (4-4-4-4), Balanced 5.5s Resonance
+// Timings & patterns imported from centralized config: frontend/src/config/breathing.js
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
 import BreathingOrbCanvas from '../components/three/BreathingOrbCanvas';
+import { BREATHING_PATTERNS, DEFAULT_BREATHING_PATTERN_KEY } from '../config/breathing';
 import { soundEngine } from '../services/audio';
-
-const PATTERNS = {
-  '478': {
-    name: '4-7-8 Deep Relaxation',
-    description: 'Activates parasympathetic vagal tone to quiet adrenaline and racing thoughts.',
-    phases: [
-      { name: 'Inhale', duration: 4, tip: 'Breathe gently in through the nose' },
-      { name: 'Hold', duration: 7, tip: 'Retain the breath with soft stillness' },
-      { name: 'Exhale', duration: 8, tip: 'Release fully through parted lips with a slow sigh' }
-    ]
-  },
-  'box': {
-    name: 'Box Breathing (4-4-4-4)',
-    description: 'Stabilizes heart rate variability and enhances grounded clarity and focus.',
-    phases: [
-      { name: 'Inhale', duration: 4, tip: 'Fill lungs smoothly and evenly' },
-      { name: 'Hold', duration: 4, tip: 'Maintain calm stillness at full expansion' },
-      { name: 'Exhale', duration: 4, tip: 'Empty lungs with steady control' },
-      { name: 'Hold', duration: 4, tip: 'Pause softly at stillness' }
-    ]
-  },
-  'resonance': {
-    name: 'Balanced 5.5s Resonance',
-    description: 'HRV coherent breathing at ~5.5 breaths per minute for deep autonomic balance.',
-    phases: [
-      { name: 'Inhale', duration: 5.5, tip: 'Slow, expansive diaphragmatic breath' },
-      { name: 'Exhale', duration: 5.5, tip: 'Smooth, unbroken surrender of breath' }
-    ]
-  }
-};
+import { Storage } from '../services/storage';
 
 export default function Breathing() {
-  const [selectedPatternKey, setSelectedPatternKey] = useState('478');
+  const [selectedPatternKey, setSelectedPatternKey] = useState(DEFAULT_BREATHING_PATTERN_KEY);
   const [isRunning, setIsRunning] = useState(false);
   const [phaseIndex, setPhaseIndex] = useState(0);
-  const [secondsRemaining, setSecondsRemaining] = useState(4);
   const [completedCycles, setCompletedCycles] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(true);
 
-  const pattern = PATTERNS[selectedPatternKey];
-  const currentPhase = pattern.phases[phaseIndex];
+  // Sound: Default off / respect persisted user setting & quiet / reduced-motion preferences
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    try {
+      const persisted = Storage.get('mindcare_sound_enabled', null);
+      if (persisted !== null) return Boolean(persisted);
+
+      // Default to muted if user has reduced-motion or quiet mode
+      const reducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const quietMode = Storage.get('mindcare_reduce_motion', false) || Storage.get('mindcare_quiet_mode', false);
+      if (reducedMotion || quietMode) return false;
+
+      return false; // Safe opt-in: no automatic unexpected sound
+    } catch (_) {
+      return false;
+    }
+  });
+
+  const pattern = BREATHING_PATTERNS[selectedPatternKey] || BREATHING_PATTERNS[DEFAULT_BREATHING_PATTERN_KEY];
+  const currentPhase = pattern.phases[phaseIndex] || pattern.phases[0];
+  const [secondsRemaining, setSecondsRemaining] = useState(pattern.phases[0].duration);
   const intervalRef = useRef(null);
+
+  // Persist sound preference whenever user changes it
+  const handleToggleSound = () => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      Storage.set('mindcare_sound_enabled', next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!isRunning) return;
 
+    // Chimes only trigger after explicit user action has started the session
     if (soundEnabled) {
       soundEngine.playChime(currentPhase.name.toLowerCase());
     }
@@ -78,7 +76,7 @@ export default function Breathing() {
     }, 500);
 
     return () => clearInterval(intervalRef.current);
-  }, [isRunning, phaseIndex, selectedPatternKey, soundEnabled]);
+  }, [isRunning, phaseIndex, selectedPatternKey, soundEnabled, pattern.phases, currentPhase.name, currentPhase.duration]);
 
   const handleStartStop = () => {
     if (isRunning) {
@@ -104,7 +102,8 @@ export default function Breathing() {
     clearInterval(intervalRef.current);
     setSelectedPatternKey(key);
     setPhaseIndex(0);
-    setSecondsRemaining(PATTERNS[key].phases[0].duration);
+    const target = BREATHING_PATTERNS[key] || pattern;
+    setSecondsRemaining(target.phases[0].duration);
     setCompletedCycles(0);
   };
 
@@ -137,7 +136,7 @@ export default function Breathing() {
           flexWrap: 'wrap',
           marginBottom: '32px'
         }}>
-          {Object.entries(PATTERNS).map(([key, pat]) => (
+          {Object.entries(BREATHING_PATTERNS).map(([key, pat]) => (
             <button
               key={key}
               type="button"
@@ -268,9 +267,10 @@ export default function Breathing() {
 
           <button
             type="button"
-            onClick={() => setSoundEnabled(!soundEnabled)}
+            onClick={handleToggleSound}
             className="btn-ghost"
             style={{ padding: '14px 24px', borderRadius: '16px' }}
+            aria-label={soundEnabled ? 'Mute singing chime' : 'Enable singing chime'}
             title={soundEnabled ? 'Mute singing chime' : 'Enable singing chime'}
           >
             {soundEnabled ? '🔔 Chimes On' : '🔕 Chimes Off'}

@@ -25,12 +25,12 @@
   --text-inverse: #ffffff;
 
   /* Primary Brand: Soft Sage Green */
-  --accent-forest: #2d6a4f;
-  --accent-leaf: #40916c;
-  --accent-mint: #52b788;
+  --accent-forest: #245741;
+  --accent-leaf: #357255;
+  --accent-mint: #40916c;
   --accent-sprout: #74c69d;
-  --accent-sage: #52b788;
-  --accent-sage-dark: #2d6a4f;
+  --accent-sage: #357255;
+  --accent-sage-dark: #245741;
   --accent-sage-light: #74c69d;
   --accent-sage-soft: #eaf4ee;
 
@@ -1167,6 +1167,70 @@ button {
 @keyframes typingBounce {
   0%, 80%, 100% { transform: scale(0); }
   40% { transform: scale(1); }
+}
+
+/* Calm Brain Hero & Responsive Layout */
+.hero-grid-container {
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.12fr 0.88fr;
+  align-items: center;
+  gap: 48px;
+}
+
+.hero-text-col {
+  z-index: 2;
+}
+
+.hero-brain-col {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 520px;
+}
+
+@media (max-width: 900px) {
+  .hero-grid-container {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .hero-brain-col {
+    order: -1; /* Place 3D brain above headline on mobile */
+    min-height: 380px;
+  }
+  .hero-brain-col .calm-brain-hero-wrapper,
+  .hero-brain-col .calm-brain-hero-fallback {
+    min-height: 360px !important;
+  }
+  .hero-brain-col .calm-brain-hero-wrapper > div:first-child {
+    height: 330px !important;
+  }
+  .hero-text-col {
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-section {
+    padding: 20px 16px 36px !important;
+  }
+  .hero-grid-container {
+    gap: 14px;
+  }
+  .hero-brain-col {
+    min-height: 320px;
+  }
+  .hero-brain-col .calm-brain-hero-wrapper,
+  .hero-brain-col .calm-brain-hero-fallback {
+    min-height: 310px !important;
+  }
+  .hero-brain-col .calm-brain-hero-wrapper > div:first-child {
+    height: 290px !important;
+  }
 }
 
 /* Responsive adjustments */

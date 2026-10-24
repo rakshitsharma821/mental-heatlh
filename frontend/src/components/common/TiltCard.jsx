@@ -18,8 +18,11 @@ export default function TiltCard({
   const [glarePosition, setGlarePosition] = useState({ x: 50, y: 50, opacity: 0 });
 
   const handleMouseMove = (e) => {
-    // Respect reduced motion
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Respect reduced motion & user preference
+    if (
+      (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+      localStorage.getItem('mindcare_reduce_motion') === 'true'
+    ) return;
 
     const card = cardRef.current;
     if (!card) return;

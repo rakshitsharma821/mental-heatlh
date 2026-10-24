@@ -85,7 +85,7 @@ Ensure the following tools are installed on your workstation or deployment serve
    cp .env.example .env
    cp backend/.env.example backend/.env
    ```
-3. Edit `backend/.env` with your PostgreSQL password (`DB_PASSWORD`), JWT secret, and encryption keys (see [Environment Variables Reference](#-environment-variables-reference) below).
+3. Edit `backend/.env` with your PostgreSQL password (`DB_PASSWORD`), unique JWT and encryption keys, and unique Super Admin bootstrap credentials (see [Environment Variables Reference](#-environment-variables-reference) below). Do not reuse credentials shown in examples or commit your `.env` files.
 4. Run table initialization and seed the Super Admin account:
    ```bash
    npm run seed:admin
@@ -121,7 +121,7 @@ All runtime configurations and secrets are passed strictly via environment varia
 | `NODE_ENV` | Optional | `development` | Set to `production` in staging/live environments. |
 | `CLIENT_ORIGIN` | Optional | `http://localhost:3000` | Allowed CORS origin for frontend client requests. |
 | `DB_HOST` | Required | `127.0.0.1` | PostgreSQL database host address. |
-| `DB_PORT` | Required | `5432` | PostgreSQL database port. |
+| `DB_PORT` | Required | `5433` | PostgreSQL database port. |
 | `DB_NAME` | Required | `mindcare_db` | PostgreSQL database name. |
 | `DB_USER` | Required | `postgres` | Database username. |
 | `DB_PASSWORD` | Required | *`<your_secure_password>`* | Database password. |
@@ -138,8 +138,8 @@ All runtime configurations and secrets are passed strictly via environment varia
 | `ADMIN_PUBLIC_ID` | Optional | `ADM-SANCTUARY-01` | Public ID assigned to the seeded Super Administrator. |
 | `ADMIN_EMAIL` | Optional | `admin@mindcare.com` | Root Super Administrator login email. |
 | `ADMIN_NAME` | Optional | `Super Administrator` | Display name for the initial Super Administrator. |
-| `ADMIN_INITIAL_PASSWORD`| Optional | `SanctuarySuperAdmin2026!` | Initial password for the seeded Super Administrator (must change on first login). |
-| `ADMIN_INITIAL_ACCESS_CODE` | Optional | `SANCTUARY-AUTH-KEY-99` | One-time bootstrap access code for Super Admin setup. |
+| `ADMIN_INITIAL_PASSWORD`| **Required to seed** | *Set a unique secret* | Initial password for the seeded Super Administrator (must change on first login). |
+| `ADMIN_INITIAL_ACCESS_CODE` | **Required to seed** | *Set a unique secret* | One-time bootstrap access code for Super Admin setup. |
 | `STORAGE_TYPE` | Optional | `local` | Document storage provider: `local` (encrypted disk vault) \| `s3`. |
 | `UPLOAD_DIR` | Optional | `./uploads/therapist_vault` | Directory for encrypted clinician verification documents. |
 | `MAX_FILE_SIZE_MB` | Optional | `15` | Maximum allowed document upload file size in megabytes. |

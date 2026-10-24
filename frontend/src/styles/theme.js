@@ -20,13 +20,13 @@ export const theme = {
     // Text & Contrast (WCAG AA Compliant on #faf9f5 / #ffffff)
     textPrimary: '#1a2e22',      // Deep forest charcoal (~12.8:1 contrast)
     textSecondary: '#2d4a3e',    // Rich herbal slate (~8.2:1 contrast)
-    textMuted: '#52796f',        // Calm sage slate (~4.8:1 contrast)
-    textSubtle: '#78998d',       // Supporting labels (~3.4:1 contrast for large/secondary UI)
+    textMuted: '#42675d',        // Calm sage slate (5.99:1 contrast on canvas, 6.31:1 on white)
+    textSubtle: '#52796f',       // Supporting labels (4.8:1 contrast)
     textInverse: '#ffffff',
 
     // Nature & Pastels: Soft Sage Green (Primary brand)
-    sage: '#52b788',
-    sageDark: '#2d6a4f',
+    sage: '#357255',
+    sageDark: '#245741',
     sageDeep: '#1b4332',
     sageLight: '#74c69d',
     sageSoft: '#eaf4ee',
@@ -161,7 +161,9 @@ export const theme = {
       normal: '400ms',
       slow: '700ms',
       gentle: '1000ms',
-      breathing: '8000ms'
+      breathing: '8000ms',
+      brainBreathCycle: '9000ms',
+      brainBreathSeconds: 9.0
     },
     easings: {
       easeOutCubic: 'cubic-bezier(0.215, 0.61, 0.355, 1)',

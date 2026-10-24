@@ -12,27 +12,76 @@ import crypto from 'crypto';
 import { db } from '../models/db.js';
 import { NOTIFICATION_CONFIG, isTimeInQuietHours } from '../config/notifications.js';
 
-// Server-side active focus mode registry for ongoing questionnaire sessions
+// In-memory fallback set for active focus mode + DB persistence for cross-restart resilience
 const activeServerFocusUsers = new Set();
 
 export const NotificationService = {
   /**
    * Set or clear active questionnaire focus mode on the server for a user
+   * Stored in DB with TTL to survive restarts and auto-expire if tab is closed
    */
-  setServerFocusMode(userId, active) {
+  async setServerFocusMode(userId, active) {
     if (!userId) return;
-    if (active) {
-      activeServerFocusUsers.add(userId);
-    } else {
-      activeServerFocusUsers.delete(userId);
+    try {
+      if (active) {
+        activeServerFocusUsers.add(userId);
+        const ttlMinutes = NOTIFICATION_CONFIG.FOCUS_MODE_TTL_MINUTES || 15;
+        await db.query(`
+          INSERT INTO user_focus_sessions (user_id, started_at, expires_at)
+          VALUES ($1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($2 || ' minutes')::interval)
+          ON CONFLICT (user_id) DO UPDATE SET
+            started_at = CURRENT_TIMESTAMP,
+            expires_at = CURRENT_TIMESTAMP + ($2 || ' minutes')::interval
+        `, [userId, ttlMinutes]);
+      } else {
+        activeServerFocusUsers.delete(userId);
+        await db.query('DELETE FROM user_focus_sessions WHERE user_id = $1', [userId]);
+        // Deliver queued notifications that were held during focus mode
+        await this.drainQueuedNotifications(userId);
+      }
+    } catch (err) {
+      console.error('setServerFocusMode error:', err);
     }
   },
 
   /**
-   * Check if a user is currently in server-side focus mode
+   * Check if a user is currently in server-side focus mode (DB + memory fallback)
    */
-  isUserInServerFocus(userId) {
+  async isUserInServerFocus(userId) {
+    if (!userId) return false;
+    try {
+      const res = await db.query(
+        'SELECT 1 FROM user_focus_sessions WHERE user_id = $1 AND expires_at > CURRENT_TIMESTAMP',
+        [userId]
+      );
+      if (res.rows.length > 0) return true;
+    } catch (_) {}
     return activeServerFocusUsers.has(userId);
+  },
+
+  /**
+   * Drain queued notifications and dispatch them once focus mode ends
+   */
+  async drainQueuedNotifications(userId) {
+    try {
+      const queuedRes = await db.query(
+        'SELECT id, payload FROM queued_notifications WHERE user_id = $1 ORDER BY created_at ASC',
+        [userId]
+      );
+      if (queuedRes.rows.length === 0) return;
+
+      for (const row of queuedRes.rows) {
+        const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+        await this.dispatchNotification(userId, {
+          ...payload,
+          isFocusMode: false
+        });
+      }
+
+      await db.query('DELETE FROM queued_notifications WHERE user_id = $1', [userId]);
+    } catch (err) {
+      console.error('drainQueuedNotifications error:', err);
+    }
   },
 
   /**
@@ -146,16 +195,12 @@ export const NotificationService = {
       sanitizedUa
     ]);
 
-    // Enforce DPDP retention limit: keep only the latest 20 entries per user
+    // Enforce DPDP time-based retention policy from config (e.g. 3 years) so consent history can be shown
+    const retentionYears = NOTIFICATION_CONFIG.CONSENT_AUDIT_RETENTION_YEARS || 3;
     await db.query(`
       DELETE FROM notification_consent_audit
-      WHERE user_id = $1 AND id NOT IN (
-        SELECT id FROM notification_consent_audit
-        WHERE user_id = $1
-        ORDER BY consent_timestamp DESC
-        LIMIT $2
-      )
-    `, [userId, NOTIFICATION_CONFIG.CONSENT_AUDIT_RETENTION_LIMIT || 20]);
+      WHERE user_id = $1 AND consent_timestamp < (CURRENT_TIMESTAMP - ($2 || ' years')::interval)
+    `, [userId, retentionYears]);
 
     return this.getPreferences(userId);
   },
@@ -184,11 +229,22 @@ export const NotificationService = {
     }
 
     // GATE 2: Never during Questionnaire Focus Mode (Client flag OR Server-side active focus mode)
-    if (isFocusMode || activeServerFocusUsers.has(userId)) {
+    // Notifications suppressed during focus mode must be queued and delivered after it ends
+    const inServerFocus = await this.isUserInServerFocus(userId);
+    if (isFocusMode || inServerFocus) {
+      await db.query(`
+        INSERT INTO queued_notifications (id, user_id, payload, created_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      `, [
+        'qnotif_' + crypto.randomUUID().slice(0, 16),
+        userId,
+        JSON.stringify({ title, message, type, overrideQuietHours, referenceDate })
+      ]);
       return {
         delivered: false,
+        queued: true,
         reason: 'silenced_focus_mode',
-        message: 'Notification silenced: member is in questionnaire focus mode.'
+        message: 'Notification queued: member is in questionnaire focus mode.'
       };
     }
 

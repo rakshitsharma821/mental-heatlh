@@ -447,7 +447,7 @@ export default function Register() {
               <input
                 type="text"
                 className="input-field"
-                placeholder="e.g. Dr. Sarah Vance, PsyD"
+                placeholder="e.g. Dr. Jane Doe, PsyD"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -493,7 +493,7 @@ export default function Register() {
                 <input
                   type="email"
                   className="input-field"
-                  placeholder="dr.vance@clinic.org"
+                  placeholder="dr.clinician@clinic.org"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -507,7 +507,7 @@ export default function Register() {
                 <input
                   type="tel"
                   className="input-field"
-                  placeholder="+919876543210"
+                  placeholder="+91 98XXXXXXXX"
                   value={mobileNumber}
                   onChange={(e) => setMobileNumber(e.target.value)}
                 />

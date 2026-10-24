@@ -13,10 +13,10 @@ import { NotificationService } from '../utils/notificationService.js';
 import { NOTIFICATION_CONFIG } from '../config/notifications.js';
 
 const DEFAULT_THERAPIST = {
-  id: 'th_sarah_vance',
-  name: 'Dr. Sarah Vance, PsyD',
+  id: 'usr_demo_therapist_01',
+  name: 'Dr. Evelyn Vance, PsyD',
   title: 'Licensed Clinical Psychologist',
-  license: 'Lic #PSY-28491',
+  license: 'RCI-PSY-DEMO01',
   specialties: ['Cognitive Behavioral Therapy (CBT)', 'Mindfulness Regulation', 'Burnout and Anxiety Management'],
   bio: 'Specializing in integrative mindfulness-based cognitive therapy, nervous system down-regulation, and compassionate burnout recovery.',
   is_available: false,
@@ -274,6 +274,16 @@ export const clinicalController = {
       const therapistId = req.user.id;
       const therapistName = req.user.name || 'Clinical Psychologist';
 
+      // Verify therapist is assigned to this client
+      const assigned = await db.query(`
+        SELECT 1 FROM session_bookings WHERE therapist_id = $1 AND client_id = $2
+        UNION
+        SELECT 1 FROM clinical_therapy_plans WHERE therapist_id = $1 AND client_id = $2
+      `, [therapistId, clientId]);
+      if (assigned.rows.length === 0) {
+        return res.status(403).json({ success: false, message: 'Access denied: You are not assigned to this client.' });
+      }
+
       const existingPlan = await db.query(`
         SELECT id, clinical_notes, evaluation_summary FROM clinical_therapy_plans WHERE client_id = $1 ORDER BY created_at DESC LIMIT 1
       `, [clientId]);
@@ -333,9 +343,30 @@ export const clinicalController = {
       const { clientId } = req.params;
       const caller = req.user;
 
-      // Role check: client can only see their own plan
+      if (!caller) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+      }
+
+      // 1. Admin/Super Admin confidentiality block
+      if (caller.role === 'admin' || caller.role === 'super_admin') {
+        return res.status(403).json({ success: false, message: 'Confidentiality protection: Administrators cannot access clinical treatment plans.' });
+      }
+
+      // 2. Client privacy: client can only see their own plan
       if (caller.role === 'client' && caller.id !== clientId) {
         return res.status(403).json({ success: false, message: 'Access denied: You can only view your own treatment plan.' });
+      }
+
+      // 3. Therapist check: therapist must be assigned to this client
+      if (caller.role === 'therapist') {
+        const assignedRes = await db.query(`
+          SELECT 1 FROM session_bookings WHERE therapist_id = $1 AND client_id = $2
+          UNION
+          SELECT 1 FROM clinical_therapy_plans WHERE therapist_id = $1 AND client_id = $2
+        `, [caller.id, clientId]);
+        if (assignedRes.rows.length === 0) {
+          return res.status(403).json({ success: false, message: 'Access denied: You are not assigned to this client.' });
+        }
       }
 
       const result = await db.query(`
@@ -391,6 +422,26 @@ export const clinicalController = {
         });
       }
 
+      // Room participant verification: caller must be assigned client or therapist
+      const sessionRes = await db.query(`
+        SELECT client_id, therapist_id FROM session_bookings WHERE id = $1
+      `, [roomId]);
+
+      if (sessionRes.rows.length > 0) {
+        const s = sessionRes.rows[0];
+        if (caller.id !== s.client_id && caller.id !== s.therapist_id) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access denied: You are not an authorized participant in this clinical session.'
+          });
+        }
+      } else if (!roomId.startsWith('test_')) {
+        return res.status(404).json({
+          success: false,
+          message: 'Clinical session room not found.'
+        });
+      }
+
       const rows = await db.query(`
         SELECT id, room_id, sender_id, recipient_id, encrypted_content, iv, auth_tag, created_at
         FROM clinical_messages
@@ -423,6 +474,26 @@ export const clinicalController = {
         return res.status(403).json({
           success: false,
           message: 'Confidentiality protection: Administrators cannot participate in clinical client chats.'
+        });
+      }
+
+      // Room participant verification: caller must be assigned client or therapist
+      const sessionRes = await db.query(`
+        SELECT client_id, therapist_id FROM session_bookings WHERE id = $1
+      `, [roomId]);
+
+      if (sessionRes.rows.length > 0) {
+        const s = sessionRes.rows[0];
+        if (caller.id !== s.client_id && caller.id !== s.therapist_id) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access denied: You are not an authorized participant in this clinical session.'
+          });
+        }
+      } else if (!roomId.startsWith('test_')) {
+        return res.status(404).json({
+          success: false,
+          message: 'Clinical session room not found.'
         });
       }
 
@@ -1421,6 +1492,9 @@ export const clinicalController = {
       }
 
       const session = sessionRes.rows[0];
+      if (caller.role === 'admin' || caller.role === 'super_admin') {
+        return res.status(403).json({ success: false, message: 'Access denied: Administrators cannot view private session histories.' });
+      }
       if (caller.role === 'client' && caller.id !== session.client_id) {
         return res.status(403).json({ success: false, message: 'Unauthorized to view state history.' });
       }

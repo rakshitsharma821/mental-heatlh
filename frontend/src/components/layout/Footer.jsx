@@ -21,8 +21,19 @@ export default function Footer() {
           </div>
           <div className="footer-col">
             <h4>{UI_STRINGS.footer.safetyHeading}</h4>
-            <Link to="/crisis" className="crisis-link-text">{UI_STRINGS.footer.crisisLink}</Link>
-            <Link to="/settings">{UI_STRINGS.footer.privacyLink}</Link>
+            <Link to="/crisis" className="crisis-link-text" style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <svg width="1.1em" height="1.1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-0.15em', marginRight: '6px', flexShrink: 0 }}>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span>{UI_STRINGS.footer.crisisLink}</span>
+            </Link>
+            <Link to="/settings" style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <svg width="1.1em" height="1.1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-0.15em', marginRight: '6px', flexShrink: 0 }}>
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <span>{UI_STRINGS.footer.privacyLink}</span>
+            </Link>
             <span className="privacy-badge">{UI_STRINGS.footer.privacyBadge}</span>
           </div>
         </div>

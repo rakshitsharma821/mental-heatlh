@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
@@ -7,29 +7,54 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import CompanionDrawer from './components/companion/CompanionDrawer';
 import SanctuaryCursor from './components/common/SanctuaryCursor';
 
-// Pages
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import MoodTracker from './pages/MoodTracker';
-import Breathing from './pages/Breathing';
-import Journal from './pages/Journal';
-import Games from './pages/Games';
-import Routine from './pages/Routine';
-import Progress from './pages/Progress';
-import Roadmap from './pages/Roadmap';
-import CrisisSupport from './pages/CrisisSupport';
-import SettingsPrivacy from './pages/SettingsPrivacy';
-import TherapistDashboard from './pages/TherapistDashboard';
-import Community from './pages/Community';
-import Welcome from './pages/Welcome';
-import Questionnaire from './pages/Questionnaire';
-import Recommendations from './pages/Recommendations';
-import AdminDashboard from './pages/AdminDashboard';
+// Lazy-loaded route pages for optimal code splitting
+const Landing = lazy(() => import('./pages/Landing'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const MoodTracker = lazy(() => import('./pages/MoodTracker'));
+const Breathing = lazy(() => import('./pages/Breathing'));
+const Journal = lazy(() => import('./pages/Journal'));
+const Games = lazy(() => import('./pages/Games'));
+const Routine = lazy(() => import('./pages/Routine'));
+const Progress = lazy(() => import('./pages/Progress'));
+const Roadmap = lazy(() => import('./pages/Roadmap'));
+const CrisisSupport = lazy(() => import('./pages/CrisisSupport'));
+const SettingsPrivacy = lazy(() => import('./pages/SettingsPrivacy'));
+const TherapistDashboard = lazy(() => import('./pages/TherapistDashboard'));
+const Community = lazy(() => import('./pages/Community'));
+const Welcome = lazy(() => import('./pages/Welcome'));
+const Questionnaire = lazy(() => import('./pages/Questionnaire'));
+const Recommendations = lazy(() => import('./pages/Recommendations'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
-
-import { useLocation } from 'react-router-dom';
+function PageLoader() {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '60vh',
+      color: 'var(--primary-dark, #2d6a4f)',
+      fontSize: '0.95rem',
+      fontWeight: 500,
+      fontFamily: 'var(--font-sans)'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{
+          width: '32px',
+          height: '32px',
+          border: '3px solid rgba(82, 183, 136, 0.2)',
+          borderTopColor: 'var(--primary, #52b788)',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          margin: '0 auto 12px auto'
+        }} />
+        <span>Arriving gently...</span>
+      </div>
+    </div>
+  );
+}
 
 function AppContent() {
   const location = useLocation();
@@ -40,114 +65,116 @@ function AppContent() {
       <a href="#main-content" className="skip-link">Skip to main content</a>
       {!isQuestionnaire && <Navbar />}
       <main id="main-content" tabIndex="-1" style={{ flex: 1, outline: 'none' }}>
-        <Routes>
-          {/* Public Entry */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public Entry */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* Crisis & Safety — ALWAYS reachable independent of auth or AI */}
-          <Route path="/crisis" element={<CrisisSupport />} />
-          <Route path="/settings" element={<SettingsPrivacy />} />
+            {/* Crisis & Safety — ALWAYS reachable independent of auth or AI */}
+            <Route path="/crisis" element={<CrisisSupport />} />
+            <Route path="/settings" element={<SettingsPrivacy />} />
 
-          {/* Clinician Portal */}
-          <Route path="/clinical" element={<TherapistDashboard />} />
-          <Route path="/therapist" element={<TherapistDashboard />} />
+            {/* Clinician Portal */}
+            <Route path="/clinical" element={<TherapistDashboard />} />
+            <Route path="/therapist" element={<TherapistDashboard />} />
 
-          {/* Admin Governance Portal (Phase B) */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
+            {/* Admin Governance Portal */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Wellness modules */}
-          <Route path="/breathing" element={<Breathing />} />
-          <Route path="/games" element={<Games />} />
-          <Route path="/community" element={<Community />} />
+            {/* Wellness modules */}
+            <Route path="/breathing" element={<Breathing />} />
+            <Route path="/games" element={<Games />} />
+            <Route path="/community" element={<Community />} />
 
-          {/* Task 2 Guided Flow */}
-          <Route
-            path="/welcome"
-            element={
-              <ProtectedRoute>
-                <Welcome />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/questionnaire"
-            element={
-              <ProtectedRoute>
-                <Questionnaire />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/recommendations"
-            element={
-              <ProtectedRoute>
-                <Recommendations />
-              </ProtectedRoute>
-            }
-          />
+            {/* Task 2 Guided Flow */}
+            <Route
+              path="/welcome"
+              element={
+                <ProtectedRoute>
+                  <Welcome />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/questionnaire"
+              element={
+                <ProtectedRoute>
+                  <Questionnaire />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/recommendations"
+              element={
+                <ProtectedRoute>
+                  <Recommendations />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Protected Sanctuary Modules */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/mood"
-            element={
-              <ProtectedRoute>
-                <MoodTracker />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/journal"
-            element={
-              <ProtectedRoute>
-                <Journal />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/routine"
-            element={
-              <ProtectedRoute>
-                <Routine />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/progress"
-            element={
-              <ProtectedRoute>
-                <Progress />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/roadmap"
-            element={
-              <ProtectedRoute>
-                <Roadmap />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected Sanctuary Modules */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mood"
+              element={
+                <ProtectedRoute>
+                  <MoodTracker />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/journal"
+              element={
+                <ProtectedRoute>
+                  <Journal />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/routine"
+              element={
+                <ProtectedRoute>
+                  <Routine />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/progress"
+              element={
+                <ProtectedRoute>
+                  <Progress />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/roadmap"
+              element={
+                <ProtectedRoute>
+                  <Roadmap />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
       {!isQuestionnaire && <Footer />}
       {!isQuestionnaire && <CompanionDrawer />}

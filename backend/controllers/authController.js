@@ -537,7 +537,8 @@ export const authController = {
       }
 
       // If OTP required for clients (via env flag, mobile login, or x-require-otp header)
-      const isMobileLogin = !isEmail && Boolean(clientUser.mobile_number);
+      const isMobileNumberInput = /^\+?\d{8,15}$/.test(rawId.replace(/[\s\-()]/g, ''));
+      const isMobileLogin = isMobileNumberInput && Boolean(clientUser.mobile_number);
       const requiresOtp = process.env.CLIENT_OTP_REQUIRED === 'true' ||
                           AUTH_CONFIG.CLIENT_OTP_REQUIRED ||
                           req.headers['x-require-otp'] === 'true' ||

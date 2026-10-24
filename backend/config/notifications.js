@@ -23,9 +23,11 @@ export const NOTIFICATION_CONFIG = {
     'therapist_verification'
   ],
 
-  // Data minimization & retention limit for consent audit log (DPDP Act compliance)
-  CONSENT_AUDIT_RETENTION_LIMIT: 20, // Maximum audit records preserved per user
-  CONSENT_AUDIT_RETENTION_DAYS: 90   // Days before older records are purged
+  // Data minimization & retention for consent audit log (DPDP Act compliance: 3-year time-based retention)
+  CONSENT_AUDIT_RETENTION_YEARS: 3,
+
+  // Server-side focus mode TTL (survives restarts in DB, auto-expires if tab is closed)
+  FOCUS_MODE_TTL_MINUTES: 15
 };
 
 /**

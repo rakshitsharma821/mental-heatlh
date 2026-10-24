@@ -28,11 +28,8 @@ export default function Questionnaire() {
   const questions = QUESTIONNAIRE_CONFIG.questions;
   const currentQ = questions[currentIndex];
 
-  // 1. Fullscreen on mount with graceful fallback
+  // 1. Fullscreen exit cleanup on unmount
   useEffect(() => {
-    if (!document.fullscreenElement && document.documentElement?.requestFullscreen) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }
     return () => {
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
@@ -45,7 +42,7 @@ export default function Questionnaire() {
     document.body.classList.add('focus-mode-active');
     try { sessionStorage.setItem('mindcare_focus_mode', 'true'); } catch (e) {}
     
-    // Notify server of focus mode start
+    // Notify server of focus mode start & heartbeat
     const token = Storage.get('mindcare_auth_token') || localStorage.getItem('mindcare_auth_token');
     if (token) {
       fetch(`${API_BASE_URL}/assessment/focus-start`, {
@@ -54,7 +51,19 @@ export default function Questionnaire() {
       }).catch(() => {});
     }
 
+    // Refresh server focus session every 2 minutes while questionnaire is active
+    const heartbeatInterval = setInterval(() => {
+      const activeToken = Storage.get('mindcare_auth_token') || localStorage.getItem('mindcare_auth_token');
+      if (activeToken) {
+        fetch(`${API_BASE_URL}/assessment/focus-heartbeat`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${activeToken}` }
+        }).catch(() => {});
+      }
+    }, 2 * 60 * 1000);
+
     return () => {
+      clearInterval(heartbeatInterval);
       document.body.classList.remove('focus-mode-active');
       try { sessionStorage.removeItem('mindcare_focus_mode'); } catch (e) {}
       if (token) {
@@ -338,7 +347,12 @@ export default function Questionnaire() {
             <button
               type="button"
               className="btn-primary"
-              onClick={() => setShowTip(false)}
+              onClick={() => {
+                if (!document.fullscreenElement && document.documentElement?.requestFullscreen) {
+                  document.documentElement.requestFullscreen().catch(() => {});
+                }
+                setShowTip(false);
+              }}
               style={{ padding: '12px 28px', borderRadius: '12px', fontWeight: 600 }}
             >
               Begin Questionnaire →
@@ -346,7 +360,12 @@ export default function Questionnaire() {
             <button
               type="button"
               className="btn-ghost"
-              onClick={() => setShowTip(false)}
+              onClick={() => {
+                if (!document.fullscreenElement && document.documentElement?.requestFullscreen) {
+                  document.documentElement.requestFullscreen().catch(() => {});
+                }
+                setShowTip(false);
+              }}
               style={{ padding: '12px 20px', borderRadius: '12px' }}
             >
               Skip Tip

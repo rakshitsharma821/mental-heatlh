@@ -3,7 +3,7 @@
 // Provides unified pool and query helpers for all controllers
 // ============================================
 
-import { pool, initPostgresDatabase } from './pgDb.js';
+import { pool, initPostgresDatabase, cleanTestDatabase, resolveDatabaseName, activeDbName } from './pgDb.js';
 
 export const db = {
   /**
@@ -23,4 +23,4 @@ export const db = {
   }
 };
 
-export { pool, initPostgresDatabase };
+export { pool, initPostgresDatabase, cleanTestDatabase, resolveDatabaseName, activeDbName };

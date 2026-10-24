@@ -149,7 +149,12 @@ test('Part 5: Therapist Availability, Session Requests & Gated Consultations', a
   // TEST 3: Client-Facing Therapist Directory
   // ──────────────────────────────────────────
   await t.test('T3. Therapist directory lists approved clinicians with verified badge and filters', async () => {
-    const dirRes = await apiRequest('/clinical/directory?specialization=Anxiety');
+    // Public unauthenticated request is blocked
+    const publicRes = await apiRequest('/clinical/directory');
+    assert.equal(publicRes.status, 401, 'Public unauthenticated directory access must be blocked');
+
+    // Authenticated client request succeeds
+    const dirRes = await apiRequest('/clinical/directory?specialization=Anxiety', 'GET', null, clientToken);
     assert.equal(dirRes.status, 200);
     assert.ok(dirRes.body.therapists.length > 0);
 

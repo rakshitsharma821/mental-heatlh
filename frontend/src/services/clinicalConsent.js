@@ -16,8 +16,8 @@ const KEYS = {
 };
 
 const DEFAULT_THERAPIST = {
-  id: 'th_sarah_vance',
-  name: 'Dr. Sarah Vance, PsyD',
+  id: 'usr_demo_therapist_01',
+  name: 'Dr. Evelyn Vance, PsyD',
   title: 'Licensed Clinical Psychologist',
   license: 'Lic #PSY-28491',
   specialties: ['CBT & Anxiety Management', 'Burnout Prevention', 'Somatic Regulation'],
@@ -79,7 +79,7 @@ export const ClinicalConsentService = {
     consent.accessGranted = true;
     consent.grantedAt = now.toISOString();
     consent.expiresAt = expires.toISOString();
-    ClinicalConsentService.appendAudit('Client', 'ACCESS_GRANTED', `Clinical access authorized for Dr. Sarah Vance (expires in ${daysValid} days)`);
+    ClinicalConsentService.appendAudit('Client', 'ACCESS_GRANTED', `Clinical access authorized for Dr. Evelyn Vance (expires in ${daysValid} days)`);
     ClinicalConsentService.saveConsent(consent);
     return consent;
   },
@@ -98,7 +98,7 @@ export const ClinicalConsentService = {
     return consent;
   },
 
-  recordAuditAccess: (viewerName = 'Dr. Sarah Vance, PsyD') => {
+  recordAuditAccess: (viewerName = 'Dr. Evelyn Vance, PsyD') => {
     const consent = ClinicalConsentService.getConsent();
     const now = new Date().toISOString();
     consent.lastAccessedAt = now;

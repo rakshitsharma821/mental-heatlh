@@ -1960,7 +1960,7 @@ export default function AdminDashboard() {
                     <input
                       type="tel"
                       className="input-field"
-                      placeholder="e.g. +91 9876543210"
+                      placeholder="e.g. +91 98XXXXXXXX"
                       value={adminMobile}
                       onChange={(e) => setAdminMobile(e.target.value)}
                     />

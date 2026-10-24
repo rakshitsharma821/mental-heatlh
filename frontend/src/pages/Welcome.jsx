@@ -10,19 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Storage } from '../services/storage';
 import { API_BASE_URL } from '../config/appConfig';
-
-const NEUTRAL_FALLBACKS = [
-  (name) => `Take a soft breath, ${name}. Wherever today finds you, give yourself permission to slow down for just a few moments. You are worthy of quiet rest and steady care.`,
-  (name) => `Welcome to your sanctuary, ${name}. In a world that constantly demands hurry, this space is yours to simply arrive as you are, without expectations or rush.`,
-  (name) => `Hello ${name}. The path you are navigating holds many possibilities, and each mindful pause builds your inner quiet. Let us take this next step together.`,
-  (name) => `${name}, you made it here today — and that matters. This is a space without judgment or hurry, just a gentle invitation to breathe and reflect.`,
-  (name) => `Good to see you, ${name}. This moment belongs to you. Let your shoulders soften and your thoughts settle. You are in the right place.`,
-];
-
-function getRandomFallback(name) {
-  const idx = Math.floor(Math.random() * NEUTRAL_FALLBACKS.length);
-  return NEUTRAL_FALLBACKS[idx](name || 'Friend');
-}
+import { getRandomFallback } from '../config/welcomeMessages';
 
 const SESSION_CACHE_KEY = 'mindcare_welcome_msg_cache';
 
@@ -46,87 +34,64 @@ export default function Welcome() {
     return () => { isMountedRef.current = false; };
   }, []);
 
-  useEffect(() => {
-    async function fetchAiMessage() {
-      setLoadingAi(true);
-      setCanSkipLoading(false);
+  const fetchAiMessage = async () => {
+    setLoadingAi(true);
+    setCanSkipLoading(false);
 
-      // Check sessionStorage cache first keyed by userId
-      try {
-        const cached = sessionStorage.getItem(sessionCacheKey);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          // Cache valid for 30 minutes
-          if (parsed.message && Date.now() - parsed.cachedAt < 30 * 60 * 1000) {
-            if (isMountedRef.current) {
-              setAiMessage(parsed.message);
-              setLoadingAi(false);
-            }
-            return;
-          }
-        }
-      } catch (_) { /* ignore parse errors */ }
+    // Show "skip" option after 3 seconds if still loading
+    skipTimerRef.current = setTimeout(() => {
+      if (isMountedRef.current) setCanSkipLoading(true);
+    }, 3000);
 
-      // Show "skip" option after 3 seconds if still loading
-      skipTimerRef.current = setTimeout(() => {
-        if (isMountedRef.current) setCanSkipLoading(true);
-      }, 3000);
-
-      try {
-        const token = Storage.get('mindcare_auth_token') || localStorage.getItem('mindcare_auth_token');
-        if (!token) {
-          // Not authenticated – show fallback immediately
-          const fallback = getRandomFallback(displayName);
-          if (isMountedRef.current) {
-            setAiMessage(fallback);
-            setLoadingAi(false);
-          }
-          return;
-        }
-
-        const res = await fetch(`${API_BASE_URL}/assessment/welcome-message`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          signal: AbortSignal.timeout(10000)
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        if (isMountedRef.current && data.success && data.message) {
-          setAiMessage(data.message);
-          // Cache in sessionStorage keyed by userId
-          try {
-            sessionStorage.setItem(sessionCacheKey, JSON.stringify({
-              message: data.message,
-              userId,
-              cachedAt: Date.now()
-            }));
-          } catch (_) { /* quota exceeded – ignore */ }
-        } else {
-          throw new Error('Empty response');
-        }
-      } catch (err) {
+    try {
+      const token = Storage.get('mindcare_auth_token') || localStorage.getItem('mindcare_auth_token');
+      if (!token) {
+        // Not authenticated – show fallback immediately
+        const fallback = getRandomFallback(displayName);
         if (isMountedRef.current) {
-          setAiMessage(getRandomFallback(displayName));
-        }
-      } finally {
-        if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
-        if (isMountedRef.current) {
+          setAiMessage(fallback);
           setLoadingAi(false);
-          setCanSkipLoading(false);
         }
+        return;
+      }
+
+      // Fetch freshly generated AI welcome message from OpenRouter
+      const res = await fetch(`${API_BASE_URL}/assessment/welcome-message?fresh=true`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      if (isMountedRef.current && data.success && data.message) {
+        setAiMessage(data.message);
+      } else {
+        throw new Error('Empty response');
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setAiMessage(getRandomFallback(displayName));
+      }
+    } finally {
+      if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
+      if (isMountedRef.current) {
+        setLoadingAi(false);
+        setCanSkipLoading(false);
       }
     }
+  };
 
+  useEffect(() => {
     fetchAiMessage();
 
     return () => {
       if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
     };
-  }, [displayName, sessionCacheKey, userId]);
+  }, [displayName]);
 
   const handleSkipLoading = () => {
     if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
@@ -241,19 +206,43 @@ export default function Welcome() {
               )}
             </>
           ) : (
-            <p
-              key={aiMessage}
-              className="reveal-text"
-              style={{
-                color: 'var(--text-primary)',
-                fontSize: '1rem',
-                lineHeight: '1.65',
-                fontStyle: 'italic',
-                margin: 0
-              }}
-            >
-              "{aiMessage}"
-            </p>
+            <>
+              <p
+                key={aiMessage}
+                className="reveal-text"
+                style={{
+                  color: 'var(--text-primary)',
+                  fontSize: '1rem',
+                  lineHeight: '1.65',
+                  fontStyle: 'italic',
+                  margin: 0
+                }}
+              >
+                "{aiMessage}"
+              </p>
+              <button
+                type="button"
+                onClick={fetchAiMessage}
+                disabled={loadingAi}
+                style={{
+                  background: 'rgba(82, 183, 136, 0.1)',
+                  border: '1px solid rgba(82, 183, 136, 0.4)',
+                  color: 'var(--primary-dark, #2d6a4f)',
+                  padding: '5px 14px',
+                  borderRadius: '100px',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  marginTop: '4px'
+                }}
+                title="Generate a fresh personalized note with AI"
+              >
+                ✨ Generate New Reflection
+              </button>
+            </>
           )}
         </div>
 
@@ -276,9 +265,6 @@ export default function Welcome() {
             type="button"
             className="btn-primary"
             onClick={() => {
-              if (document.documentElement && document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(() => {});
-              }
               navigate('/questionnaire');
             }}
             style={{

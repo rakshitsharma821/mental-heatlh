@@ -14,15 +14,6 @@ import { API_BASE_URL } from '../config/appConfig';
 import BookingModal from '../components/clinical/BookingModal';
 import TiltCard from '../components/common/TiltCard';
 
-function getFriendlyBadge(bandId) {
-  const labels = {
-    low: '🌱 Steady & Grounded',
-    moderate: '🌤️ Taking Care',
-    high: '🤝 Extra Support Available'
-  };
-  return labels[bandId] || bandId;
-}
-
 export default function Recommendations() {
   const navigate = useNavigate();
   const [assessment, setAssessment] = useState(() => Storage.get('mindcare_assessment_result', null));
@@ -94,7 +85,7 @@ export default function Recommendations() {
             letterSpacing: '0.04em',
             marginBottom: '14px'
           }}>
-            {getFriendlyBadge(band.id)} · SCORE {totalScore}/24
+            {band.title} · SCORE {totalScore}/24
           </span>
 
           <h1 style={{ fontSize: 'clamp(1.7rem, 3.8vw, 2.3rem)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>

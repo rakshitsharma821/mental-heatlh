@@ -56,6 +56,28 @@ export default function SettingsPrivacy() {
   const [consentAuditList, setConsentAuditList] = useState([]);
   const [showConsentHistory, setShowConsentHistory] = useState(false);
 
+  // Motion Comfort & Sensory Accessibility
+  const [reduceMotion, setReduceMotion] = useState(() => {
+    try {
+      return Storage.get('mindcare_reduce_motion', false) || localStorage.getItem('mindcare_reduce_motion') === 'true';
+    } catch (_) {
+      return false;
+    }
+  });
+
+  const handleToggleReduceMotion = () => {
+    const next = !reduceMotion;
+    setReduceMotion(next);
+    Storage.set('mindcare_reduce_motion', next);
+    try {
+      localStorage.setItem('mindcare_reduce_motion', String(next));
+      if (document.documentElement) {
+        document.documentElement.classList.toggle('user-reduced-motion', next);
+      }
+      window.dispatchEvent(new CustomEvent('mindcare-motion-preference-changed', { detail: { reduceMotion: next } }));
+    } catch (_) {}
+  };
+
   useEffect(() => {
     setInventory(Storage.getDataInventory());
     setConsent(Storage.getPrivacyConsent());
@@ -231,6 +253,43 @@ export default function SettingsPrivacy() {
             >
               Switch to {user?.role === 'therapist' ? 'Client View' : 'Therapist View'} ⇄
             </button>
+          </div>
+        </div>
+
+        {/* SENSORY & MOTION ACCESSIBILITY CONTROLS */}
+        <div className="glass-card" style={{ padding: '26px 30px', marginBottom: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <span style={{ fontSize: '1.3rem' }}>🍃</span>
+            <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>Motion & Visual Comfort</h2>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginBottom: '18px' }}>
+            Tailor animations and 3D graphics for vestibular comfort, sensory sensitivity, or device battery saving.
+          </p>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '16px',
+            padding: '16px 20px',
+            gap: '16px'
+          }}>
+            <div>
+              <strong style={{ color: 'var(--text-primary)', fontSize: '0.94rem' }}>Reduce Motion & Disable 3D</strong>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', margin: '4px 0 0 0', lineHeight: 1.5 }}>
+                Replaces all WebGL 3D canvases and perspective mouse parallax with calming static gradient posters.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              id="reduce-motion-toggle"
+              checked={reduceMotion}
+              onChange={handleToggleReduceMotion}
+              style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: 'var(--accent-forest)' }}
+              aria-label="Reduce Motion & Disable 3D"
+            />
           </div>
         </div>
 

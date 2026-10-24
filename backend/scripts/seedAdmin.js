@@ -18,8 +18,11 @@ export async function seedAdmin() {
 
   const email = (process.env.ADMIN_EMAIL || 'admin@mindcare.com').toLowerCase().trim();
   const name = process.env.ADMIN_NAME || 'Super Administrator';
-  const initialPassword = process.env.ADMIN_INITIAL_PASSWORD || 'AdminMindCare@2026!';
-  const initialAccessCode = process.env.ADMIN_INITIAL_ACCESS_CODE || 'MC-SUPER-ADM-999';
+  const initialPassword = process.env.ADMIN_INITIAL_PASSWORD;
+  const initialAccessCode = process.env.ADMIN_INITIAL_ACCESS_CODE;
+  if (!initialPassword || !initialAccessCode) {
+    throw new Error('ADMIN_INITIAL_PASSWORD and ADMIN_INITIAL_ACCESS_CODE must be set before seeding the Super Admin.');
+  }
 
   console.log(`🔐 Seeding/Verifying Super Admin for [${email}]...`);
 

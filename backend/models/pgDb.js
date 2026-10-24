@@ -1,6 +1,6 @@
 // ============================================
 // MindCare Sanctuary — PostgreSQL Database Engine & Schema Migrator
-// Connects to PostgreSQL 18 on port 5432 with full ACID constraints & JSONB support
+// Connects to PostgreSQL on the configured DB_PORT with full ACID constraints & JSONB support
 // ============================================
 
 import pg from 'pg';
@@ -9,22 +9,86 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-dotenv.config();
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const envPath = path.resolve(__dirname, '../.env');
+
+// ── Check for conflicting system environment variables BEFORE loading .env ──
+const potentialSystemConflicts = ['DB_PORT', 'PGPORT', 'PGDATABASE', 'PGUSER', 'DATABASE_URL'];
+if (fs.existsSync(envPath)) {
+  const parsedEnv = dotenv.parse(fs.readFileSync(envPath));
+  for (const key of potentialSystemConflicts) {
+    if (process.env[key] !== undefined && parsedEnv[key] !== undefined && process.env[key] !== parsedEnv[key]) {
+      console.warn(`⚠️ [ENV WARNING] System environment variable ${key}="${process.env[key]}" conflicts with backend .env value "${parsedEnv[key]}". .env will take precedence.`);
+    }
+  }
+}
+
+// Load .env with override: true so .env always wins over system environment variables
+dotenv.config({ path: envPath, override: true });
+
+// ── Strict Validation: Fail at startup if any required DB variable is missing ──
+const REQUIRED_DB_VARS = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+for (const varName of REQUIRED_DB_VARS) {
+  if (!process.env[varName] || String(process.env[varName]).trim() === '') {
+    throw new Error(`[FATAL DATABASE CONFIG ERROR] Missing required environment variable: ${varName}. No hardcoded fallbacks are permitted.`);
+  }
+}
+
+const dbPortParsed = parseInt(process.env.DB_PORT, 10);
+if (isNaN(dbPortParsed) || dbPortParsed <= 0 || dbPortParsed > 65535) {
+  throw new Error(`[FATAL DATABASE CONFIG ERROR] Invalid DB_PORT: "${process.env.DB_PORT}". Must be a valid port number.`);
+}
 
 const { Pool } = pg;
 
+export function resolveDatabaseName() {
+  const isTest = process.env.NODE_ENV === 'test' ||
+                 Boolean(process.env.TEST_DB_NAME) ||
+                 Boolean(process.env.NODE_TEST_CONTEXT) ||
+                 process.execArgv.some(a => a.includes('test'));
+
+  if (isTest) {
+    const testDb = process.env.TEST_DB_NAME || 'mindcare_test';
+    if (!testDb.endsWith('_test')) {
+      throw new Error(`SECURITY VIOLATION: Test database name must end with "_test". Refusing to run tests against: "${testDb}"`);
+    }
+    return testDb;
+  }
+  return process.env.DB_NAME;
+}
+
+export const activeDbName = resolveDatabaseName();
+
 export const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT, 10) || 5433,
-  database: process.env.DB_NAME || 'mindcare_db',
-  user: process.env.DB_USER || 'postgres',
+  host: process.env.DB_HOST,
+  port: dbPortParsed,
+  database: activeDbName,
+  user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000
 });
+
+async function ensureDatabaseExists(dbName) {
+  const adminPool = new Pool({
+    host: process.env.DB_HOST,
+    port: dbPortParsed,
+    database: 'postgres',
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD
+  });
+  try {
+    const res = await adminPool.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
+    if (res.rows.length === 0) {
+      console.log(`🛠️ Creating database [${dbName}] on port ${dbPortParsed}...`);
+      await adminPool.query(`CREATE DATABASE "${dbName}"`);
+      console.log(`✅ Database [${dbName}] created.`);
+    }
+  } finally {
+    await adminPool.end();
+  }
+}
 
 // Helper for unified query execution
 export const db = {
@@ -32,12 +96,27 @@ export const db = {
   getClient: () => pool.connect()
 };
 
-export async function initPostgresDatabase() {
-  const client = await pool.connect();
-  try {
-    console.log(`🐘 Connecting to PostgreSQL [${process.env.DB_NAME || 'mindcare_db'}] on port ${process.env.DB_PORT || 5433}...`);
+let initPromise = null;
 
-    await client.query('BEGIN');
+export function initPostgresDatabase() {
+  if (initPromise) return initPromise;
+  initPromise = (async () => {
+    await ensureDatabaseExists(activeDbName);
+
+    let client;
+    try {
+      client = await pool.connect();
+
+      // Honest startup logging: log actual host, port, database, user (NEVER password)
+      console.log(`🐘 Connecting to PostgreSQL at ${process.env.DB_HOST}:${dbPortParsed} as user "${process.env.DB_USER}" for database "${activeDbName}"...`);
+
+      // Verify connection server-side
+      const checkRes = await client.query('SELECT current_database(), inet_server_port()');
+      const actualDb = checkRes.rows[0].current_database;
+      const actualPort = checkRes.rows[0].inet_server_port;
+      console.log(`📡 Verified server connection: Database="${actualDb}", Port=${actualPort}`);
+
+      await client.query('BEGIN');
 
     // 1. Phase 1 Tables
     await client.query(`
@@ -195,6 +274,9 @@ export async function initPostgresDatabase() {
         specialties JSONB DEFAULT '["CBT", "Anxiety", "Mindfulness"]',
         bio TEXT,
         verification_status VARCHAR(30) DEFAULT 'under_review' CHECK (verification_status IN ('registered', 'documents_pending', 'under_review', 'approved', 'rejected', 'more_info_required', 'suspended')),
+        is_available BOOLEAN DEFAULT TRUE,
+        title VARCHAR(150) DEFAULT 'Licensed Clinical Psychologist',
+        is_demo BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -542,7 +624,6 @@ export async function initPostgresDatabase() {
       CREATE INDEX IF NOT EXISTS idx_notif_user_read ON in_app_notifications(user_id, is_read, created_at DESC);
 
 
-
     `);
 
     // Seed community circles
@@ -557,56 +638,8 @@ export async function initPostgresDatabase() {
       ON CONFLICT (id) DO NOTHING;
     `);
 
-    
-    // Seed demo clinician only in development/test, flagged is_demo, never approved
-    if (process.env.NODE_ENV !== 'production') {
-      try {
-        const demoFilePath = path.join(__dirname, '..', 'data', 'seedDemoClinician.json');
-        if (fs.existsSync(demoFilePath)) {
-          const demo = JSON.parse(fs.readFileSync(demoFilePath, 'utf8'));
-          const therapistUserRes = await client.query("SELECT id FROM users WHERE id = $1 OR email = $2", [demo.id, demo.email]);
-          if (therapistUserRes.rows.length === 0) {
-            await client.query(`
-              INSERT INTO users (id, public_id, email, password_hash, salt, recovery_key_hash, full_name, role, mobile_number, age, gender)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-              ON CONFLICT (id) DO NOTHING;
-            `, [
-              demo.id,
-              demo.public_id,
-              demo.email,
-              demo.password_hash || 'demo_hash',
-              demo.salt || 'salt',
-              demo.recovery_key_hash || 'demo_rec',
-              demo.name,
-              demo.role,
-              demo.mobile_number,
-              demo.age,
-              demo.gender
-            ]);
-          }
-          await client.query(`
-            INSERT INTO therapist_profiles (id, user_id, license_number, licensing_board, specialties, bio, is_available, title, verification_status, is_demo)
-            VALUES (
-              'tp_sarah_vance',
-              $1,
-              $2,
-              $3,
-              $4::jsonb,
-              $5,
-              FALSE,
-              $6,
-              $7,
-              $8
-            )
-            ON CONFLICT (user_id) DO UPDATE SET is_demo = $8, verification_status = $7;
-          `, [demo.id, demo.license_number, demo.licensing_board, JSON.stringify(demo.specialties), demo.bio, demo.title, demo.verification_status, demo.is_demo]);
-        }
-      } catch (seedErr) {
-        console.warn('⚠️ Could not load seedDemoClinician.json:', seedErr.message);
-      }
-    }
 
-    // ── Phase A & B: companion conversation word-tracking (ephemeral, 24h expiry, strict privacy) ──
+        // ── Phase A & B: companion conversation word-tracking
     await client.query(`
       CREATE TABLE IF NOT EXISTS companion_user_words (
         id          VARCHAR(64) PRIMARY KEY,
@@ -621,7 +654,7 @@ export async function initPostgresDatabase() {
       CREATE INDEX IF NOT EXISTS idx_cum_expires ON companion_user_words(expires_at);
     `);
 
-    // ── Step 0: Encrypted Clinical Messages, Access Logs, and Append-Only Admin Audit Log ──
+    // ΓöÇΓöÇ Step 0: Encrypted Clinical Messages, Access Logs, and Append-Only Admin Audit Log ΓöÇΓöÇ
     await client.query(`
       CREATE TABLE IF NOT EXISTS clinical_messages (
         id VARCHAR(64) PRIMARY KEY,
@@ -662,18 +695,86 @@ export async function initPostgresDatabase() {
       CREATE INDEX IF NOT EXISTS idx_admin_audit_time ON admin_audit_log(timestamp DESC);
     `);
 
-    await client.query('COMMIT');
-    console.log('✅ PostgreSQL [mindcare_db] fully initialized with all 20 tables for Phases 1–5.');
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('❌ PostgreSQL initialization error:', err.message);
-    throw err;
-  } finally {
-    client.release();
+
+
+      // Safe column migration for existing schemas
+      await client.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS public_id VARCHAR(50);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_number VARCHAR(30);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS age INT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(30);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS city VARCHAR(100);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS state VARCHAR(100);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_access_code BOOLEAN DEFAULT FALSE;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS access_code_hash TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS access_code_salt TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_count INT DEFAULT 1;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS mindfulness_score INT DEFAULT 10;
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users (email);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_public_id_unique ON users (public_id) WHERE public_id IS NOT NULL;
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_mobile_unique ON users (mobile_number) WHERE mobile_number IS NOT NULL;
+        ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+        ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('client', 'therapist', 'admin', 'super_admin'));
+
+        ALTER TABLE therapist_profiles ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE;
+        ALTER TABLE therapist_profiles ADD COLUMN IF NOT EXISTS is_available BOOLEAN DEFAULT TRUE;
+        ALTER TABLE therapist_profiles ADD COLUMN IF NOT EXISTS title VARCHAR(150) DEFAULT 'Licensed Clinical Psychologist';
+
+        ALTER TABLE therapy_roadmaps ADD COLUMN IF NOT EXISTS active_track VARCHAR(100) DEFAULT 'Mindful Foundations';
+        ALTER TABLE therapy_roadmaps ADD COLUMN IF NOT EXISTS milestones_json JSONB DEFAULT '[]';
+        ALTER TABLE therapy_roadmaps ADD COLUMN IF NOT EXISTS current_stage_index INT DEFAULT 0;
+        ALTER TABLE therapy_roadmaps ADD COLUMN IF NOT EXISTS progress_percentage INT DEFAULT 0;
+      `);
+
+      await client.query('COMMIT');
+
+      // Count public tables after migrations and fail loudly if 0
+      const countRes = await client.query(`
+        SELECT count(*) as count
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      `);
+      const tableCount = parseInt(countRes.rows[0].count, 10);
+      console.log(`📊 Verified schema: ${tableCount} tables in public schema.`);
+      if (tableCount === 0) {
+        throw new Error(`[CRITICAL DATABASE ERROR] Migration committed but 0 tables found in schema public for database "${activeDbName}".`);
+      }
+
+      console.log(`✅ PostgreSQL [${activeDbName}] fully initialized with ${tableCount} tables on port ${actualPort}.`);
+    } catch (err) {
+      if (client) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+      }
+      const msg = err?.message || (err?.errors && err.errors.map(e => e.message).join(', ')) || String(err);
+      console.error('❌ PostgreSQL initialization error:', msg);
+      throw err;
+    } finally {
+      if (client) client.release();
+    }
+  })();
+  return initPromise;
+}
+
+export async function cleanTestDatabase() {
+  if (!activeDbName.endsWith('_test')) {
+    throw new Error(`SECURITY VIOLATION: Refusing to clean non-test database: "${activeDbName}"`);
+  }
+  const res = await db.query(`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+  `);
+  const tableNames = res.rows.map(r => `"${r.table_name}"`);
+  if (tableNames.length > 0) {
+    await db.query(`TRUNCATE TABLE ${tableNames.join(', ')} CASCADE;`);
   }
 }
 
 // Auto-run initialization
 initPostgresDatabase().catch(err => {
-  console.error('Failed to init PostgreSQL:', err.message);
+  const msg = err?.message || (err?.errors && err.errors.map(e => e.message).join(', ')) || String(err);
+  console.error('Failed to init PostgreSQL:', msg);
 });

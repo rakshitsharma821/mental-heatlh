@@ -117,50 +117,45 @@ export const requireTherapist = async (req, res, next) => {
     return res.status(401).json({ success: false, error: 'Unauthorized', message: 'Authentication required.' });
   }
 
-  // Admins and Super Admins retain clinical review access
-  if (req.user.role === 'admin' || req.user.role === 'super_admin') {
-    return next();
+  if (req.user.role !== 'therapist') {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden',
+      message: 'Access restricted: Requires approved therapist.'
+    });
   }
 
-  if (req.user.role === 'therapist') {
-    try {
-      const tpRes = await db.query('SELECT verification_status FROM therapist_profiles WHERE user_id = $1', [req.user.id]);
-      if (tpRes.rows.length === 0 || tpRes.rows[0].verification_status !== 'approved') {
-        return res.status(403).json({
-          success: false,
-          error: 'Forbidden',
-          message: 'Therapist account is not approved. Access restricted until approved.'
-        });
-      }
-      return next();
-    } catch (err) {
-      return res.status(500).json({ success: false, message: 'Failed to verify therapist verification status.' });
+  try {
+    const tpRes = await db.query('SELECT verification_status FROM therapist_profiles WHERE user_id = $1', [req.user.id]);
+    if (tpRes.rows.length === 0 || tpRes.rows[0].verification_status !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Therapist account is not approved. Access restricted until approved.'
+      });
     }
+    return next();
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to verify therapist verification status.' });
   }
-
-  return res.status(403).json({
-    success: false,
-    error: 'Forbidden',
-    message: 'Access restricted: Requires approved therapist or admin.'
-  });
 };
 
 /**
- * Allows any therapist (even unapproved/documents_pending) or admin to access their own verification profile & vault
+ * Allows any therapist (even unapproved/documents_pending) to access their own verification profile & vault
  */
 export const requireAnyTherapist = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ success: false, error: 'Unauthorized', message: 'Authentication required.' });
   }
 
-  if (['therapist', 'admin', 'super_admin'].includes(req.user.role)) {
+  if (req.user.role === 'therapist') {
     return next();
   }
 
   return res.status(403).json({
     success: false,
     error: 'Forbidden',
-    message: 'Access restricted to clinical practitioners and administrators.'
+    message: 'Access restricted to clinical practitioners.'
   });
 };
 

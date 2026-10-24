@@ -599,10 +599,37 @@ export const communityController = {
    */
   setFeatureFlag: async (req, res) => {
     try {
+      const caller = req.user;
+      if (!caller || (caller.role !== 'admin' && caller.role !== 'super_admin')) {
+        return res.status(403).json({ success: false, message: 'Admin access required.' });
+      }
+
       const { enablePeerMatching } = req.body;
+      const isProd = (process.env.NODE_ENV || '').trim() === 'production' || req.headers['x-test-env'] === 'production';
+      const envAllowed = process.env.ENABLE_PEER_MATCHING === 'true';
+
+      if (enablePeerMatching === true && isProd && !envAllowed) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cannot enable peer matching in production unless ENABLE_PEER_MATCHING=true in environment configuration.'
+        });
+      }
+
       if (typeof enablePeerMatching === 'boolean') {
         COMMUNITY_CONFIG.setPeerMatching(enablePeerMatching);
+
+        // Audit log action to admin_audit_log
+        await db.query(`
+          INSERT INTO admin_audit_log (id, admin_id, action, target_type, target_id, details, ip, timestamp)
+          VALUES ($1, $2, 'update_community_feature_flag', 'feature_flags', 'peer_matching', $3, $4, CURRENT_TIMESTAMP)
+        `, [
+          'aal_' + crypto.randomUUID().slice(0, 16),
+          caller.id,
+          JSON.stringify({ enablePeerMatching }),
+          req.ip || '127.0.0.1'
+        ]).catch(() => {});
       }
+
       return res.json({
         success: true,
         enablePeerMatching: COMMUNITY_CONFIG.enablePeerMatching

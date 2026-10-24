@@ -3,6 +3,11 @@
 // 100% Client-side, zero external AI dependency
 // ============================================
 
+import { HELPLINES } from '../../../shared/helplines.js';
+
+const kiranHelpline = HELPLINES.find(h => h.id === 'kiran') || { primaryNumber: '14416', availableHours: '24/7' };
+const teleManas = HELPLINES.find(h => h.id === 'tele-manas') || { primaryNumber: '14416', availableHours: '24/7' };
+
 export const CRISIS_HELPLINES = [
   {
     country: 'United States & Canada',
@@ -34,11 +39,11 @@ export const CRISIS_HELPLINES = [
   {
     country: 'India',
     flag: '🇮🇳',
-    service: 'KIRAN Mental Health Helpline',
-    number: '1800-599-0019',
-    callUrl: 'tel:18005990019',
-    textOption: 'Vandrevala Foundation: +91 9999 666 555',
-    availability: '24/7, Toll-free, Multilingual'
+    service: `${teleManas.name} & ${kiranHelpline.name}`,
+    number: `${teleManas.primaryNumber} / ${kiranHelpline.primaryNumber}`,
+    callUrl: `tel:${teleManas.primaryNumber}`,
+    textOption: 'Toll-free 24/7 Government of India National Helplines',
+    availability: '24/7, Toll-free, Multilingual (20+ languages)'
   },
   {
     country: 'Australia',
