@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Storage } from '../services/storage';
 import { ClinicalConsentService } from '../services/clinicalConsent';
+import { Api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -39,6 +40,22 @@ export default function SettingsPrivacy() {
   const [newContactRelation, setNewContactRelation] = useState('Partner');
   const [newContactEmail, setNewContactEmail] = useState('');
 
+  // Part 7: Opt-in Notifications & Quiet Hours state
+  const [notifPrefs, setNotifPrefs] = useState({
+    optIn: false,
+    consentTimestamp: null,
+    quietHoursEnabled: true,
+    quietHoursStart: '22:00',
+    quietHoursEnd: '07:00',
+    sessionUpdates: true,
+    reminders: true,
+    therapistVerificationUpdates: true
+  });
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifNotice, setNotifNotice] = useState('');
+  const [consentAuditList, setConsentAuditList] = useState([]);
+  const [showConsentHistory, setShowConsentHistory] = useState(false);
+
   useEffect(() => {
     setInventory(Storage.getDataInventory());
     setConsent(Storage.getPrivacyConsent());
@@ -47,7 +64,45 @@ export default function SettingsPrivacy() {
     setMultimodalConsent(ClinicalConsentService.getMultimodalConsent());
     setBiometricsConsent(ClinicalConsentService.getBiometricsConsent());
     setAuditLog(ClinicalConsentService.getAuditLog());
+
+    // Load Part 7 Notification Preferences
+    Api.getNotificationPreferences().then(res => {
+      if (res && res.success && res.preferences) {
+        setNotifPrefs(res.preferences);
+      }
+    });
   }, [user]);
+
+  const handleToggleNotifOptIn = async () => {
+    setNotifLoading(true);
+    const updated = { ...notifPrefs, optIn: !notifPrefs.optIn };
+    const res = await Api.updateNotificationPreferences(updated);
+    setNotifLoading(false);
+    if (res && res.success && res.preferences) {
+      setNotifPrefs(res.preferences);
+      setNotifNotice(res.message);
+      setTimeout(() => setNotifNotice(''), 4000);
+    }
+  };
+
+  const handleUpdateNotifPrefs = async (key, value) => {
+    const updated = { ...notifPrefs, [key]: value };
+    setNotifPrefs(updated);
+    const res = await Api.updateNotificationPreferences(updated);
+    if (res && res.success && res.preferences) {
+      setNotifPrefs(res.preferences);
+    }
+  };
+
+  const loadConsentHistory = async () => {
+    if (!showConsentHistory) {
+      const res = await Api.getNotificationConsentAudit();
+      if (res && res.success && res.consentHistory) {
+        setConsentAuditList(res.consentHistory);
+      }
+    }
+    setShowConsentHistory(!showConsentHistory);
+  };
 
   const handleToggleConsent = (key) => {
     const updated = { ...consent, [key]: !consent[key] };
@@ -706,11 +761,205 @@ export default function SettingsPrivacy() {
           </div>
         </div>
 
+        {/* PART 7: MINDFUL NOTIFICATIONS & QUIET HOURS (STRICT OPT-IN) */}
+        <div className="glass-card" style={{ padding: '32px', marginBottom: '32px', borderLeft: '4px solid var(--primary)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.3rem' }}>🔔</span>
+                <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>Mindful Notifications & Quiet Hours</h2>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px', maxWidth: '640px' }}>
+                Strictly <strong>OFF by default</strong>. MindCare Sanctuary respects your peace. No reminders, session status changes, or practitioner updates are ever sent without your explicit recorded consent.
+              </p>
+            </div>
+
+            <button
+              onClick={handleToggleNotifOptIn}
+              disabled={notifLoading}
+              className={notifPrefs.optIn ? 'btn-primary' : 'btn-ghost'}
+              style={{ fontSize: '0.82rem', padding: '8px 20px', borderRadius: '100px' }}
+            >
+              {notifPrefs.optIn ? '● Notifications Enabled' : '○ Turned Off (Default Silence)'}
+            </button>
+          </div>
+
+          {/* Consent Timestamp Banner */}
+          <div style={{
+            background: notifPrefs.optIn ? 'rgba(82, 183, 136, 0.1)' : 'rgba(82, 121, 111, 0.06)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '12px',
+            padding: '14px 18px',
+            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <div>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)' }}>
+                Consent Status & Timestamp
+              </div>
+              <div style={{ fontSize: '0.92rem', fontWeight: 600, color: notifPrefs.optIn ? 'var(--primary-dark)' : 'var(--text-muted)', marginTop: '2px' }}>
+                {notifPrefs.optIn && notifPrefs.consentTimestamp
+                  ? `✓ Explicit consent granted on ${new Date(notifPrefs.consentTimestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`
+                  : '○ Off by default: No consent recorded. All notification channels completely silenced.'}
+              </div>
+            </div>
+
+            <button
+              onClick={loadConsentHistory}
+              className="btn-ghost"
+              style={{ fontSize: '0.75rem', padding: '5px 12px' }}
+            >
+              {showConsentHistory ? 'Hide Audit Log ▲' : 'View Consent Audit Trail ▼'}
+            </button>
+          </div>
+
+          {/* Consent History Accordion */}
+          {showConsentHistory && (
+            <div style={{
+              background: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '20px',
+              maxHeight: '200px',
+              overflowY: 'auto'
+            }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                Immutable Notification Consent History (DPDP Verified)
+              </div>
+              {consentAuditList.length === 0 ? (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>No audit events found yet.</div>
+              ) : (
+                consentAuditList.map(a => (
+                  <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', padding: '6px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <span style={{ fontWeight: 600, color: a.action === 'opt_in' ? 'var(--primary-dark)' : '#b91c1c' }}>
+                      [{a.action.toUpperCase()}] {a.action === 'opt_in' ? 'Consent Recorded' : 'Consent Revoked'}
+                    </span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      {new Date(a.consentTimestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Guarantees Badges */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+            {/* Quiet Hours Card */}
+            <div style={{
+              background: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '14px',
+              padding: '16px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span>🌙</span>
+                <h4 style={{ fontSize: '0.92rem', color: 'var(--text-primary)' }}>Restorative Quiet Hours</h4>
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                Routine notifications are held during restful sleep hours ({notifPrefs.quietHoursStart} - {notifPrefs.quietHoursEnd} IST).
+              </p>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
+                <input
+                  type="checkbox"
+                  checked={notifPrefs.quietHoursEnabled}
+                  disabled={!notifPrefs.optIn}
+                  onChange={(e) => handleUpdateNotifPrefs('quietHoursEnabled', e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--primary)' }}
+                />
+                <span>Enforce sleep quiet hours protection</span>
+              </label>
+            </div>
+
+            {/* Questionnaire Focus Mode Shield */}
+            <div style={{
+              background: 'rgba(82, 183, 136, 0.06)',
+              border: '1px solid rgba(82, 183, 136, 0.25)',
+              borderRadius: '14px',
+              padding: '16px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span>🧘‍♀️</span>
+                <h4 style={{ fontSize: '0.92rem', color: 'var(--primary-dark)' }}>Questionnaire Focus Shield</h4>
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Notifications are <strong>guaranteed silenced</strong> whenever you are in Questionnaire or clinical reflection mode to protect your mindful presence.
+              </p>
+              <div style={{ marginTop: '10px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-dark)' }}>
+                🛡️ SYSTEM-ENFORCED NON-DISTURB
+              </div>
+            </div>
+          </div>
+
+          {/* Category Controls (Only active when opted in) */}
+          {notifPrefs.optIn && (
+            <div>
+              <h4 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '12px' }}>
+                Notification Sanctuary Channels:
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>Session Status Updates</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Receive gentle alerts when consultation requests are confirmed, declined, or rescheduled.</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifPrefs.sessionUpdates}
+                    onChange={(e) => handleUpdateNotifPrefs('sessionUpdates', e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
+                  />
+                </label>
+
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>Gentle Well-Being Reminders</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Calming daily invitations to breathe, ground, or log your evening rhythm.</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifPrefs.reminders}
+                    onChange={(e) => handleUpdateNotifPrefs('reminders', e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
+                  />
+                </label>
+
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>Practitioner & Verification Notices</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Updates regarding clinical credentialing and dossier reviews.</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifPrefs.therapistVerificationUpdates}
+                    onChange={(e) => handleUpdateNotifPrefs('therapistVerificationUpdates', e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
+                  />
+                </label>
+              </div>
+            </div>
+          )}
+
+          {notifNotice && (
+            <div style={{ marginTop: '14px', color: 'var(--primary-dark)', fontSize: '0.82rem', fontWeight: 600 }}>
+              ✓ {notifNotice}
+            </div>
+          )}
+        </div>
+
         {/* Granular Consent Toggles */}
         <div className="glass-card" style={{ padding: '32px', marginBottom: '32px' }}>
           <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '8px' }}>⚙️ Personalization & Consent Controls</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '24px' }}>
             Control which local analyses Aria and the AI Wellness Coach are allowed to perform:
+          </p>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'rgba(82, 183, 136, 0.08)', padding: '10px 14px', borderRadius: '10px', marginBottom: '24px', border: '1px solid var(--border-subtle)' }}>
+            🌿 <strong>AI Personalization Privacy:</strong> Your first name is sent to an AI provider (OpenRouter) to personalize messages.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>

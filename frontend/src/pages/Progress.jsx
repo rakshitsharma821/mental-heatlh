@@ -1,7 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Storage } from '../services/storage';
-import GeometricShapesCanvas from '../components/three/GeometricShapesCanvas';
 
 export default function Progress() {
   const { user } = useAuth();
@@ -42,8 +41,6 @@ export default function Progress() {
 
   return (
     <div className="progress-page" style={{ position: 'relative', padding: '36px 24px 80px', minHeight: '100vh' }}>
-      <GeometricShapesCanvas />
-
       <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--primary-dark)', fontWeight: 700 }}>

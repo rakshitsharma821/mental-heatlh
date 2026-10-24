@@ -1,0 +1,24 @@
+{
+  "id": "th_sarah_vance",
+  "public_id": "THR-DEMO01",
+  "name": "Dr. Sarah Vance, PsyD",
+  "email": "sarah.vance@mindcare.com",
+  "role": "therapist",
+  "age": 25,
+  "gender": "Female",
+  "mobile_number": "+919876543210",
+  "title": "Licensed Clinical Psychologist",
+  "license_number": "Lic #PSY-28491",
+  "licensing_board": "California Board of Psychology / RCI India",
+  "specialties": [
+    "Cognitive Behavioral Therapy (CBT)",
+    "Mindfulness Regulation",
+    "Burnout and Anxiety Management"
+  ],
+  "bio": "Specializing in integrative mindfulness-based cognitive therapy, nervous system down-regulation, and compassionate burnout recovery.",
+  "password_hash": "scrypt_demo_hash",
+  "salt": "demo_salt",
+  "recovery_key_hash": "demo_recovery_key",
+  "is_demo": true,
+  "verification_status": "under_review"
+}

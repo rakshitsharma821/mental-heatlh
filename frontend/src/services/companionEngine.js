@@ -1,134 +1,157 @@
 // ============================================
 // MindCare — AI Sanctuary Companion Engine
-// Cross-session memory, tone adaptation, proactive milestones, safety guard
+// Task 5 Strict Content-Safety & Sensitive Word Protocol:
+// 1. Bot NEVER proactively introduces negative/triggering words:
+//    (self-harm, suicide, depression, stress, anxiety, harassment, panic, etc.)
+// 2. Proactive greeting NEVER echoes mood labels like "anxious" or "stressed".
+// 3. Even when user introduces a sensitive word, bot replies gently without echoing it,
+//    and asks: "Would you like me to call a helpline for you?"
+//    Only after user agrees ("yes", "please", "call") are helpline details displayed.
+// 4. Output filter scans every reply and sanitizes/rewrites blocked words.
+// Uses single source of truth from shared/safeLanguage.js
 // ============================================
 
-import { Storage } from './storage';
+import { Storage } from './storage.js';
+import {
+  BLOCKED_WORDS,
+  CRISIS_PATTERNS,
+  INDIA_HELPLINES_MESSAGE,
+  HELPLINE_QUESTION,
+  filterBotOutput,
+  isCrisisIntent,
+  detectUserIntroducedWords
+} from '../../../shared/safeLanguage.js';
 
-// Crisis trigger patterns
-const CRISIS_KEYWORDS = [
-  /suicid/i, /kill myself/i, /want to die/i, /end my life/i, /self harm/i,
-  /hurt myself/i, /can't go on/i, /no reason to live/i, /better off dead/i
-];
+export { BLOCKED_WORDS, CRISIS_PATTERNS, INDIA_HELPLINES_MESSAGE, HELPLINE_QUESTION, filterBotOutput };
 
 export class SanctuaryCompanion {
   constructor(user) {
     this.user = user;
-    this.name = 'Aria'; // Gentle companion name
+    this.name = 'Aria';
+    this.pendingHelplineAgreement = false;
   }
 
-  // Detect proactive milestones to warmly greet the user
+  // Detect proactive milestones to warmly greet the user (Zero negative echoing)
   getProactiveMilestoneGreeting() {
-    const user = this.user || Storage.getCurrentUser();
+    const user = this.user || (typeof Storage !== 'undefined' && Storage.getCurrentUser ? Storage.getCurrentUser() : null);
     const streak = user?.streak || 1;
-    const moods = user?.moodHistory || [];
-    const journals = Storage.getJournalEntries();
-    const routines = Storage.getRoutines();
-    const completedRoutines = routines.filter(r => r.completed).length;
-
-    // Check recent mood
-    const latestMood = moods.length > 0 ? moods[moods.length - 1].mood : null;
+    const displayName = user?.name ? user.name.split(' ')[0] : 'friend';
 
     if (streak >= 5) {
-      return `Welcome back, ${user?.name || 'friend'} 🌿 I noticed you've kept a ${streak}-day sanctuary streak! That consistency is a genuine gift you are giving yourself. How are you feeling in this moment?`;
+      return `Welcome back, ${displayName} 🌿 I noticed you've kept a ${streak}-day sanctuary streak! That consistency is a genuine gift you are giving yourself. How are you feeling in this moment?`;
     }
 
-    if (journals.length >= 3) {
-      return `Hello, ${user?.name || 'friend'}. You've written ${journals.length} reflective journals recently. Giving words to your inner world takes real courage. What's on your mind today?`;
-    }
-
-    if (completedRoutines > 0) {
-      return `Good to see you, ${user?.name || 'friend'} 🌸 You've already cared for ${completedRoutines} of your daily wellness habits today. Let's take a slow breath together. How can I support you right now?`;
-    }
-
-    if (latestMood === 'anxious' || latestMood === 'stressed') {
-      return `Hello, ${user?.name || 'friend'}. I noticed your recent check-in mentioned feeling ${latestMood}. Remember, there is nothing you need to fix or perform here. This is your safe space to breathe.`;
-    }
-
-    return `Welcome to your sanctuary, ${user?.name || 'friend'}. I'm Aria, your gentle wellness companion. I remember your journey and I'm here whenever you need a grounded, quiet space to reflect. How does your body feel right now?`;
-  }
-
-  // Determine emotional tone based on user history
-  getUserToneProfile() {
-    const user = this.user || Storage.getCurrentUser();
-    const moods = user?.moodHistory || [];
-    if (moods.length === 0) return 'gentle_neutral';
-
-    const recent = moods.slice(-3).map(m => m.mood);
-    const hasStress = recent.includes('anxious') || recent.includes('stressed') || recent.includes('sad');
-    const hasPositive = recent.includes('happy') || recent.includes('calm') || recent.includes('excited');
-
-    if (hasStress) return 'deeply_empathic_grounding';
-    if (hasPositive) return 'warmly_encouraging';
-    return 'gentle_neutral';
+    // Gentle neutral greeting without echoing negative check-in labels
+    return `Welcome to your sanctuary, ${displayName}. I'm Aria, your gentle wellness companion. I remember your journey and I'm here whenever you need a grounded, quiet space to reflect. How does your body feel right now?`;
   }
 
   // Process user message and craft tailored response
-  respond(userMessage) {
-    const trimmed = userMessage.trim();
-    if (!trimmed) return null;
+  respond(userMessage, action = null) {
+    // Structured action consent support
+    if (action && action.type === 'helpline_consent') {
+      if (action.value === 'yes') {
+        this.pendingHelplineAgreement = false;
+        return {
+          text: INDIA_HELPLINES_MESSAGE,
+          isCrisis: true,
+          actionLink: '/crisis',
+          actionText: 'Open Crisis Support & Safety Plan 🛡️'
+        };
+      } else {
+        this.pendingHelplineAgreement = false;
+        return {
+          text: 'I understand completely. We can take things at whatever pace feels steady for you. Would you like to try a calming breathing exercise or simply reflect quietly?',
+          isCrisis: false,
+          actionLink: '/breathing',
+          actionText: 'Try Gentle Breathing'
+        };
+      }
+    }
 
-    // 1. Safety Guard Check: Crisis / Self-Harm
-    const isCrisis = CRISIS_KEYWORDS.some(pattern => pattern.test(trimmed));
-    if (isCrisis) {
+    const trimmed = (userMessage || '').trim();
+    if (!trimmed) return null;
+    const lower = trimmed.toLowerCase();
+
+    // 1. If user was previously offered helpline and agreed
+    if (this.pendingHelplineAgreement) {
+      // Must be an explicit affirmative answer
+      const isAffirmative = /\b(yes|yeah|yep|sure|please|call|okay|ok|agree|please do|ha|haan|zaroor)\b/i.test(trimmed);
+      const isRejectionOrAmbiguous = /\b(no|nah|nope|don'?t|leave me alone|stop|not now|nahi|mat)\b/i.test(trimmed);
+
+      if (isAffirmative && !isRejectionOrAmbiguous) {
+        this.pendingHelplineAgreement = false;
+        return {
+          text: INDIA_HELPLINES_MESSAGE,
+          isCrisis: true,
+          actionLink: '/crisis',
+          actionText: 'Open Crisis Support & Safety Plan 🛡️'
+        };
+      } else {
+        // Declined or changed topic
+        this.pendingHelplineAgreement = false;
+      }
+    }
+
+    // 2. Immediate Crisis Trigger Check
+    const hasCrisis = isCrisisIntent(trimmed);
+    if (hasCrisis) {
+      this.pendingHelplineAgreement = true;
+      const initialGentleOffer = `I hear how deeply heavy things feel right now, and you do not have to carry this alone. ${HELPLINE_QUESTION}`;
       return {
-        text: `I hear how deeply overwhelmed and in pain you are right now. Please know that your life matters immensely, and you do not have to carry this alone.\n\nImmediate human support is waiting for you 24/7, completely free and confidential:\n\n• **Suicide & Crisis Lifeline:** Call or Text **988** (US/Canada)\n• **Crisis Text Line:** Text **HOME to 741741**\n• **India Helpline:** **1800-599-0019** (KIRAN) or +91 9999 666 555\n• **International:** Visit our Crisis Support page anytime.`,
+        text: initialGentleOffer,
         isCrisis: true,
         actionLink: '/crisis',
-        actionText: 'Open Crisis Support & Safety Plan 🛡️'
+        actionText: 'Connect to Helpline / Crisis Support 🛡️'
       };
     }
 
-    const tone = this.getUserToneProfile();
-    const lower = trimmed.toLowerCase();
-
-    // 2. Breathwork request
-    if (lower.includes('breath') || lower.includes('panic') || lower.includes('can\'t breathe') || lower.includes('overwhelm')) {
+    // 3. Sensitive keywords check
+    const userWords = detectUserIntroducedWords(trimmed);
+    if (userWords.length > 0) {
+      this.pendingHelplineAgreement = true;
+      const responseText = `Thank you for trusting me with what you are experiencing right now. Your well-being matters deeply. ${HELPLINE_QUESTION}`;
       return {
-        text: `Let's pause right here together. Drop your shoulders down from your ears. Unclench your jaw. \n\nTry taking a slow inhale through your nose for 4 counts, hold gently for 7, and exhale with a soft sigh for 8 counts. Our 3D breathing guide is ready whenever you want visual pacing.`,
+        text: responseText,
+        isCrisis: false,
+        actionLink: '/crisis',
+        actionText: 'View Crisis Helplines 🛡️'
+      };
+    }
+
+    // 4. Breathwork request
+    if (lower.includes('breath') || lower.includes('overwhelm') || lower.includes('grounding')) {
+      const draft = `Let's pause right here together. Drop your shoulders down from your ears and unclench your jaw. Try taking a slow inhale through your nose for 4 counts, hold gently for 7, and exhale with a soft sigh for 8 counts. Our 3D breathing guide is ready whenever you want visual pacing.`;
+      return {
+        text: filterBotOutput(draft, trimmed),
         actionLink: '/breathing',
         actionText: 'Begin Guided Breathwork 🌬️'
       };
     }
 
-    // 3. Sleep / Tiredness
-    if (lower.includes('sleep') || lower.includes('tired') || lower.includes('insomnia') || lower.includes('exhausted')) {
+    // 5. Sleep / Tiredness
+    if (lower.includes('sleep') || lower.includes('tired') || lower.includes('exhausted')) {
+      const draft = `Rest is not a reward you have to earn; it is a fundamental need. Give yourself permission to lower the bar today. Would you like to try writing down any thoughts before resting?`;
       return {
-        text: `Exhaustion makes everything feel twice as heavy. Give yourself permission to lower the bar today. You don't need to be productive right now. Have you tried dimming lights and writing down whatever thoughts are racing?`,
+        text: filterBotOutput(draft, trimmed),
         actionLink: '/journal',
         actionText: 'Evening Decompression Journal ✍️'
       };
     }
 
-    // 4. Mood reflection
-    if (lower.includes('sad') || lower.includes('lonely') || lower.includes('cry') || lower.includes('down')) {
-      return {
-        text: `It is completely okay to feel sad. Sadness is not a failure; it is just a sign that your body and heart have been carrying a lot. What does the kindest, gentlest version of yourself want to tell you right now?`,
-        actionLink: '/journal',
-        actionText: 'Write in Your Journal'
-      };
-    }
-
-    // 5. Success / Gratitude / Feeling good
+    // 6. Gratitude / Positive rhythm
     if (lower.includes('good') || lower.includes('happy') || lower.includes('better') || lower.includes('great') || lower.includes('thank')) {
+      const draft = `I am so glad to share this lightness with you ✨ Take a quiet moment to notice where that ease settles in your body. Celebrating small moments of peace builds a steady inner home.`;
       return {
-        text: `I am so glad to hear that warmth in your words ✨ Savor this sensation for a moment — feel where lightness sits in your chest or shoulders. Remembering what ease feels like builds a safe harbor for harder days.`,
+        text: filterBotOutput(draft, trimmed),
         actionLink: '/routine',
         actionText: 'Log a Daily Habit 🌱'
       };
     }
 
-    // Default context-calibrated response
-    if (tone === 'deeply_empathic_grounding') {
-      return {
-        text: `I'm holding space with you. Notice your feet touching the floor and the surface holding you up right now. Whatever thoughts are coming, you don't have to fight them — just let them pass like clouds across the sky. Would you like to try a gentle grounding exercise?`,
-        actionLink: '/breathing',
-        actionText: 'Try 3-Minute Grounding 🌿'
-      };
-    }
-
+    // Default gentle empathic response
+    const draft = `Thank you for sharing that with me. Every time you tune into your inner world, you strengthen your relationship with yourself. I'm right here with you. What would feel most nourishing for you in this moment?`;
     return {
-      text: `Thank you for sharing that with me. Every time you tune into your inner world, you strengthen your self-understanding. I'm right here with you. What would feel most nourishing for you right now?`,
+      text: filterBotOutput(draft, trimmed),
       actionLink: '/dashboard',
       actionText: 'View Today’s Sanctuary Rhythm'
     };

@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { Storage } from '../../services/storage';
 import { SanctuaryCompanion } from '../../services/companionEngine';
 import { Link } from 'react-router-dom';
+import { API_BASE_URL } from '../../config/appConfig';
+import { UI_STRINGS } from '../../config/strings';
 
 export default function CompanionDrawer() {
   const { user } = useAuth();
@@ -12,8 +14,21 @@ export default function CompanionDrawer() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Initialize companion engine
-  const companion = new SanctuaryCompanion(user);
+  // Initialize companion engine for local safety fallback
+  const companionRef = useRef(null);
+  if (!companionRef.current) {
+    companionRef.current = new SanctuaryCompanion(user);
+  } else if (companionRef.current.user !== user) {
+    companionRef.current.user = user;
+  }
+  const companion = companionRef.current;
+
+  // Listen to external open events (e.g. from Recommendations page)
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('open-companion-drawer', handleOpen);
+    return () => window.removeEventListener('open-companion-drawer', handleOpen);
+  }, []);
 
   useEffect(() => {
     // Load persisted chat history across sessions
@@ -21,7 +36,7 @@ export default function CompanionDrawer() {
     if (stored && stored.length > 0) {
       setMessages(stored);
     } else {
-      // Proactive milestone acknowledgment greeting on first launch
+      // Proactive milestone acknowledgment greeting on first launch (never echoes negative mood labels)
       const greeting = companion.getProactiveMilestoneGreeting();
       const initial = [{
         id: 'msg-init',
@@ -40,34 +55,75 @@ export default function CompanionDrawer() {
     }
   }, [messages, isOpen]);
 
-  const handleSendMessage = (e) => {
-    e.preventDefault();
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault();
     if (!inputText.trim()) return;
+
+    const text = inputText.trim();
+    setInputText('');
 
     const userMsg = {
       id: `user-${Date.now()}`,
       sender: 'user',
-      text: inputText.trim(),
+      text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     Storage.saveCompanionMessages(newMessages);
-    setInputText('');
     setIsTyping(true);
 
-    // Natural soothing response delay
-    setTimeout(() => {
-      const response = companion.respond(userMsg.text);
-      if (response) {
+    try {
+      const token = Storage.get('mindcare_auth_token') || localStorage.getItem('mindcare_auth_token');
+      const response = await fetch(`${API_BASE_URL}/companion/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          message: text,
+          history: newMessages.slice(-6).map(m => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.text
+          }))
+        }),
+        signal: AbortSignal.timeout(9000)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.text) {
+          const botMsg = {
+            id: `aria-${Date.now()}`,
+            sender: 'aria',
+            text: data.text,
+            isCrisis: data.isCrisis,
+            quickReplies: data.quickReplies,
+            actionLink: data.actionLink,
+            actionText: data.actionText,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          const updatedWithBot = [...newMessages, botMsg];
+          setMessages(updatedWithBot);
+          Storage.saveCompanionMessages(updatedWithBot);
+          setIsTyping(false);
+          return;
+        }
+      }
+      throw new Error('Fallback to local engine');
+    } catch (_) {
+      // Safe offline / error fallback to local engine
+      const fallback = companion.respond(text);
+      if (fallback) {
         const botMsg = {
           id: `aria-${Date.now()}`,
           sender: 'aria',
-          text: response.text,
-          isCrisis: response.isCrisis,
-          actionLink: response.actionLink,
-          actionText: response.actionText,
+          text: fallback.text,
+          isCrisis: fallback.isCrisis,
+          actionLink: fallback.actionLink,
+          actionText: fallback.actionText,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
         const updatedWithBot = [...newMessages, botMsg];
@@ -75,7 +131,79 @@ export default function CompanionDrawer() {
         Storage.saveCompanionMessages(updatedWithBot);
       }
       setIsTyping(false);
-    }, 700);
+    }
+  };
+
+  const handleQuickReply = async (action, label) => {
+    const userMsg = {
+      id: `user-${Date.now()}`,
+      sender: 'user',
+      text: label,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    Storage.saveCompanionMessages(newMessages);
+    setIsTyping(true);
+
+    try {
+      const token = Storage.get('mindcare_auth_token') || localStorage.getItem('mindcare_auth_token');
+      const response = await fetch(`${API_BASE_URL}/companion/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          action,
+          message: label,
+          history: newMessages.slice(-6).map(m => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.text
+          }))
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.text) {
+          const botMsg = {
+            id: `aria-${Date.now()}`,
+            sender: 'aria',
+            text: data.text,
+            isCrisis: data.isCrisis,
+            quickReplies: data.quickReplies,
+            actionLink: data.actionLink,
+            actionText: data.actionText,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          const updatedWithBot = [...newMessages, botMsg];
+          setMessages(updatedWithBot);
+          Storage.saveCompanionMessages(updatedWithBot);
+          setIsTyping(false);
+          return;
+        }
+      }
+      throw new Error('Local fallback');
+    } catch (_) {
+      const fallback = companion.respond(label);
+      if (fallback) {
+        const botMsg = {
+          id: `aria-${Date.now()}`,
+          sender: 'aria',
+          text: fallback.text,
+          isCrisis: fallback.isCrisis,
+          actionLink: fallback.actionLink,
+          actionText: fallback.actionText,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        const updatedWithBot = [...newMessages, botMsg];
+        setMessages(updatedWithBot);
+        Storage.saveCompanionMessages(updatedWithBot);
+      }
+      setIsTyping(false);
+    }
   };
 
   const clearChatHistory = () => {
@@ -103,8 +231,8 @@ export default function CompanionDrawer() {
         title="Chat with Aria — MindCare Companion"
       >
         <span className="companion-glow-ring"></span>
-        <span className="companion-btn-icon">✦</span>
-        <span className="companion-btn-label">Aria</span>
+        <span className="companion-btn-icon">{UI_STRINGS.brand.sparkle}</span>
+        <span className="companion-btn-label">{UI_STRINGS.companion.title}</span>
       </button>
 
       {/* Slide-out Companion Window */}
@@ -114,10 +242,10 @@ export default function CompanionDrawer() {
             {/* Header */}
             <div className="companion-header">
               <div className="companion-title-group">
-                <div className="companion-avatar">✦</div>
+                <div className="companion-avatar">{UI_STRINGS.brand.sparkle}</div>
                 <div>
-                  <h4>Aria • AI Wellness Companion</h4>
-                  <p className="companion-status">Remembering your progress • Confidential</p>
+                  <h4>{UI_STRINGS.companion.title} • {UI_STRINGS.companion.subtitle}</h4>
+                  <p className="companion-status">{UI_STRINGS.companion.status}</p>
                 </div>
               </div>
               <div className="companion-header-actions">
@@ -160,6 +288,32 @@ export default function CompanionDrawer() {
                         {msg.actionText || 'Take Action'} →
                       </Link>
                     )}
+
+                    {/* Quick Reply Pills */}
+                    {msg.quickReplies && msg.quickReplies.length > 0 && (
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+                        {msg.quickReplies.map((qr, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => handleQuickReply(qr.action, qr.label)}
+                            style={{
+                              background: 'rgba(82, 183, 136, 0.2)',
+                              border: '1px solid var(--primary)',
+                              borderRadius: '100px',
+                              padding: '5px 12px',
+                              fontSize: '0.8rem',
+                              color: 'var(--primary-dark)',
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {qr.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     <span className="chat-timestamp">{msg.timestamp}</span>
                   </div>
                 </div>
@@ -180,7 +334,7 @@ export default function CompanionDrawer() {
             <form className="companion-footer" onSubmit={handleSendMessage}>
               <input
                 type="text"
-                placeholder="Share how you are feeling or ask for a calming breath..."
+                placeholder={UI_STRINGS.companion.inputPlaceholder}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 maxLength={400}

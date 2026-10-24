@@ -6,12 +6,13 @@ import { Storage } from '../services/storage';
 import { generateExplainableInsights } from '../services/aiInsights';
 import { generateDailyPlan } from '../services/wellnessCoach';
 import { calculateDigitalTwin } from '../services/digitalTwin';
-import GeometricShapesCanvas from '../components/three/GeometricShapesCanvas';
 import DigitalTwinCard from '../components/predictive/DigitalTwinCard';
 import MoodForecastHorizon from '../components/predictive/MoodForecastHorizon';
 import EarlyWarningNudge from '../components/predictive/EarlyWarningNudge';
 import InnerWorldCanvas from '../components/three/InnerWorldCanvas';
 import BookingModal from '../components/clinical/BookingModal';
+import ClinicalLiveRoom from '../components/clinical/ClinicalLiveRoom';
+import QuestionnaireModal from '../components/onboarding/QuestionnaireModal';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -23,8 +24,44 @@ export default function Dashboard() {
   const [journalEntries, setJournalEntries] = useState([]);
   const [digitalTwin, setDigitalTwin] = useState(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isQuestionnaireOpen, setIsQuestionnaireOpen] = useState(false);
+  const [mySessions, setMySessions] = useState([]);
+  const [activeLiveSession, setActiveLiveSession] = useState(null);
+
+  const loadSessions = async () => {
+    try {
+      const res = await Api.getMySessions();
+      if (res.success && res.sessions) {
+        setMySessions(res.sessions);
+      }
+    } catch (e) {
+      // Ignore
+    }
+  };
+
+  const handleCancelSession = async (sessionId) => {
+    if (!window.confirm('Are you sure you wish to cancel this appointment?')) return;
+    const res = await Api.cancelSession(sessionId, 'Cancelled by user from dashboard');
+    if (res.success) {
+      loadSessions();
+    } else {
+      alert(res.message || 'Unable to cancel appointment.');
+    }
+  };
+
+  // Check if user has not completed onboarding assessment
+  useEffect(() => {
+    const hasCompleted = Storage.get('mindcare_has_completed_onboarding', false);
+    if (!hasCompleted) {
+      const timer = setTimeout(() => {
+        setIsQuestionnaireOpen(true);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   useEffect(() => {
+    loadSessions();
     const journals = Storage.getJournalEntries();
     const storedRoutines = Storage.getRoutines();
     setJournalEntries(journals);
@@ -66,8 +103,6 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-page" style={{ position: 'relative', padding: '36px 24px 80px', minHeight: '100vh' }}>
-      <GeometricShapesCanvas />
-
       <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         {/* Greeting Row */}
         <div style={{
@@ -104,6 +139,25 @@ export default function Dashboard() {
               <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Nourishing consistency</div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsQuestionnaireOpen(true)}
+            className="btn-primary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              borderRadius: '100px',
+              fontSize: '0.88rem',
+              fontWeight: 600,
+              boxShadow: '0 4px 14px rgba(82, 183, 136, 0.35)'
+            }}
+          >
+            <span>📋</span>
+            <span>Assessment & Onboarding Pulse</span>
+          </button>
         </div>
 
         {/* Daily Quote Banner */}
@@ -220,11 +274,149 @@ export default function Dashboard() {
         {/* Digital Twin Profile: Evolving Metrics */}
         <DigitalTwinCard twin={digitalTwin} />
 
+        {/* Clinical Consultations & Appointments (Part 5) */}
+        <div className="glass-card" style={{ marginBottom: '32px', padding: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.25rem' }}>🩺</span>
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>My Clinical Consultations</h3>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginTop: '2px' }}>
+                Private, end-to-end encrypted sessions with verified clinicians
+              </p>
+            </div>
+            <button
+              onClick={() => setIsBookingOpen(true)}
+              className="btn-primary"
+              style={{ padding: '8px 18px', fontSize: '0.82rem' }}
+            >
+              + Request Consultation
+            </button>
+          </div>
+
+          {mySessions.length === 0 ? (
+            <div style={{
+              background: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '14px',
+              padding: '24px',
+              textAlign: 'center'
+            }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0 0 12px 0' }}>
+                You have no active or upcoming clinical appointments scheduled.
+              </p>
+              <button
+                onClick={() => setIsBookingOpen(true)}
+                className="btn-ghost"
+                style={{ fontSize: '0.82rem', padding: '6px 16px' }}
+              >
+                Schedule First Consultation
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {mySessions.map((session) => {
+                const isConfirmed = session.status === 'confirmed';
+                const canCancel = ['requested', 'under_admin_review', 'assigned', 'confirmed'].includes(session.status);
+                const statusLabels = {
+                  requested: { text: 'Requested (Coordination Queued)', bg: 'rgba(246, 189, 96, 0.15)', color: '#b07d3b' },
+                  under_admin_review: { text: 'Under Clinical Review', bg: 'rgba(59, 130, 246, 0.15)', color: '#2563eb' },
+                  assigned: { text: 'Clinician Assigned', bg: 'rgba(59, 130, 246, 0.15)', color: '#2563eb' },
+                  therapist_accepted: { text: 'Clinician Accepted (Awaiting Confirmation)', bg: 'rgba(59, 130, 246, 0.15)', color: '#2563eb' },
+                  confirmed: { text: 'Confirmed', bg: 'rgba(82, 183, 136, 0.2)', color: 'var(--primary-dark)' },
+                  completed: { text: 'Completed', bg: 'rgba(107, 114, 128, 0.15)', color: '#4b5563' },
+                  admin_rejected: { text: 'Declined / Re-route Suggested', bg: 'rgba(239, 68, 68, 0.12)', color: '#dc2626' },
+                  cancelled_by_user: { text: 'Cancelled', bg: 'rgba(107, 114, 128, 0.15)', color: '#4b5563' }
+                };
+                const badge = statusLabels[session.status] || { text: session.status, bg: 'var(--bg-glass)', color: 'var(--text-secondary)' };
+
+                return (
+                  <div
+                    key={session.id}
+                    style={{
+                      background: 'var(--bg-surface-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '16px',
+                      padding: '16px 20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '12px'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.98rem', color: 'var(--text-primary)' }}>
+                          {session.therapist?.name || 'Clinical Care Practitioner'}
+                        </span>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '3px 10px',
+                          borderRadius: '100px',
+                          background: badge.bg,
+                          color: badge.color
+                        }}>
+                          {badge.text}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        Mode: <strong>{session.mode?.toUpperCase()}</strong> • Duration: {session.slot_duration_minutes || 45} min • Scheduled: {new Date(session.preferred_slot).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                      </div>
+                      {session.rejection_reason && (
+                        <div style={{ fontSize: '0.78rem', color: '#dc2626', marginTop: '4px' }}>
+                          Note: {session.rejection_reason}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {isConfirmed && (
+                        <button
+                          onClick={() => setActiveLiveSession(session)}
+                          className="btn-primary"
+                          style={{ padding: '7px 16px', fontSize: '0.82rem' }}
+                        >
+                          📹 Enter Live Room
+                        </button>
+                      )}
+                      {canCancel && (
+                        <button
+                          onClick={() => handleCancelSession(session.id)}
+                          className="btn-ghost"
+                          style={{ padding: '7px 14px', fontSize: '0.78rem', color: '#b91c1c' }}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Booking Request Modal */}
         <BookingModal
           isOpen={isBookingOpen}
           onClose={() => setIsBookingOpen(false)}
+          onBooked={loadSessions}
         />
+
+        {/* Live Gated Clinical Room */}
+        {activeLiveSession && (
+          <ClinicalLiveRoom
+            isOpen={Boolean(activeLiveSession)}
+            onClose={() => setActiveLiveSession(null)}
+            roomId={activeLiveSession.id}
+            initialMode={activeLiveSession.mode || 'video'}
+            peerName={activeLiveSession.therapist?.name || 'Clinical Practitioner'}
+            peerRole={activeLiveSession.therapist?.title || 'Licensed Clinical Psychologist'}
+          />
+        )}
 
         {/* AI WELLNESS COACH: DAILY PLAN */}
         <div className="glass-card" style={{ marginBottom: '36px' }}>
@@ -436,6 +628,14 @@ export default function Dashboard() {
             </Link>
           </div>
         </div>
+        {/* Onboarding & Clinical Questionnaire Popup */}
+        <QuestionnaireModal
+          isOpen={isQuestionnaireOpen}
+          onClose={() => setIsQuestionnaireOpen(false)}
+          onComplete={(rec) => {
+            setIsQuestionnaireOpen(false);
+          }}
+        />
       </div>
     </div>
   );

@@ -1,31 +1,70 @@
+// ============================================
+// MindCare Sanctuary — Multi-Role Registration Portal
+// Default Entry Screen: Register first, with login switch below
+// Portals: 1. Sanctuary Member (20-25)  2. Clinical Practitioner
+// ============================================
+
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import AmbientCanvas from '../components/three/AmbientCanvas';
+import { Api } from '../services/api';
+import { CLINICAL_CONFIG } from '../config/clinicalConfig';
 
 export default function Register() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, register } = useAuth();
+
+  const searchParams = new URLSearchParams(location.search);
+  const requestedPortal = searchParams.get('portal');
+  const [activePortal, setActivePortal] = useState(
+    requestedPortal === 'therapist' ? 'therapist' : 'member'
+  );
+
+  // Common & Client Member Fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState('Prefer not to say');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
   const [agree, setAgree] = useState(true);
+
+  // Therapist Specific Fields (Part 3)
+  const [therapistType, setTherapistType] = useState(CLINICAL_CONFIG.therapistTypes[0]);
+  const [therapistTitle, setTherapistTitle] = useState('Licensed Clinical Psychologist');
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [licensingBoard, setLicensingBoard] = useState(CLINICAL_CONFIG.licensingBodies[0]);
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [yearsOfExperience, setYearsOfExperience] = useState(3);
+  const [selectedSpecialties, setSelectedSpecialties] = useState(['Anxiety & Panic', 'Work & Academic Stress']);
+  const [selectedSkills, setSelectedSkills] = useState(['Cognitive Behavioral Therapy (CBT)', 'Mindfulness-Based Stress Reduction (MBSR)']);
+  const [degrees, setDegrees] = useState([
+    { degree: 'M.Phil in Clinical Psychology', institution: 'NIMHANS', year: '2021' }
+  ]);
+  const [consultModes, setConsultModes] = useState(['chat', 'voice', 'video']);
+  const [consultationFee, setConsultationFee] = useState(1200);
+  const [bio, setBio] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(true);
+
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Recovery seed phrase presentation state
-  const [createdPhrase, setCreatedPhrase] = useState(null);
-  const [copiedPhrase, setCopiedPhrase] = useState(false);
+  // Success modals
+  const [memberSuccess, setMemberSuccess] = useState(null); // { publicId, recoveryPhrase }
+  const [therapistSuccess, setTherapistSuccess] = useState(null); // { therapistId }
+  const [copiedId, setCopiedId] = useState(false);
 
-  const { user, register } = useAuth();
-  const navigate = useNavigate();
-
-  // If already authenticated and not in recovery dialog, redirect
   useEffect(() => {
-    if (user && !createdPhrase) {
-      navigate('/dashboard', { replace: true });
+    if (user && !memberSuccess && !therapistSuccess) {
+      if (user.role === 'therapist') navigate('/therapist', { replace: true });
+      else if (user.role === 'admin' || user.role === 'super_admin') navigate('/admin', { replace: true });
+      else navigate('/welcome', { replace: true });
     }
-  }, [user, createdPhrase, navigate]);
+  }, [user, memberSuccess, therapistSuccess, navigate]);
 
   const getPasswordStrength = () => {
     if (!password) return { label: '', percent: 0, color: 'var(--text-muted)' };
@@ -41,9 +80,15 @@ export default function Register() {
 
   const strength = getPasswordStrength();
 
-  const handleSubmit = async (e) => {
+  const handleMemberSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const parsedAge = parseInt(age, 10);
+    if (isNaN(parsedAge) || parsedAge < 20 || parsedAge > 25) {
+      setError('MindCare Sanctuary is designed specifically for ages 20–25. Please enter an age between 20 and 25.');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please verify both entries.');
@@ -51,19 +96,30 @@ export default function Register() {
     }
 
     if (!agree) {
-      setError('Please acknowledge the client-side privacy notice to proceed.');
+      setError('Please acknowledge the client privacy notice to proceed.');
       return;
     }
 
     setSubmitting(true);
-
     try {
-      const res = await register(email, password, name);
+      const res = await register({
+        name,
+        email,
+        password,
+        age: parsedAge,
+        gender,
+        city,
+        state,
+        role: 'client'
+      });
+
       if (res.success) {
-        // Display recovery seed phrase modal before navigating to dashboard
-        setCreatedPhrase(res.recoveryPhrase);
+        setMemberSuccess({
+          publicId: res.user?.public_id || 'MC-WELCOME',
+          recoveryPhrase: res.recoveryPhrase || 'sanctuary-growth-breeze'
+        });
       } else {
-        setError(res.message);
+        setError(res.message || 'Registration failed.');
         setSubmitting(false);
       }
     } catch (err) {
@@ -72,246 +128,759 @@ export default function Register() {
     }
   };
 
-  const handleCopyPhrase = () => {
-    if (createdPhrase) {
-      navigator.clipboard.writeText(createdPhrase).catch(() => {});
-      setCopiedPhrase(true);
-      setTimeout(() => setCopiedPhrase(false), 2000);
+  const handleTherapistSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match. Please verify both entries.');
+      return;
+    }
+
+    if (!licenseNumber.trim() || !licensingBoard.trim()) {
+      setError('Clinical license number and licensing board are required.');
+      return;
+    }
+
+    if (!termsAccepted) {
+      setError('You must confirm that your credentials are authentic and accept the terms.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await Api.registerTherapist({
+        name,
+        email,
+        password,
+        title: therapistTitle,
+        license_number: licenseNumber,
+        licensing_board: licensingBoard,
+        specialties: selectedSpecialties,
+        skills_practised: selectedSkills,
+        education_entries: degrees,
+        years_of_experience: yearsOfExperience,
+        consultation_modes: consultModes,
+        consultation_fee: consultationFee,
+        bio,
+        city,
+        state,
+        gender,
+        therapist_type: therapistType,
+        mobile_number: mobileNumber,
+        terms_accepted: termsAccepted
+      });
+
+      if (res.success) {
+        setTherapistSuccess({
+          therapistId: res.therapistId
+        });
+      } else {
+        setError(res.message || 'Therapist registration failed.');
+        setSubmitting(false);
+      }
+    } catch (err) {
+      setError('An error occurred during therapist registration.');
+      setSubmitting(false);
     }
   };
 
-  const handleProceedToSanctuary = () => {
-    navigate('/dashboard');
+  const copyToClipboard = (text) => {
+    if (text) {
+      navigator.clipboard.writeText(text).catch(() => {});
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2500);
+    }
   };
 
   return (
-    <div style={{
-      minHeight: '85vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '40px 24px',
-      position: 'relative'
-    }}>
-      <AmbientCanvas count={25} speed={0.25} />
-
-      <div className="glass-card" style={{
-        maxWidth: '460px',
-        width: '100%',
-        position: 'relative',
-        zIndex: 2,
-        padding: '40px 32px'
-      }}>
+    <div className="auth-page" style={{ padding: '40px 20px 80px', minHeight: '88vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="glass-card" style={{ maxWidth: '580px', width: '100%', padding: '40px 32px', borderRadius: '24px' }}>
+        
+        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🌱</div>
-          <h2 style={{ fontSize: '1.8rem', marginBottom: '8px' }}>Begin Your Sanctuary</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Create a safe, private space tailored to your emotional rhythm.</p>
+          <div style={{ fontSize: '2.4rem', marginBottom: '8px' }}>
+            {activePortal === 'therapist' ? '🩺' : '🌿'}
+          </div>
+          <h1 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginBottom: '6px' }}>
+            {activePortal === 'therapist' ? 'Join the Clinical Care Team' : 'Create Your Sanctuary Space'}
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            {activePortal === 'therapist'
+              ? 'Register with your clinical credentials to consult with sanctuary members.'
+              : 'Begin your personal wellness journey. Confidential, calm, and ad-free.'}
+          </p>
+        </div>
+
+        {/* Portal Tabs: Member vs Therapist */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '8px',
+          padding: '4px',
+          background: 'var(--bg-surface-elevated, rgba(0,0,0,0.03))',
+          borderRadius: '14px',
+          marginBottom: '26px'
+        }}>
+          <button
+            type="button"
+            onClick={() => { setActivePortal('member'); setError(''); }}
+            style={{
+              padding: '10px 14px',
+              borderRadius: '10px',
+              border: 'none',
+              background: activePortal === 'member' ? '#52b788' : 'transparent',
+              color: activePortal === 'member' ? '#ffffff' : 'var(--text-secondary)',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            🌿 User (Ages 20–25)
+          </button>
+          <button
+            type="button"
+            onClick={() => { setActivePortal('therapist'); setError(''); }}
+            style={{
+              padding: '10px 14px',
+              borderRadius: '10px',
+              border: 'none',
+              background: activePortal === 'therapist' ? '#2b5f7d' : 'transparent',
+              color: activePortal === 'therapist' ? '#ffffff' : 'var(--text-secondary)',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            🩺 Therapist
+          </button>
         </div>
 
         {error && (
           <div style={{
-            background: 'rgba(220, 38, 38, 0.08)',
-            border: '1px solid rgba(220, 38, 38, 0.25)',
-            color: '#991b1b',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#dc2626',
+            borderRadius: '10px',
             padding: '12px 16px',
-            borderRadius: '12px',
-            fontSize: '0.85rem',
+            fontSize: '0.86rem',
             marginBottom: '20px'
           }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="input-group">
-            <label className="input-label">Preferred Name</label>
-            <input
-              type="text"
-              className="input-field"
-              placeholder="How may we address you?"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={submitting}
-              required
-            />
-          </div>
-
-          <div className="input-group">
-            <label className="input-label">Email Address</label>
-            <input
-              type="email"
-              className="input-field"
-              placeholder="you@sanctuary.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={submitting}
-              required
-              autoComplete="username"
-            />
-          </div>
-
-          <div className="input-group" style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label className="input-label" style={{ margin: 0 }}>Password (min. 6 characters)</label>
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
-                  fontSize: '0.78rem',
-                  cursor: 'pointer',
-                  padding: 0
-                }}
-              >
-                {showPassword ? 'Hide 👁️' : 'Show 👁️'}
-              </button>
+        {/* ── MEMBER REGISTRATION FORM ── */}
+        {activePortal === 'member' && !memberSuccess && (
+          <form onSubmit={handleMemberSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Full Name or Preferred Name
+              </label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="e.g. Alex Sharma"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
             </div>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              className="input-field"
-              placeholder="Create a calm, secure password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={submitting}
-              required
-              autoComplete="new-password"
-            />
-          </div>
 
-          <div className="input-group" style={{ marginBottom: '14px' }}>
-            <label className="input-label">Confirm Password</label>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              className="input-field"
-              placeholder="Re-type your password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={submitting}
-              required
-              autoComplete="new-password"
-            />
-          </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Email Address
+              </label>
+              <input
+                type="email"
+                className="input-field"
+                placeholder="alex@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
 
-          {password && (
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '4px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Security Level:</span>
-                <span style={{ color: strength.color, fontWeight: 600 }}>{strength.label}</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Age <span style={{ fontSize: '0.74rem', color: '#52b788' }}>(20–25 prototype)</span>
+                </label>
+                <input
+                  type="number"
+                  min="20"
+                  max="25"
+                  className="input-field"
+                  placeholder="20 - 25"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  required
+                />
               </div>
-              <div style={{ height: '4px', background: 'rgba(64, 145, 108, 0.15)', borderRadius: '10px', overflow: 'hidden' }}>
-                <div style={{ width: `${strength.percent}%`, height: '100%', background: strength.color, transition: 'all 0.3s' }}></div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Gender
+                </label>
+                <select
+                  className="input-field"
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  style={{ background: 'var(--bg-surface)' }}
+                >
+                  <option value="Female">Female</option>
+                  <option value="Male">Male</option>
+                  <option value="Non-binary">Non-binary</option>
+                  <option value="Other">Other</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
+                </select>
               </div>
             </div>
-          )}
 
-          {/* Privacy Consent Step */}
-          <div style={{
-            background: 'var(--bg-surface-elevated)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '14px',
-            padding: '14px',
-            marginBottom: '24px',
-            fontSize: '0.82rem',
-            color: 'var(--text-secondary)'
-          }}>
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  City
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="e.g. Pune"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  State
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="e.g. Maharashtra"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Password (min 6 characters)
+              </label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="input-field"
+                placeholder="Choose a safe password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Confirm Password
+              </label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="input-field"
+                placeholder="Re-enter password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            {password && (
+              <div style={{ fontSize: '0.78rem', color: strength.color }}>
+                Security: {strength.label}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem' }}>
               <input
                 type="checkbox"
-                checked={agree}
-                onChange={(e) => setAgree(e.target.checked)}
-                style={{ accentColor: 'var(--accent-green)', marginTop: '3px' }}
-                disabled={submitting}
+                id="showPass"
+                checked={showPassword}
+                onChange={(e) => setShowPassword(e.target.checked)}
               />
-              <span>
-                I understand MindCare operates with <strong>client-side local storage</strong>. My journal reflections and mood records stay strictly on this device.
-              </span>
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary"
-            style={{ width: '100%', marginBottom: '20px' }}
-            disabled={submitting}
-          >
-            {submitting ? 'Creating Sanctuary...' : 'Create Account →'}
-          </button>
-        </form>
-
-        <div style={{ textAlign: 'center', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-          Already have an account?{' '}
-          <Link to="/login" style={{ fontWeight: 600 }}>Log In</Link>
-        </div>
-      </div>
-
-      {/* Emergency Recovery Phrase Presentation Modal */}
-      {createdPhrase && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 2600,
-          background: 'rgba(26, 46, 34, 0.55)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div className="glass-card" style={{
-            maxWidth: '480px',
-            width: '100%',
-            padding: '36px',
-            textAlign: 'center',
-            boxShadow: '0 20px 60px rgba(33, 64, 47, 0.2)',
-            border: '1px solid var(--primary)'
-          }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔐</div>
-            <h3 style={{ fontSize: '1.45rem', color: 'var(--text-primary)', marginBottom: '8px' }}>
-              Your Sovereign Recovery Seed
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '20px' }}>
-              Because MindCare does not send your data to remote cloud servers, this 3-word phrase is your <strong>only</strong> key to reset your password if you ever forget it.
-            </p>
-
-            <div style={{
-              background: 'var(--bg-surface-elevated)',
-              border: '2px dashed var(--primary)',
-              borderRadius: '14px',
-              padding: '16px',
-              fontFamily: 'monospace',
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              color: 'var(--primary-dark)',
-              letterSpacing: '1px',
-              marginBottom: '18px'
-            }}>
-              {createdPhrase}
+              <label htmlFor="showPass" style={{ color: 'var(--text-secondary)', cursor: 'pointer' }}>Show password</label>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '24px' }}>
-              <button
-                type="button"
-                onClick={handleCopyPhrase}
-                className="btn-ghost"
-                style={{ fontSize: '0.82rem', padding: '8px 18px' }}
-              >
-                {copiedPhrase ? 'Copied to Clipboard! ✓' : 'Copy Phrase 📋'}
-              </button>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.82rem', marginTop: '4px' }}>
+              <input
+                type="checkbox"
+                id="agree"
+                checked={agree}
+                onChange={(e) => setAgree(e.target.checked)}
+                style={{ marginTop: '3px' }}
+              />
+              <label htmlFor="agree" style={{ color: 'var(--text-secondary)', lineHeight: 1.4, cursor: 'pointer' }}>
+                I agree to the MindCare Sanctuary confidentiality terms. Client data is protected with end-to-end field encryption.
+              </label>
             </div>
 
             <button
-              type="button"
-              onClick={handleProceedToSanctuary}
+              type="submit"
               className="btn-primary"
-              style={{ width: '100%', padding: '12px 24px' }}
+              disabled={submitting}
+              style={{ width: '100%', padding: '14px', marginTop: '10px', background: '#52b788', borderColor: '#52b788' }}
             >
-              I Have Saved My Phrase — Enter Sanctuary 🌿
+              {submitting ? 'Creating Sanctuary Space...' : 'Register as Sanctuary Member →'}
             </button>
+          </form>
+        )}
+
+        {/* ── THERAPIST REGISTRATION FORM ── */}
+        {activePortal === 'therapist' && !therapistSuccess && (
+          <form onSubmit={handleTherapistSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Clinician Full Name & Qualifications
+              </label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="e.g. Dr. Sarah Vance, PsyD"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Professional Type
+                </label>
+                <select
+                  className="input-field"
+                  value={therapistType}
+                  onChange={(e) => setTherapistType(e.target.value)}
+                >
+                  {CLINICAL_CONFIG.therapistTypes.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Professional Title
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Licensed Clinical Psychologist"
+                  value={therapistTitle}
+                  onChange={(e) => setTherapistTitle(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Official Email
+                </label>
+                <input
+                  type="email"
+                  className="input-field"
+                  placeholder="dr.vance@clinic.org"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Mobile Number (E.164)
+                </label>
+                <input
+                  type="tel"
+                  className="input-field"
+                  placeholder="+919876543210"
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Clinical License Number
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="e.g. RCI-CR-28491"
+                  value={licenseNumber}
+                  onChange={(e) => setLicenseNumber(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Licensing Board / Council
+                </label>
+                <select
+                  className="input-field"
+                  value={licensingBoard}
+                  onChange={(e) => setLicensingBoard(e.target.value)}
+                  required
+                >
+                  {CLINICAL_CONFIG.licensingBodies.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Mental Health Specializations
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {CLINICAL_CONFIG.specializations.map(spec => {
+                  const isSelected = selectedSpecialties.includes(spec);
+                  return (
+                    <button
+                      key={spec}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSpecialties(prev =>
+                          isSelected ? prev.filter(s => s !== spec) : [...prev, spec]
+                        );
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '100px',
+                        border: isSelected ? '1px solid var(--primary, #2d6a4f)' : '1px solid rgba(0,0,0,0.1)',
+                        backgroundColor: isSelected ? 'rgba(82, 183, 136, 0.15)' : '#ffffff',
+                        color: isSelected ? 'var(--primary-dark, #1b4332)' : 'var(--text-secondary)',
+                        fontSize: '0.78rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {isSelected ? '✓ ' : '+ '}{spec}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Therapies / Modalities Practiced
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {CLINICAL_CONFIG.skillsTherapies.map(skill => {
+                  const isSelected = selectedSkills.includes(skill);
+                  return (
+                    <button
+                      key={skill}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSkills(prev =>
+                          isSelected ? prev.filter(s => s !== skill) : [...prev, skill]
+                        );
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '100px',
+                        border: isSelected ? '1px solid #7c3aed' : '1px solid rgba(0,0,0,0.1)',
+                        backgroundColor: isSelected ? 'rgba(124, 58, 237, 0.1)' : '#ffffff',
+                        color: isSelected ? '#7c3aed' : 'var(--text-secondary)',
+                        fontSize: '0.78rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {isSelected ? '✓ ' : '+ '}{skill}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Practice Bio & Approach
+              </label>
+              <textarea
+                className="input-field"
+                rows="3"
+                placeholder="Brief summary of your clinical approach and therapeutic orientation..."
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  City
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="e.g. New Delhi"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  State
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="e.g. Delhi"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Years of Experience
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="60"
+                  className="input-field"
+                  value={yearsOfExperience}
+                  onChange={(e) => setYearsOfExperience(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Consultation Fee (₹ optional)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="50"
+                  className="input-field"
+                  placeholder="1200"
+                  value={consultationFee}
+                  onChange={(e) => setConsultationFee(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Password
+                </label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="input-field"
+                  placeholder="Minimum 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Confirm Password
+                </label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="input-field"
+                  placeholder="Confirm password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div style={{
+              padding: '12px 14px',
+              backgroundColor: 'rgba(240, 246, 242, 0.7)',
+              borderRadius: '12px',
+              border: '1px solid rgba(82, 183, 136, 0.25)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px'
+            }}>
+              <input
+                type="checkbox"
+                id="therapistTerms"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                style={{ marginTop: '3px' }}
+                required
+              />
+              <label htmlFor="therapistTerms" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                {CLINICAL_CONFIG.consentNotice}
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem' }}>
+              <input
+                type="checkbox"
+                id="showTherapistPass"
+                checked={showPassword}
+                onChange={(e) => setShowPassword(e.target.checked)}
+              />
+              <label htmlFor="showTherapistPass" style={{ color: 'var(--text-secondary)', cursor: 'pointer' }}>Show password</label>
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={submitting}
+              style={{ width: '100%', padding: '14px', marginTop: '10px', background: '#2b5f7d', borderColor: '#2b5f7d' }}
+            >
+              {submitting ? 'Registering Practitioner...' : 'Register as Clinical Practitioner →'}
+            </button>
+          </form>
+        )}
+
+        {/* ── MEMBER SUCCESS MODAL ── */}
+        {memberSuccess && (
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '14px' }}>🌱</div>
+            <h2 style={{ fontSize: '1.6rem', color: 'var(--text-primary)', marginBottom: '8px' }}>
+              Welcome to MindCare Sanctuary!
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+              Your account has been created successfully. Please take note of your permanent Sanctuary User ID:
+            </p>
+
+            <div style={{
+              background: 'var(--bg-surface-elevated, #f4fbf7)',
+              border: '2px dashed #52b788',
+              borderRadius: '16px',
+              padding: '20px',
+              marginBottom: '24px'
+            }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '1px' }}>
+                Your Permanent Sanctuary User ID
+              </div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#2d6a4f', letterSpacing: '2px', margin: '8px 0' }}>
+                {memberSuccess.publicId}
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                You can log in anytime using this User ID or your email address.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => copyToClipboard(memberSuccess.publicId)}
+                style={{ padding: '12px 20px' }}
+              >
+                {copiedId ? '✓ Copied ID' : '📋 Copy User ID'}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => navigate('/welcome', { replace: true })}
+                style={{ padding: '12px 28px', background: '#52b788', borderColor: '#52b788' }}
+              >
+                Begin Questionnaire & Welcome →
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* ── THERAPIST SUCCESS MODAL ── */}
+        {therapistSuccess && (
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '14px' }}>🎉</div>
+            <h2 style={{ fontSize: '1.6rem', color: 'var(--text-primary)', marginBottom: '8px' }}>
+              Practitioner Account Created!
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '24px' }}>
+              Your clinical profile has been created and is now queued for administrative verification. Please record your official Therapist ID:
+            </p>
+
+            <div style={{
+              background: 'var(--bg-surface-elevated, #f0f7fa)',
+              border: '2px dashed #2b5f7d',
+              borderRadius: '16px',
+              padding: '22px',
+              marginBottom: '24px'
+            }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '1px' }}>
+                Your Official Therapist ID
+              </div>
+              <div style={{ fontSize: '2rem', fontWeight: 800, color: '#2b5f7d', letterSpacing: '3px', margin: '8px 0' }}>
+                {therapistSuccess.therapistId}
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                ⚠️ <strong>Important:</strong> You must enter this <strong>Therapist ID</strong> along with your registered email and password whenever you log in.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => copyToClipboard(therapistSuccess.therapistId)}
+                style={{ padding: '12px 20px' }}
+              >
+                {copiedId ? '✓ Copied ID' : '📋 Copy Therapist ID'}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => navigate('/login?portal=therapist', { replace: true })}
+                style={{ padding: '12px 28px', background: '#2b5f7d', borderColor: '#2b5f7d' }}
+              >
+                Proceed to Therapist Login →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── BOTTOM SWITCH / LOGIN BANNER ── */}
+        {!memberSuccess && !therapistSuccess && (
+          <div style={{
+            marginTop: '32px',
+            paddingTop: '20px',
+            borderTop: '1px solid var(--border-glass, rgba(0,0,0,0.06))',
+            textAlign: 'center',
+            fontSize: '0.88rem'
+          }}>
+            <span style={{ color: 'var(--text-secondary)' }}>Already have a MindCare account? </span>
+            <Link
+              to={`/login?portal=${activePortal}`}
+              style={{ fontWeight: 700, color: activePortal === 'therapist' ? '#2b5f7d' : '#52b788', textDecoration: 'none' }}
+            >
+              Log in here →
+            </Link>
+
+            <div style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              System Governance? <Link to="/login?portal=admin" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Admin Login Console</Link>
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

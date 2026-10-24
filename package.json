@@ -1,4 +1,17 @@
 {
+  "name": "mindcare-root",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test backend/tests/*.test.js",
+    "test:parts": "node --test backend/tests/part*.test.js",
+    "check:hardcoded": "node backend/scripts/checkHardcoded.js",
+    "seed:admin": "node -e \"import('./backend/scripts/seedAdmin.js').then(m => m.seedAdmin()).then(() => process.exit(0))\"",
+    "seed:demo": "node backend/scripts/seedDemoAccounts.js",
+    "dev:backend": "node backend/server.js",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build"
+  },
   "dependencies": {
     "pg": "^8.23.0"
   }

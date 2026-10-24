@@ -4,6 +4,7 @@ build/
 .history/
 coverage/
 backend/data/*.db*
+backend/uploads/
 
 .env*
 !.env.example

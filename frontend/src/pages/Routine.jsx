@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Storage } from '../services/storage';
-import GeometricShapesCanvas from '../components/three/GeometricShapesCanvas';
 
 const DEFAULT_ROUTINES = [
   { id: 1, category: 'Morning', title: 'Gentle hydration & window sunlight', desc: '1 glass of water + 2 mins daylight', completed: false, icon: '☀️' },
@@ -58,8 +57,6 @@ export default function Routine() {
 
   return (
     <div className="routine-page" style={{ position: 'relative', padding: '36px 24px 80px', minHeight: '100vh' }}>
-      <GeometricShapesCanvas />
-
       <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--primary-dark)', fontWeight: 700 }}>

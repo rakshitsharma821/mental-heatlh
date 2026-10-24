@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { Storage } from '../services/storage';
 import { generateTherapyRoadmap } from '../services/roadmapEngine';
 import { Link } from 'react-router-dom';
-import GeometricShapesCanvas from '../components/three/GeometricShapesCanvas';
 
 export default function Roadmap() {
   const { user } = useAuth();
@@ -19,8 +18,6 @@ export default function Roadmap() {
 
   return (
     <div className="roadmap-page" style={{ position: 'relative', padding: '36px 24px 80px', minHeight: '100vh' }}>
-      <GeometricShapesCanvas />
-
       <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div style={{ textAlign: 'center', marginBottom: '36px' }}>
           <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--primary-dark)', fontWeight: 700 }}>

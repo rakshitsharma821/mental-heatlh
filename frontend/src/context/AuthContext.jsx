@@ -101,12 +101,24 @@ export const AuthProvider = ({ children }) => {
   }, [lockoutRemaining]);
 
   // Login with rate limiting, email trimming, and salted SHA-256 verification
-  const login = async (email, password, remember = false) => {
-    const trimmedEmail = (email || '').trim().toLowerCase();
-    const cleanPassword = password || '';
+  const login = async (credentials, passwordParam, rememberParam = false) => {
+    let payload = credentials;
+    let remember = rememberParam;
+    let identifier = '';
+    let password = '';
 
-    if (!trimmedEmail || !cleanPassword) {
-      return { success: false, message: 'Please enter both email and password.' };
+    if (typeof credentials === 'string') {
+      identifier = credentials.trim();
+      password = passwordParam || '';
+      payload = { identifier, password, portal: 'member' };
+    } else if (credentials && typeof credentials === 'object') {
+      identifier = (credentials.identifier || credentials.email || credentials.adminId || credentials.therapistId || '').trim();
+      password = credentials.password || '';
+      remember = credentials.remember !== undefined ? credentials.remember : rememberParam;
+    }
+
+    if (!identifier || !password) {
+      return { success: false, message: 'Please enter your login details.' };
     }
 
     // Check Lockout Status
@@ -124,6 +136,41 @@ export const AuthProvider = ({ children }) => {
       };
     }
 
+    // Call backend authoritative login first
+    try {
+      const backendRes = await Api.login(payload, password, remember);
+      if (backendRes.success) {
+        Storage.set('mindcare_auth_lockout', { attempts: 0, lockedUntil: null });
+        setLockoutRemaining(0);
+        if (backendRes.user) {
+          Storage.setCurrentUser(backendRes.user, remember);
+          setUser(backendRes.user);
+        }
+        return backendRes;
+      } else if (!backendRes.offline) {
+        // Increment failed attempts
+        const nextAttempts = (lockoutData.attempts || 0) + 1;
+        let nextLockout = null;
+        let waitSec = 0;
+        if (nextAttempts >= 5) {
+          waitSec = 30;
+          nextLockout = now + (waitSec * 1000);
+          setLockoutRemaining(waitSec);
+        }
+        Storage.set('mindcare_auth_lockout', { attempts: nextAttempts, lockedUntil: nextLockout });
+        return {
+          success: false,
+          locked: nextAttempts >= 5,
+          remainingSeconds: waitSec,
+          message: backendRes.message || "These details don't match. Please try again."
+        };
+      }
+    } catch (_) {
+      // Fallback to local storage if offline
+    }
+
+    const trimmedEmail = identifier.toLowerCase();
+    const cleanPassword = password;
     const users = Storage.getUsers();
     const found = users.find(u => (u.email || '').trim().toLowerCase() === trimmedEmail);
 
@@ -200,13 +247,30 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Register with input sanitation, password hashing, and recovery phrase generation
-  const register = async (email, password, name, role = 'client') => {
-    const trimmedEmail = (email || '').trim().toLowerCase();
-    const cleanPassword = password || '';
-    const cleanName = (name || '').trim();
+  // Register with demographics, mobile normalization, scrypt backend sync, and recovery phrase
+  const register = async (registerData, legacyPassword, legacyName, legacyRole = 'client') => {
+    let payload = registerData;
+    if (typeof registerData === 'string') {
+      payload = { email: registerData, password: legacyPassword, name: legacyName, role: legacyRole };
+    }
 
-    if (!trimmedEmail || !cleanPassword || !cleanName) {
-      return { success: false, message: 'All fields are required.' };
+    const trimmedEmail = (payload.email || '').trim().toLowerCase();
+    const cleanPassword = payload.password || '';
+    const cleanName = (payload.name || '').trim();
+    const cleanMobile = (payload.mobile_number || payload.mobile || '').trim();
+    const cleanGender = (payload.gender || '').trim();
+    const cleanCity = (payload.city || '').trim();
+    const cleanState = (payload.state || '').trim();
+    const cleanAddress = (payload.address || '').trim() || `${cleanCity}, ${cleanState}`.trim();
+    const parsedAge = parseInt(payload.age, 10);
+    const role = payload.role || 'client';
+
+    if (!trimmedEmail || !cleanPassword || !cleanName || !payload.age || !cleanGender) {
+      return { success: false, message: 'All registration fields are required.' };
+    }
+
+    if (isNaN(parsedAge) || parsedAge < 20 || parsedAge > 25) {
+      return { success: false, message: 'MindCare Sanctuary is designed specifically for ages 20–25.' };
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -218,24 +282,40 @@ export const AuthProvider = ({ children }) => {
       return { success: false, message: 'Password must be at least 6 characters.' };
     }
 
-    const users = Storage.getUsers();
-    if (users.find(u => (u.email || '').trim().toLowerCase() === trimmedEmail)) {
-      return { success: false, message: 'This email is already registered.' };
+    // Call backend API for authoritative registration
+    const backendRes = await Api.register({
+      name: cleanName,
+      email: trimmedEmail,
+      password: cleanPassword,
+      mobile_number: cleanMobile || null,
+      age: parsedAge,
+      gender: cleanGender,
+      city: cleanCity,
+      state: cleanState,
+      address: cleanAddress,
+      role
+    });
+
+    if (!backendRes.success && !backendRes.offline) {
+      return backendRes;
     }
 
-    // Generate cryptographic salt and salted password hash
+    // Local client-side sanctuary storage sync
+    const users = Storage.getUsers();
     const salt = 'salt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
     const passwordHash = await Storage.hashPassword(cleanPassword, salt);
-
-    // Generate self-sovereign 3-word recovery phrase
-    const recoveryPhrase = generateRecoveryPhrase();
+    const recoveryPhrase = backendRes.recoveryPhrase || generateRecoveryPhrase();
     const recoveryKeyHash = await Storage.hashPassword(recoveryPhrase, salt);
 
     const newUser = {
-      id: Date.now(),
+      id: backendRes.user?.id || Date.now(),
       email: trimmedEmail,
       name: cleanName,
-      role: role || 'client',
+      role,
+      mobile_number: backendRes.user?.mobile_number || cleanMobile,
+      age: parsedAge,
+      gender: cleanGender,
+      address: cleanAddress,
       passwordHash,
       salt,
       recoveryKeyHash,
@@ -248,21 +328,13 @@ export const AuthProvider = ({ children }) => {
 
     users.push(newUser);
     Storage.saveUsers(users);
-    // Default to persistent remember on register
     Storage.setCurrentUser(newUser, true);
     setUser(newUser);
-
-    // Sync user registration to backend database
-    Api.register(trimmedEmail, cleanPassword, cleanName, role).then(res => {
-      if (res && res.token) {
-        localStorage.setItem('mindcare_auth_token', res.token);
-      }
-    }).catch(() => {});
 
     return {
       success: true,
       user: newUser,
-      recoveryPhrase // Handed back once for the user to note down securely
+      recoveryPhrase
     };
   };
 
@@ -313,6 +385,15 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     Api.removeToken();
     Storage.removeCurrentUser();
+    // Clear welcome message sessionStorage on logout to prevent cross-user leakage
+    try {
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('mindcare_welcome_msg_')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+      sessionStorage.removeItem('mindcare_welcome_msg_cache');
+    } catch (_) {}
     setUser(null);
   };
 
@@ -395,6 +476,17 @@ export const AuthProvider = ({ children }) => {
       lockoutRemaining,
       login,
       register,
+      verifyOtp: async (challenge_id, otp, remember = false) => {
+        const res = await Api.verifyOtp(challenge_id, otp, remember);
+        if (res.success && res.user) {
+          Storage.setCurrentUser(res.user, remember);
+          setUser(res.user);
+        }
+        return res;
+      },
+      resendOtp: async (challenge_id) => {
+        return await Api.resendOtp(challenge_id);
+      },
       recoverPassword,
       logout,
       updateUser,

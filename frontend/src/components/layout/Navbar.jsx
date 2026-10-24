@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { UI_STRINGS } from '../../config/strings';
 
 export default function Navbar() {
   const { user, logout, switchRole } = useAuth();
@@ -35,23 +36,22 @@ export default function Navbar() {
   }, [settingsOpen]);
 
   const navLinks = [
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/mood', label: 'Mood' },
-    { to: '/breathing', label: 'Breathing' },
-    { to: '/journal', label: 'Journal' },
-    { to: '/routine', label: 'Routine' },
-    { to: '/progress', label: 'Progress' },
-    { to: '/community', label: 'Community' },
-    { to: '/games', label: 'Games' }
+    { to: '/dashboard', label: UI_STRINGS.nav.dashboard },
+    { to: '/mood', label: UI_STRINGS.nav.mood },
+    { to: '/breathing', label: UI_STRINGS.nav.breathing },
+    { to: '/routine', label: UI_STRINGS.nav.routine },
+    { to: '/progress', label: UI_STRINGS.nav.progress },
+    { to: '/community', label: UI_STRINGS.nav.community },
+    { to: '/games', label: UI_STRINGS.nav.games }
   ];
 
   return (
     <nav className="sanctuary-nav">
       <div className="nav-container">
         {/* Brand Logo */}
-        <Link to={user ? "/dashboard" : "/"} className="nav-logo" onClick={() => setMenuOpen(false)}>
-          <span className="logo-sparkle">✦</span>
-          <span className="logo-text">MindCare</span>
+        <Link to={!user ? "/" : (user.role === 'admin' || user.role === 'super_admin' ? "/admin" : (user.role === 'therapist' ? "/therapist" : "/dashboard"))} className="nav-logo" onClick={() => setMenuOpen(false)}>
+          <span className="logo-sparkle">{UI_STRINGS.brand.sparkle}</span>
+          <span className="logo-text">{UI_STRINGS.brand.name}</span>
         </Link>
 
         {/* Mobile Hamburger Toggle */}
@@ -86,6 +86,19 @@ export default function Navbar() {
 
               {/* Action & Utility Group */}
               <div className="nav-actions-cluster" style={{ position: 'relative' }}>
+                {/* Admin Portal (if admin role) */}
+                {user?.role === 'admin' && (
+                  <NavLink
+                    to="/admin"
+                    className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                    onClick={() => setMenuOpen(false)}
+                    style={{ color: '#2b5f7d', fontWeight: 700 }}
+                    title="System Administration Portal"
+                  >
+                    ⚙️ Admin
+                  </NavLink>
+                )}
+
                 {/* Clinical Portal */}
                 <NavLink
                   to="/clinical"
@@ -166,6 +179,21 @@ export default function Navbar() {
                             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                           </svg>
                           <span>Privacy & Data Sovereignty</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="settings-drop-item"
+                          onClick={() => {
+                            setSettingsOpen(false);
+                            navigate('/settings');
+                          }}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                          </svg>
+                          <span>Mindful Notifications & Quiet Hours</span>
                         </button>
 
                         <button
@@ -263,8 +291,14 @@ export default function Navbar() {
                 </svg>
                 <span>Crisis Help</span>
               </Link>
-              <Link to="/login" className="nav-link" onClick={() => setMenuOpen(false)}>
-                Log In
+              <Link to="/login?portal=therapist" className="nav-link" onClick={() => setMenuOpen(false)} title="Therapist Portal Login" style={{ color: '#2b5f7d', fontWeight: 600 }}>
+                🩺 Therapist
+              </Link>
+              <Link to="/login?portal=admin" className="nav-link" onClick={() => setMenuOpen(false)} title="Admin Console Login" style={{ color: '#8e44ad', fontWeight: 600 }}>
+                🏛️ Admin
+              </Link>
+              <Link to="/login?portal=member" className="nav-link" onClick={() => setMenuOpen(false)}>
+                Member Log In
               </Link>
               <Link to="/register" className="nav-btn-primary" onClick={() => setMenuOpen(false)}>
                 Begin Sanctuary

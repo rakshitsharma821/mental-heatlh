@@ -87,10 +87,10 @@ export default function InnerWorldCanvas({
       renderer = new THREE.WebGLRenderer({
         alpha: true,
         antialias: true,
-        powerPreference: 'high-performance'
+        powerPreference: 'low-power'
       });
       renderer.setSize(width, height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 
       // Enable Real Soft Shadows
       renderer.shadowMap.enabled = true;
@@ -115,8 +115,8 @@ export default function InnerWorldCanvas({
     const sunLight = new THREE.DirectionalLight(0xfff7ed, 2.2);
     sunLight.position.set(7, 14, 8);
     sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.mapSize.width = 1024;
+    sunLight.shadow.mapSize.height = 1024;
     sunLight.shadow.camera.near = 0.5;
     sunLight.shadow.camera.far = 32;
     sunLight.shadow.camera.left = -7;
@@ -415,8 +415,27 @@ export default function InnerWorldCanvas({
     let animId;
     let clock = new THREE.Clock();
 
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let isVisible = true;
+    let isTabActive = !document.hidden;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisible = entry.isIntersecting;
+    }, { threshold: 0.05 });
+    observer.observe(container);
+
+    const handleVisibility = () => {
+      isTabActive = !document.hidden;
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     const animate = () => {
+      if (prefersReducedMotion) {
+        renderer.render(scene, camera);
+        return;
+      }
       animId = requestAnimationFrame(animate);
+      if (!isVisible || !isTabActive) return;
       if (document.hidden) return;
 
       const elapsed = clock.getElapsedTime();
@@ -481,6 +500,8 @@ export default function InnerWorldCanvas({
 
     return () => {
       cancelAnimationFrame(animId);
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
       if (renderer) {

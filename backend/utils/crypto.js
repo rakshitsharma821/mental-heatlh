@@ -11,10 +11,12 @@ dotenv.config();
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // 96 bits for GCM
 
-// Ensure 32-byte key
+// Ensure 32-byte key derived strictly from environment variable
 function getEncryptionKey() {
-  const envKey = process.env.ENCRYPTION_KEY || 'mindcare-sanctuary-fallback-key-32b!';
-  // Hash or pad to guarantee exactly 32 bytes
+  const envKey = process.env.ENCRYPTION_KEY;
+  if (!envKey) {
+    throw new Error('FATAL: ENCRYPTION_KEY environment variable is missing.');
+  }
   return crypto.createHash('sha256').update(envKey).digest();
 }
 

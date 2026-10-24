@@ -9,7 +9,13 @@ import { authenticateToken } from '../middleware/auth.js';
 const router = express.Router();
 
 router.post('/register', authController.register);
+router.post('/register-therapist', authController.registerTherapist);
 router.post('/login', authController.login);
+router.post('/verify-otp', authController.verifyOtp);
+router.post('/resend-otp', authController.resendOtp);
+router.post('/recovery/request-otp', authController.requestRecoveryOtp);
+router.post('/recovery/verify-otp', authController.verifyRecoveryOtp);
+router.post('/recovery/complete', authController.completeRecovery);
 router.post('/sync', authController.syncSession);
 router.get('/me', authenticateToken, authController.me);
 router.post('/recover', authController.recover);
