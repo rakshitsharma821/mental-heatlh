@@ -167,18 +167,19 @@ async function runStep0Tests() {
     }
 
     // T7: Persistent clinical chat message encrypted at rest; admin forbidden (403)
+    const testRoomId = `room_step0_${rand}`;
     const sendMsgRes = await request('POST', '/api/clinical/messages', {
-      roomId: 'room_step0_test_99',
+      roomId: testRoomId,
       recipientId: 'th_approved_test_01',
       text: 'Hello doctor, feeling uneasy tonight.'
     }, clientToken);
 
-    const msgDbRes = await db.query('SELECT encrypted_content, iv, auth_tag FROM clinical_messages WHERE room_id = $1', ['room_step0_test_99']);
+    const msgDbRes = await db.query('SELECT encrypted_content, iv, auth_tag FROM clinical_messages WHERE room_id = $1 ORDER BY created_at DESC LIMIT 1', [testRoomId]);
     const storedMsg = msgDbRes.rows[0];
     const decryptedMsg = decryptField(storedMsg.encrypted_content, storedMsg.iv, storedMsg.auth_tag);
 
     const adminToken = jwt.sign({ id: 'admin_system_root', email: 'admin@mindcare.com', role: 'admin' }, JWT_SECRET);
-    const adminMsgAccess = await request('GET', '/api/clinical/messages/room_step0_test_99', null, adminToken);
+    const adminMsgAccess = await request('GET', `/api/clinical/messages/${testRoomId}`, null, adminToken);
 
     if (sendMsgRes.status === 201 && decryptedMsg === 'Hello doctor, feeling uneasy tonight.' && adminMsgAccess.status === 403) {
       console.log('✅ 7. Clinical chat encrypted at rest; administrators forbidden from reading (403): PASS');

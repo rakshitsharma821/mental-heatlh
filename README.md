@@ -74,15 +74,18 @@ Ensure the following tools are installed on your workstation or deployment serve
 
 ### 2. Backend Setup & Configuration
 
-1. Navigate to the project root and install backend dependencies:
+1. Install dependencies across root, backend, and frontend:
    ```bash
    npm install
+   npm --prefix backend install
+   npm --prefix frontend install
    ```
 2. Copy the environment configuration template:
    ```bash
+   cp .env.example .env
    cp backend/.env.example backend/.env
    ```
-3. Edit `backend/.env` with your PostgreSQL password, JWT secret, and encryption keys (see [Environment Variables Reference](#-environment-variables-reference) below).
+3. Edit `backend/.env` with your PostgreSQL password (`DB_PASSWORD`), JWT secret, and encryption keys (see [Environment Variables Reference](#-environment-variables-reference) below).
 4. Run table initialization and seed the Super Admin account:
    ```bash
    npm run seed:admin
@@ -99,17 +102,12 @@ Ensure the following tools are installed on your workstation or deployment serve
 
 ### 3. Frontend Setup
 
-1. Open a new terminal and install frontend dependencies:
+1. Start the Vite development server:
    ```bash
-   cd frontend
-   npm install
-   ```
-2. Start the Vite development server:
-   ```bash
-   npm run dev
+   npm --prefix frontend run dev
    # Vite development server starts at http://localhost:3000
    ```
-3. Open your browser and navigate to `http://localhost:3000`.
+2. Open your browser and navigate to `http://localhost:3000`.
 
 ---
 
