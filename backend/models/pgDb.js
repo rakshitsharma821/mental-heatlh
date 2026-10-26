@@ -727,6 +727,11 @@ export function initPostgresDatabase() {
         ALTER TABLE therapy_roadmaps ADD COLUMN IF NOT EXISTS milestones_json JSONB DEFAULT '[]';
         ALTER TABLE therapy_roadmaps ADD COLUMN IF NOT EXISTS current_stage_index INT DEFAULT 0;
         ALTER TABLE therapy_roadmaps ADD COLUMN IF NOT EXISTS progress_percentage INT DEFAULT 0;
+
+        ALTER TABLE user_assessments ADD COLUMN IF NOT EXISTS ai_analysis JSONB DEFAULT NULL;
+        ALTER TABLE user_assessments ADD COLUMN IF NOT EXISTS recommended_therapy VARCHAR(250) DEFAULT NULL;
+        ALTER TABLE user_assessments ADD COLUMN IF NOT EXISTS recommended_specialist VARCHAR(250) DEFAULT NULL;
+        ALTER TABLE user_assessments ADD COLUMN IF NOT EXISTS clinical_notes TEXT DEFAULT NULL;
       `);
 
       await client.query('COMMIT');

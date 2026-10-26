@@ -113,13 +113,13 @@ export default function QuestionnaireModal({ isOpen, onClose, onComplete }) {
         name: 'Zen Garden & Sensory Focus',
         route: '/games',
         badge: 'Interactive Game',
-        icon: '🎮'
+        icon: ''
       },
       secondaryActivity: {
         name: 'Physiological Sigh Breathing',
         route: '/breathing',
         badge: 'Somatic Breath',
-        icon: '🌬️'
+        icon: ''
       },
       musicRecommendation: 'Ambient Lo-Fi & Forest Solitude Soundscapes',
       exerciseRecommendation: 'Light mindful walking or gentle stretching'
@@ -137,13 +137,13 @@ export default function QuestionnaireModal({ isOpen, onClose, onComplete }) {
           name: 'Box Breathing (4-4-4-4) & Somatic Grounding',
           route: '/breathing',
           badge: 'Immediate Grounding',
-          icon: '🌬️'
+          icon: ''
         },
         secondaryActivity: {
           name: 'Ripple Tap & Calming Games',
           route: '/games',
           badge: 'Decompression Game',
-          icon: '🫧'
+          icon: ''
         },
         musicRecommendation: '432Hz Binaural Delta Waves & Soft Rain Meditation',
         exerciseRecommendation: 'Restorative Child\'s Pose, gentle neck rolls, or yoga nidra'
@@ -160,13 +160,13 @@ export default function QuestionnaireModal({ isOpen, onClose, onComplete }) {
           name: '4-7-8 Relaxation Breath',
           route: '/breathing',
           badge: 'Breath Regulation',
-          icon: '🌿'
+          icon: ''
         },
         secondaryActivity: {
           name: 'Color Harmony & Focus Blocks',
           route: '/games',
           badge: 'Mindful Game',
-          icon: '🧩'
+          icon: ''
         },
         musicRecommendation: 'Acoustic Piano & Gentle Flow Ambient Melodies',
         exerciseRecommendation: '10-minute Sun Salutations or desk postural release'
@@ -249,13 +249,13 @@ export default function QuestionnaireModal({ isOpen, onClose, onComplete }) {
           }}
           aria-label="Close"
         >
-          ✕
+          
         </button>
 
         {/* STEP 1: WELCOME SCREEN */}
         {step === 'welcome' && (
           <div style={{ textAlign: 'center', padding: '12px 8px' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🌱</div>
+            <div style={{ fontSize: '3rem', marginBottom: '12px' }}></div>
             <span
               style={{
                 display: 'inline-block',
@@ -291,7 +291,7 @@ export default function QuestionnaireModal({ isOpen, onClose, onComplete }) {
                   borderRadius: '14px'
                 }}
               >
-                Begin 2-Minute Pulse ✦
+                Begin 2-Minute Pulse 
               </button>
               <button
                 type="button"
@@ -408,7 +408,7 @@ export default function QuestionnaireModal({ isOpen, onClose, onComplete }) {
                   cursor: answers[currentQ.id] === undefined ? 'not-allowed' : 'pointer'
                 }}
               >
-                {currentIndex === ONBOARDING_QUESTIONS.length - 1 ? 'Compute My Plan ✦' : 'Next →'}
+                {currentIndex === ONBOARDING_QUESTIONS.length - 1 ? 'Compute My Plan ' : 'Next →'}
               </button>
             </div>
           </div>
@@ -522,10 +522,10 @@ export default function QuestionnaireModal({ isOpen, onClose, onComplete }) {
               }}
             >
               <div style={{ marginBottom: '6px' }}>
-                🎵 <strong>Calming Music:</strong> {recommendation.musicRecommendation}
+                 <strong>Calming Music:</strong> {recommendation.musicRecommendation}
               </div>
               <div>
-                🧘 <strong>Movement / Yoga:</strong> {recommendation.exerciseRecommendation}
+                 <strong>Movement / Yoga:</strong> {recommendation.exerciseRecommendation}
               </div>
             </div>
 
@@ -539,7 +539,7 @@ export default function QuestionnaireModal({ isOpen, onClose, onComplete }) {
                 }}
                 style={{ flex: 1, padding: '12px 20px', borderRadius: '12px', fontWeight: 600 }}
               >
-                Go to My Dashboard ✦
+                Go to My Dashboard 
               </button>
             </div>
           </div>

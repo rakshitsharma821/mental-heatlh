@@ -376,7 +376,7 @@ export default function Landing() {
                 </svg>
               </div>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontWeight: 700 }}>
-                {UI_STRINGS.landing?.pillar2Title || 'Aria AI Companion'}
+                {UI_STRINGS.landing?.pillar2Title || 'Aria Care Companion'}
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
                 {UI_STRINGS.landing?.pillar2Desc || 'A warm, grounded wellness friend governed by strict safe-language rules. Aria never diagnoses, never echoes negative triggers, and offers calm guidance.'}

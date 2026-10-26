@@ -277,7 +277,7 @@ export default function ClinicalLiveRoom({
           background: 'var(--bg-surface-elevated)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '1.4rem' }}>🌿</span>
+            <span style={{ fontSize: '1.4rem' }}></span>
             <div>
               <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
                 {peerName}
@@ -317,7 +317,7 @@ export default function ClinicalLiveRoom({
               style={{ padding: '6px 14px', fontSize: '0.8rem' }}
               title="Toggle In-Session Chat"
             >
-              💬 {isChatOpen ? 'Hide Chat' : 'Show Chat'}
+               {isChatOpen ? 'Hide Chat' : 'Show Chat'}
             </button>
           </div>
         </div>
@@ -333,7 +333,7 @@ export default function ClinicalLiveRoom({
             padding: '40px 24px',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🔒</div>
+            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}></div>
             <h3 style={{ fontSize: '1.4rem', color: 'var(--text-primary)', marginBottom: '10px' }}>
               Consultation Room Locked
             </h3>
@@ -357,7 +357,7 @@ export default function ClinicalLiveRoom({
                 className="btn-ghost"
                 style={{ padding: '10px 20px' }}
               >
-                ✦ Connect with Aria (24/7 Companion)
+                 Connect with Aria (24/7 Companion)
               </button>
             </div>
           </div>
@@ -375,7 +375,7 @@ export default function ClinicalLiveRoom({
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <span>ℹ️</span>
+                <span>ℹ</span>
                 <span>{mediaError}</span>
               </div>
             )}
@@ -427,7 +427,7 @@ export default function ClinicalLiveRoom({
                     backdropFilter: 'blur(6px)',
                     borderRadius: '16px'
                   }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '8px' }}>🩺</div>
+                    <div style={{ fontSize: '3rem', marginBottom: '8px' }}></div>
                     <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>Ready for Consultation</h3>
                     <p style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.65)' }}>
                       Connecting audio & video stream with {peerName}...
@@ -496,7 +496,7 @@ export default function ClinicalLiveRoom({
                   margin: '0 auto 16px',
                   boxShadow: connectionStatus === 'connected' ? '0 0 30px rgba(82, 183, 136, 0.4)' : 'none'
                 }}>
-                  🎙️
+                  
                 </div>
                 <h3 style={{ fontSize: '1.3rem', marginBottom: '6px' }}>{peerName}</h3>
                 <p style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '16px' }}>
@@ -530,7 +530,7 @@ export default function ClinicalLiveRoom({
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <span>💬</span>
+                <span></span>
                 <span>In-Session Clinical Notes & Chat</span>
               </div>
 
@@ -545,7 +545,7 @@ export default function ClinicalLiveRoom({
               }}>
                 {messages.length === 0 ? (
                   <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '40px' }}>
-                    🌿 Session started. You can write thoughts, symptoms, or reflections directly to {peerName}.
+                     Session started. You can write thoughts, symptoms, or reflections directly to {peerName}.
                   </div>
                 ) : (
                   messages.map((m) => {
@@ -613,21 +613,21 @@ export default function ClinicalLiveRoom({
               className={activeMode === 'video' ? 'btn-primary' : 'btn-ghost'}
               style={{ padding: '8px 14px', fontSize: '0.8rem' }}
             >
-              📹 Video
+               Video
             </button>
             <button
               onClick={() => setActiveMode('voice')}
               className={activeMode === 'voice' ? 'btn-primary' : 'btn-ghost'}
               style={{ padding: '8px 14px', fontSize: '0.8rem' }}
             >
-              🎙️ Voice Only
+               Voice Only
             </button>
             <button
               onClick={() => setActiveMode('chat')}
               className={activeMode === 'chat' ? 'btn-primary' : 'btn-ghost'}
               style={{ padding: '8px 14px', fontSize: '0.8rem' }}
             >
-              💬 Text Only
+               Text Only
             </button>
           </div>
 
@@ -648,7 +648,7 @@ export default function ClinicalLiveRoom({
                     fontWeight: 600
                   }}
                 >
-                  {isMuted ? '🔇 Mic Muted' : '🎙️ Mic Active'}
+                  {isMuted ? ' Mic Muted' : ' Mic Active'}
                 </button>
 
                 {activeMode === 'video' && (
@@ -665,7 +665,7 @@ export default function ClinicalLiveRoom({
                       fontWeight: 600
                     }}
                   >
-                    {isVideoDisabled ? '📷 Camera Off' : '📹 Camera On'}
+                    {isVideoDisabled ? ' Camera Off' : ' Camera On'}
                   </button>
                 )}
               </>
@@ -684,7 +684,7 @@ export default function ClinicalLiveRoom({
                 fontWeight: 700
               }}
             >
-              End Session ✕
+              End Session 
             </button>
           </div>
         </div>

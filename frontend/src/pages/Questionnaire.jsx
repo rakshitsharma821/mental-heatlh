@@ -218,7 +218,7 @@ export default function Questionnaire() {
     // Post to backend API
     try {
       const token = Storage.get('mindcare_auth_token') || localStorage.getItem('mindcare_auth_token');
-      await fetch(`${API_BASE_URL}/assessment/submit`, {
+      const res = await fetch(`${API_BASE_URL}/assessment/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -230,6 +230,13 @@ export default function Questionnaire() {
           answers
         })
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ai_analysis) {
+          assessmentResult.ai_analysis = data.ai_analysis;
+          Storage.set('mindcare_assessment_result', assessmentResult);
+        }
+      }
     } catch (e) {
       console.warn('Non-blocking backend assessment log notice:', e.message);
     }
@@ -293,7 +300,7 @@ export default function Questionnaire() {
             fontWeight: 500
           }}
         >
-          ✕ Take a break / Exit
+           Take a break / Exit
         </button>
 
         <Link
@@ -312,7 +319,7 @@ export default function Questionnaire() {
             gap: '6px'
           }}
         >
-          <span>🛡️</span>
+          <span></span>
           <span>Need support?</span>
         </Link>
       </div>
@@ -334,7 +341,7 @@ export default function Questionnaire() {
             textAlign: 'center'
           }}
         >
-          <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🌙</div>
+          <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px' }}>
             A Quiet Space For You
           </h2>
@@ -490,7 +497,7 @@ export default function Questionnaire() {
               {submitting
                 ? 'Computing Plan...'
                 : currentIndex === questions.length - 1
-                ? 'View My Recommendations ✦'
+                ? 'View My Recommendations '
                 : 'Next Question →'}
             </button>
           </div>
@@ -510,7 +517,7 @@ export default function Questionnaire() {
           fontSize: '0.88rem',
           boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
         }}>
-          🌿 Welcome back! Let's continue right where you left off.
+           Welcome back! Let's continue right where you left off.
         </div>
       )}
     </div>

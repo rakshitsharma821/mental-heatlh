@@ -60,7 +60,7 @@ export default function MoodTracker() {
         mood: moodToLog,
         intensity: intensityToLog,
         label: MOOD_CONFIG[moodToLog]?.label || moodToLog,
-        emoji: MOOD_CONFIG[moodToLog]?.emoji || '🌿'
+        emoji: MOOD_CONFIG[moodToLog]?.emoji || ''
       });
 
       setNote('');
@@ -114,7 +114,7 @@ export default function MoodTracker() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--accent-forest)', fontWeight: 700 }}>
-              Living 3D Sanctuary Tree ✦
+              Living 3D Sanctuary Tree 
             </span>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
               Atmosphere: <strong style={{ color: 'var(--accent-forest)' }}>{MOOD_CONFIG[selectedMood]?.label || 'Calm'}</strong>
@@ -147,7 +147,7 @@ export default function MoodTracker() {
             fontWeight: 600,
             animation: 'fadeIn 0.3s ease-out'
           }}>
-            ✓ Mood logged with compassion. Your 3D atmosphere and history have synchronized.
+             Mood logged with compassion. Your 3D atmosphere and history have synchronized.
           </div>
         )}
 
@@ -264,13 +264,13 @@ export default function MoodTracker() {
                   </>
                 ) : isSaved ? (
                   <>
-                    <span style={{ fontSize: '1.25rem' }}>✓</span>
-                    <span>Saved to Sanctuary! 🌿</span>
+                    <span style={{ fontSize: '1.25rem' }}></span>
+                    <span>Saved to Sanctuary! </span>
                   </>
                 ) : (
                   <>
                     <span>Save Mood Check-in</span>
-                    <span style={{ fontSize: '1.1rem' }}>✦</span>
+                    <span style={{ fontSize: '1.1rem' }}></span>
                   </>
                 )}
               </button>
@@ -282,14 +282,14 @@ export default function MoodTracker() {
                 style={{ borderColor: 'rgba(212, 163, 115, 0.4)' }}
                 title="Verify local RAM-only acoustic & facial emotion signals"
               >
-                Ephemeral Biometrics & Sensor Sandbox 🔬
+                Ephemeral Biometrics & Sensor Sandbox 
               </button>
               <button
                 type="button"
                 className="btn-ghost"
                 onClick={() => setShowAssessment(!showAssessment)}
               >
-                {showAssessment ? 'Close Check-in Tool' : '3-Question Wellbeing Pulse 📋'}
+                {showAssessment ? 'Close Check-in Tool' : '3-Question Wellbeing Pulse '}
               </button>
             </div>
 
@@ -319,7 +319,7 @@ export default function MoodTracker() {
                     </div>
                   </div>
                 </div>
-                <span style={{ fontSize: '1.1rem', color: 'var(--primary)' }}>✦</span>
+                <span style={{ fontSize: '1.1rem', color: 'var(--primary)' }}></span>
               </div>
             )}
           </form>
@@ -338,7 +338,7 @@ export default function MoodTracker() {
         {/* 3-Question Wellbeing Pulse Modal/Section */}
         {showAssessment && (
           <div className="glass-card" style={{ marginBottom: '36px', border: '1px solid var(--border-hover)' }}>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '6px', color: 'var(--text-primary)' }}>📋 3-Question Wellbeing Pulse</h3>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '6px', color: 'var(--text-primary)' }}> 3-Question Wellbeing Pulse</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
               A rapid, evidence-informed screener based on GAD-7 and PHQ-9 emotional load metrics.
             </p>
@@ -427,7 +427,7 @@ export default function MoodTracker() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {moodEntries.slice(0, 8).map(m => {
-                const conf = MOOD_CONFIG[m.mood] || { emoji: '🌿', label: m.mood };
+                const conf = MOOD_CONFIG[m.mood] || { emoji: '', label: m.mood };
                 return (
                   <div
                     key={m.id}

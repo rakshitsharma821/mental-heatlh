@@ -154,14 +154,13 @@ export const companionController = {
         userWordsSeen = introducedWords;
       }
 
-      // 4. Sensitive non-crisis keyword check (e.g., stress, panic, depression)
-      // Check if user specifically used a sensitive word in this turn
-      const sensitiveWord = findBlockedWord(sanitizedText);
-      if (sensitiveWord && !wasAskedHelpline) {
+      // 4. If user explicitly asks for a helpline or crisis numbers
+      const wantsHelpline = /\b(helpline|support line|crisis number|hotline|help number)\b/i.test(sanitizedText);
+      if (wantsHelpline && !wasAskedHelpline) {
         return res.json({
           success: true,
           type: 'sensitive',
-          text: "Thank you for trusting me with what you are experiencing right now. Your well-being matters deeply. Would you like me to call a helpline for you?",
+          text: "I am right here with you, and your well-being matters deeply. Would you like me to share verified helpline numbers with you?",
           quickReplies: [
             { label: 'Yes, please', action: { type: 'helpline_consent', value: 'yes' } },
             { label: 'No, let us keep talking', action: { type: 'helpline_consent', value: 'no' } }

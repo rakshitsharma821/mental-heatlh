@@ -259,7 +259,7 @@ export default function SettingsPrivacy() {
         {/* SENSORY & MOTION ACCESSIBILITY CONTROLS */}
         <div className="glass-card" style={{ padding: '26px 30px', marginBottom: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <span style={{ fontSize: '1.3rem' }}>🍃</span>
+            <span style={{ fontSize: '1.3rem' }}></span>
             <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>Motion & Visual Comfort</h2>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginBottom: '18px' }}>
@@ -302,7 +302,7 @@ export default function SettingsPrivacy() {
           alignItems: 'center',
           gap: '16px'
         }}>
-          <div style={{ fontSize: '2.2rem' }}>🔒</div>
+          <div style={{ fontSize: '2.2rem' }}></div>
           <div>
             <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '4px' }}>Client-Side Offline Architecture</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
@@ -313,7 +313,7 @@ export default function SettingsPrivacy() {
 
         {/* Real-time Data Inventory */}
         <div className="glass-card" style={{ padding: '32px', marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '8px' }}>📦 Stored Data Inventory</h2>
+          <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '8px' }}> Stored Data Inventory</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '24px' }}>
             Exact count of wellness records residing on this browser instance:
           </p>
@@ -342,7 +342,7 @@ export default function SettingsPrivacy() {
 
           <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
             <button onClick={handleExportData} className="btn-primary" style={{ padding: '12px 24px' }}>
-              Export All Data (.json) 💾
+              Export All Data (.json) 
             </button>
           </div>
         </div>
@@ -352,21 +352,13 @@ export default function SettingsPrivacy() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '18px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>🩺</span>
+                <span style={{ fontSize: '1.2rem', color: 'var(--primary)' }}></span>
                 <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>Clinical Data Sharing & Therapist Access</h2>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '2px' }}>
                 Strictly zero-trust by default. Grant, customize, or revoke provider access anytime.
               </p>
             </div>
-
-            <Link
-              to="/clinical"
-              className="btn-ghost"
-              style={{ fontSize: '0.8rem', padding: '6px 14px', borderColor: 'var(--border-subtle)' }}
-            >
-              Preview Clinician Portal ↗
-            </Link>
           </div>
 
           {/* Active Pairing Status & Access Key */}
@@ -429,7 +421,7 @@ export default function SettingsPrivacy() {
                     className="btn-primary"
                     style={{ padding: '8px 18px', fontSize: '0.82rem' }}
                   >
-                    Activate Access Key ✓
+                    Activate Access Key 
                   </button>
                 ) : (
                   <button
@@ -445,7 +437,7 @@ export default function SettingsPrivacy() {
                       cursor: 'pointer'
                     }}
                   >
-                    Revoke Access Immediately 🔒
+                    Revoke Access Immediately 
                   </button>
                 )}
               </div>
@@ -511,7 +503,7 @@ export default function SettingsPrivacy() {
 
             <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '12px', background: 'rgba(220, 53, 69, 0.06)', border: '1px solid rgba(220, 53, 69, 0.25)', borderRadius: '12px' }}>
               <div>
-                <div style={{ fontSize: '0.9rem', color: '#991b1b', fontWeight: 700 }}>⚠️ Share Full Raw Journal Text (Strictly Optional)</div>
+                <div style={{ fontSize: '0.9rem', color: '#991b1b', fontWeight: 700 }}> Share Full Raw Journal Text (Strictly Optional)</div>
                 <div style={{ fontSize: '0.78rem', color: '#7f1d1d' }}>Exposes your complete unedited reflections. Recommended to keep DISABLED.</div>
               </div>
               <input
@@ -529,7 +521,7 @@ export default function SettingsPrivacy() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '18px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.2rem' }}>👨‍👩‍👧</span>
+                <span style={{ fontSize: '1.2rem' }}>‍‍</span>
                 <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>Caregiver & Family Sanctuary Mode</h2>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '2px' }}>
@@ -651,7 +643,7 @@ export default function SettingsPrivacy() {
                         className="btn-ghost"
                         style={{ fontSize: '0.75rem', padding: '4px 10px', color: '#b91c1c' }}
                       >
-                        Remove ✕
+                        Remove 
                       </button>
                     </div>
                   ))}
@@ -702,7 +694,7 @@ export default function SettingsPrivacy() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.2rem' }}>🔮</span>
+                <span style={{ fontSize: '1.2rem' }}></span>
                 <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>Multimodal & Biometric Sensor Governance</h2>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '2px' }}>
@@ -721,7 +713,7 @@ export default function SettingsPrivacy() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
             <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '12px' }}>
               <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>💤 Sleep Latency & Duration Sync</div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}> Sleep Latency & Duration Sync</div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Reads local sleep cycle metrics to forecast morning emotional replenishment.</div>
               </div>
               <input
@@ -747,7 +739,7 @@ export default function SettingsPrivacy() {
 
             <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '12px' }}>
               <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>📅 Workday Calendar Density & Meeting Load</div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}> Workday Calendar Density & Meeting Load</div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Estimates cognitive demand without inspecting meeting titles or participants.</div>
               </div>
               <input
@@ -769,14 +761,14 @@ export default function SettingsPrivacy() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
               <h4 style={{ fontSize: '0.98rem', color: '#8a5828', fontWeight: 700, margin: 0 }}>
-                🔬 Sensitive Biometric Emotion Recognition (RAM-Only)
+                 Sensitive Biometric Emotion Recognition (RAM-Only)
               </h4>
               <button
                 onClick={handlePurgeBiometrics}
                 className="btn-ghost"
                 style={{ fontSize: '0.75rem', padding: '5px 12px', color: '#b91c1c', borderColor: 'rgba(220, 53, 69, 0.3)' }}
               >
-                Purge All Biometric Weights 🗑️
+                Purge All Biometric Weights 
               </button>
             </div>
 
@@ -787,7 +779,7 @@ export default function SettingsPrivacy() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '10px 14px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '10px' }}>
                 <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>🎙️ Voice Valence & Acoustic Cadence Analysis</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}> Voice Valence & Acoustic Cadence Analysis</div>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Extracts vocal pace and vocal fatigue indicators locally during check-in.</div>
                 </div>
                 <input
@@ -800,7 +792,7 @@ export default function SettingsPrivacy() {
 
               <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '10px 14px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '10px' }}>
                 <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>📷 Facial Micro-Expression & Affect Tracking</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}> Facial Micro-Expression & Affect Tracking</div>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Estimates subtle facial valence markers on-device. Frames immediately dropped.</div>
                 </div>
                 <input
@@ -814,7 +806,7 @@ export default function SettingsPrivacy() {
 
             {biometricPurgeNotice && (
               <div style={{ marginTop: '12px', color: 'var(--primary-dark)', fontSize: '0.8rem', fontWeight: 600 }}>
-                ✓ Biometric calibration weights and models have been completely purged from memory.
+                 Biometric calibration weights and models have been completely purged from memory.
               </div>
             )}
           </div>
@@ -825,7 +817,7 @@ export default function SettingsPrivacy() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.3rem' }}>🔔</span>
+                <span style={{ fontSize: '1.3rem' }}></span>
                 <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>Mindful Notifications & Quiet Hours</h2>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px', maxWidth: '640px' }}>
@@ -862,7 +854,7 @@ export default function SettingsPrivacy() {
               </div>
               <div style={{ fontSize: '0.92rem', fontWeight: 600, color: notifPrefs.optIn ? 'var(--primary-dark)' : 'var(--text-muted)', marginTop: '2px' }}>
                 {notifPrefs.optIn && notifPrefs.consentTimestamp
-                  ? `✓ Explicit consent granted on ${new Date(notifPrefs.consentTimestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`
+                  ? ` Explicit consent granted on ${new Date(notifPrefs.consentTimestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`
                   : '○ Off by default: No consent recorded. All notification channels completely silenced.'}
               </div>
             </div>
@@ -917,7 +909,7 @@ export default function SettingsPrivacy() {
               padding: '16px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <span>🌙</span>
+                <span></span>
                 <h4 style={{ fontSize: '0.92rem', color: 'var(--text-primary)' }}>Restorative Quiet Hours</h4>
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>
@@ -943,14 +935,14 @@ export default function SettingsPrivacy() {
               padding: '16px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <span>🧘‍♀️</span>
+                <span>‍</span>
                 <h4 style={{ fontSize: '0.92rem', color: 'var(--primary-dark)' }}>Questionnaire Focus Shield</h4>
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                 Notifications are <strong>guaranteed silenced</strong> whenever you are in Questionnaire or clinical reflection mode to protect your mindful presence.
               </p>
               <div style={{ marginTop: '10px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-dark)' }}>
-                🛡️ SYSTEM-ENFORCED NON-DISTURB
+                 SYSTEM-ENFORCED NON-DISTURB
               </div>
             </div>
           </div>
@@ -1006,25 +998,25 @@ export default function SettingsPrivacy() {
 
           {notifNotice && (
             <div style={{ marginTop: '14px', color: 'var(--primary-dark)', fontSize: '0.82rem', fontWeight: 600 }}>
-              ✓ {notifNotice}
+               {notifNotice}
             </div>
           )}
         </div>
 
         {/* Granular Consent Toggles */}
         <div className="glass-card" style={{ padding: '32px', marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '8px' }}>⚙️ Personalization & Consent Controls</h2>
+          <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '8px' }}> Personalization & Consent Controls</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '24px' }}>
-            Control which local analyses Aria and the AI Wellness Coach are allowed to perform:
+            Control which local analyses Aria and the Care Wellness Coach are allowed to perform:
           </p>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'rgba(82, 183, 136, 0.08)', padding: '10px 14px', borderRadius: '10px', marginBottom: '24px', border: '1px solid var(--border-subtle)' }}>
-            🌿 <strong>AI Personalization Privacy:</strong> Your first name is sent to an AI provider (OpenRouter) to personalize messages.
+             <strong>AI Personalization Privacy:</strong> Your first name is sent to an AI provider (OpenRouter) to personalize messages.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
               <div>
-                <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '2px' }}>AI Companion Tone Adaptation & Milestones</h4>
+                <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '2px' }}>Care Companion Tone Adaptation & Milestones</h4>
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                   Allows Aria to read recent mood states and streaks to adjust empathy and acknowledge achievements.
                 </p>
@@ -1058,7 +1050,7 @@ export default function SettingsPrivacy() {
         <div className="glass-card" style={{ padding: '32px', marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
             <div>
-              <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>🛡️ Governance & Access Audit Trail</h2>
+              <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}> Governance & Access Audit Trail</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                 Immutable client-side log of every permission change and clinical view event.
               </p>
@@ -1115,7 +1107,7 @@ export default function SettingsPrivacy() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h3 style={{ fontSize: '1.15rem', color: '#991b1b', marginBottom: '4px' }}>
-                🛑 Emergency Severance (One-Click Disconnect)
+                 Emergency Severance (One-Click Disconnect)
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '540px' }}>
                 Immediately revoke clinician access, clear caregiver sharing keys, purge biometric weights, and regenerate fresh rotation tokens in a single action.
@@ -1134,19 +1126,19 @@ export default function SettingsPrivacy() {
                 cursor: 'pointer'
               }}
             >
-              Sever All Active Connections ✂️
+              Sever All Active Connections 
             </button>
           </div>
           {severSuccessNotice && (
             <div style={{ marginTop: '12px', color: 'var(--primary-dark)', fontSize: '0.82rem', fontWeight: 600 }}>
-              ✓ All clinical, family, and sensor links have been terminated. Fresh security keys regenerated.
+               All clinical, family, and sensor links have been terminated. Fresh security keys regenerated.
             </div>
           )}
         </div>
 
         {/* Danger Zone: Nuclear Data Wipe */}
         <div className="glass-card" style={{ padding: '32px', borderColor: 'rgba(220, 53, 69, 0.3)' }}>
-          <h2 style={{ fontSize: '1.25rem', color: '#b91c1c', marginBottom: '6px' }}>⚠️ Right to Be Forgotten (Data Wipe)</h2>
+          <h2 style={{ fontSize: '1.25rem', color: '#b91c1c', marginBottom: '6px' }}> Right to Be Forgotten (Data Wipe)</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
             Permanently clear all data stored in this browser, including account login, journal entries, and safety plan. This cannot be undone.
           </p>
@@ -1165,7 +1157,7 @@ export default function SettingsPrivacy() {
                 cursor: 'pointer'
               }}
             >
-              Permanently Erase All Data 🗑️
+              Permanently Erase All Data 
             </button>
           ) : (
             <div style={{

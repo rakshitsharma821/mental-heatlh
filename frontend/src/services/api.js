@@ -1067,6 +1067,44 @@ export const Api = {
     }
   },
 
+  deleteTherapist: async (therapistId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/therapists/${therapistId}`, {
+        method: 'DELETE',
+        headers: Api.getAuthHeaders()
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: 'Server unreachable.' };
+    }
+  },
+
+  sendRegistrationOtp: async (email) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/send-registration-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: 'Could not connect to verification server.' };
+    }
+  },
+
+  verifyRegistrationOtp: async (email, otp) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/verify-registration-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: 'Could not connect to verification server.' };
+    }
+  },
+
   getTherapistAssignedClients: async (therapistId) => {
     try {
       const res = await fetch(`${API_BASE_URL}/admin/therapists/${therapistId}/assigned-clients`, {

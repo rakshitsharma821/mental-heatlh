@@ -32,11 +32,11 @@ export default function Progress() {
   }
 
   const achievements = [
-    { id: 1, title: 'First Sanctuary Step', desc: 'Logged your very first mood reflection', icon: '🌱', unlocked: moods.length >= 1 },
-    { id: 2, title: 'Breath Master', desc: 'Completed 3 days of conscious breathwork', icon: '🌬️', unlocked: streak >= 3 },
-    { id: 3, title: 'Inner Scribe', desc: 'Saved 3 reflective entries in private journal', icon: '✍️', unlocked: journalEntries.length >= 3 },
-    { id: 4, title: 'Equilibrium Anchor', desc: 'Maintained 5-day continuous sanctuary streak', icon: '⚓', unlocked: streak >= 5 },
-    { id: 5, title: 'Emotional Cartographer', desc: 'Logged 10 total mood check-ins', icon: '🗺️', unlocked: moods.length >= 10 }
+    { id: 1, title: 'First Sanctuary Step', desc: 'Logged your very first mood reflection', icon: '', unlocked: moods.length >= 1 },
+    { id: 2, title: 'Breath Master', desc: 'Completed 3 days of conscious breathwork', icon: '', unlocked: streak >= 3 },
+    { id: 3, title: 'Inner Scribe', desc: 'Saved 3 reflective entries in private journal', icon: '', unlocked: journalEntries.length >= 3 },
+    { id: 4, title: 'Equilibrium Anchor', desc: 'Maintained 5-day continuous sanctuary streak', icon: '', unlocked: streak >= 5 },
+    { id: 5, title: 'Emotional Cartographer', desc: 'Logged 10 total mood check-ins', icon: '', unlocked: moods.length >= 10 }
   ];
 
   return (
@@ -55,19 +55,19 @@ export default function Progress() {
         {/* Overview Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '36px' }}>
           <div className="glass-card" style={{ textAlign: 'center', padding: '26px' }}>
-            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}>🔥</div>
+            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}></div>
             <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{streak} Days</div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Current Streak</div>
           </div>
 
           <div className="glass-card" style={{ textAlign: 'center', padding: '26px' }}>
-            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}>📊</div>
+            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}></div>
             <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary-dark)' }}>{moods.length}</div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Check-ins</div>
           </div>
 
           <div className="glass-card" style={{ textAlign: 'center', padding: '26px' }}>
-            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}>✍️</div>
+            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}></div>
             <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary)' }}>{journalEntries.length}</div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Journal Entries</div>
           </div>
@@ -148,10 +148,10 @@ export default function Progress() {
           {/* Growth Stages Stepper */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '14px', marginBottom: '28px' }}>
             {[
-              { stage: 'Stage 1', name: 'Sprouting Seedling', desc: 'First roots planted in soil', threshold: 1, current: moods.length + journalEntries.length >= 1, icon: '🌱' },
-              { stage: 'Stage 2', name: 'Tender Sapling', desc: 'Budding foliage & early rhythm', threshold: 5, current: moods.length + journalEntries.length >= 5, icon: '🌿' },
-              { stage: 'Stage 3', name: 'Flourishing Canopy', desc: 'Resilient trunk & sunlit leaves', threshold: 12, current: moods.length + journalEntries.length >= 12, icon: '🌳' },
-              { stage: 'Stage 4', name: 'Ancient Elderwood', desc: 'Deep roots & harmonic peace', threshold: 25, current: moods.length + journalEntries.length >= 25, icon: '✨' }
+              { stage: 'Stage 1', name: 'Sprouting Seedling', desc: 'First roots planted in soil', threshold: 1, current: moods.length + journalEntries.length >= 1, icon: '' },
+              { stage: 'Stage 2', name: 'Tender Sapling', desc: 'Budding foliage & early rhythm', threshold: 5, current: moods.length + journalEntries.length >= 5, icon: '' },
+              { stage: 'Stage 3', name: 'Flourishing Canopy', desc: 'Resilient trunk & sunlit leaves', threshold: 12, current: moods.length + journalEntries.length >= 12, icon: '' },
+              { stage: 'Stage 4', name: 'Ancient Elderwood', desc: 'Deep roots & harmonic peace', threshold: 25, current: moods.length + journalEntries.length >= 25, icon: '' }
             ].map((st, i) => (
               <div
                 key={i}
@@ -175,7 +175,7 @@ export default function Progress() {
                   fontWeight: 700,
                   color: st.current ? 'var(--primary-dark)' : 'var(--text-muted)'
                 }}>
-                  {st.current ? '✓ Active Stage' : `Requires ${st.threshold} reflections`}
+                  {st.current ? ' Active Stage' : `Requires ${st.threshold} reflections`}
                 </div>
               </div>
             ))}

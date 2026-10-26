@@ -273,7 +273,7 @@ export default function Breathing() {
             aria-label={soundEnabled ? 'Mute singing chime' : 'Enable singing chime'}
             title={soundEnabled ? 'Mute singing chime' : 'Enable singing chime'}
           >
-            {soundEnabled ? '🔔 Chimes On' : '🔕 Chimes Off'}
+            {soundEnabled ? ' Chimes On' : ' Chimes Off'}
           </button>
         </div>
       </div>

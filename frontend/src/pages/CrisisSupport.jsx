@@ -41,7 +41,7 @@ export default function CrisisSupport() {
           textAlign: 'center',
           boxShadow: '0 10px 30px rgba(220, 53, 69, 0.06)'
         }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🛡️</div>
+          <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}></div>
           <h1 style={{ fontSize: '2.2rem', color: '#991b1b', marginBottom: '10px' }}>Immediate Crisis Support</h1>
           <p style={{ color: '#7f1d1d', fontSize: '1.05rem', maxWidth: '650px', margin: '0 auto', lineHeight: 1.6 }}>
             If you are in danger, feeling overwhelmed, or experiencing thoughts of self-harm, please know you are not alone. Compassionate human help is ready for you right now — free, confidential, and 24/7.
@@ -89,7 +89,7 @@ export default function CrisisSupport() {
                       boxShadow: '0 4px 15px rgba(220, 38, 38, 0.25)'
                     }}
                   >
-                    Call / Connect Now 📞
+                    Call / Connect Now 
                   </a>
                 </div>
               </div>
@@ -100,7 +100,7 @@ export default function CrisisSupport() {
         {/* Somatic 5-4-3-2-1 Grounding Tool */}
         <div className="glass-card" style={{ padding: '32px', marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '1.6rem' }}>🌱</span>
+            <span style={{ fontSize: '1.6rem' }}></span>
             <h2 style={{ fontSize: '1.3rem', color: 'var(--text-primary)' }}>5-4-3-2-1 Sensory Grounding Technique</h2>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '24px' }}>
@@ -157,7 +157,7 @@ export default function CrisisSupport() {
             </div>
             {savedNotice && (
               <span style={{ fontSize: '0.78rem', color: '#88d8b0', fontWeight: 600 }}>
-                ✓ Safety plan saved locally
+                 Safety plan saved locally
               </span>
             )}
           </div>

@@ -117,12 +117,12 @@ export default function BookingModal({ isOpen, onClose, initialReason = '', onBo
           className="icon-btn-ghost"
           style={{ position: 'absolute', top: '20px', right: '20px' }}
         >
-          ✕
+          
         </button>
 
         {submitted ? (
           <div style={{ textAlign: 'center', padding: '36px 16px' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🌿</div>
+            <div style={{ fontSize: '3rem', marginBottom: '12px' }}></div>
             <h3 style={{ fontSize: '1.4rem', color: 'var(--text-primary)', marginBottom: '8px' }}>
               {UI_STRINGS.clinical.bookingSuccess}
             </h3>
@@ -160,11 +160,11 @@ export default function BookingModal({ isOpen, onClose, initialReason = '', onBo
                 fontSize: '0.85rem',
                 marginBottom: '16px'
               }}>
-                ⚠️ {error}
+                 {error}
               </div>
             )}
 
-            {/* 24/7 AI Companion Aria Banner */}
+            {/* 24/7 Care Companion Aria Banner */}
             <div style={{
               background: 'rgba(82, 183, 136, 0.08)',
               border: '1px solid rgba(82, 183, 136, 0.25)',
@@ -190,7 +190,7 @@ export default function BookingModal({ isOpen, onClose, initialReason = '', onBo
                 className="btn-ghost"
                 style={{ padding: '6px 14px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
               >
-                ✦ Open Aria
+                 Open Aria
               </button>
             </div>
 
@@ -203,7 +203,7 @@ export default function BookingModal({ isOpen, onClose, initialReason = '', onBo
                   value={selectedTherapistId}
                   onChange={(e) => setSelectedTherapistId(e.target.value)}
                 >
-                  <option value="no_preference">🌱 No Preference (First Available Verified Clinician)</option>
+                  <option value="no_preference"> No Preference (First Available Verified Clinician)</option>
                   {therapists.map(t => (
                     <option key={t.id} value={t.id}>
                       {t.name} ({t.title}) {t.is_available_now ? '• Available Now' : ''}
@@ -223,7 +223,7 @@ export default function BookingModal({ isOpen, onClose, initialReason = '', onBo
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      ✓ Verified Clinical Practitioner
+                       Verified Clinical Practitioner
                     </span>
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                       Timezone: {selectedTherapist.timezone || 'Asia/Kolkata'}
@@ -252,7 +252,7 @@ export default function BookingModal({ isOpen, onClose, initialReason = '', onBo
                     fontWeight: mode === 'video' ? 600 : 400
                   }}
                 >
-                  <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}>📹</div>
+                  <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}></div>
                   Video Call
                 </button>
                 <button
@@ -270,7 +270,7 @@ export default function BookingModal({ isOpen, onClose, initialReason = '', onBo
                     fontWeight: mode === 'voice' ? 600 : 400
                   }}
                 >
-                  <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}>🎙️</div>
+                  <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}></div>
                   Voice Call
                 </button>
                 <button
@@ -288,7 +288,7 @@ export default function BookingModal({ isOpen, onClose, initialReason = '', onBo
                     fontWeight: mode === 'chat' ? 600 : 400
                   }}
                 >
-                  <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}>💬</div>
+                  <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}></div>
                   Secure Chat
                 </button>
               </div>

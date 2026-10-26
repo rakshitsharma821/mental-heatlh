@@ -59,11 +59,14 @@ function PageLoader() {
 function AppContent() {
   const location = useLocation();
   const isQuestionnaire = location.pathname === '/questionnaire';
+  const isTherapistPortal = location.pathname === '/therapist' || location.pathname === '/clinical';
+  const isAdminPortal = location.pathname === '/admin';
+  const hideNavbar = isQuestionnaire || isTherapistPortal || isAdminPortal;
 
   return (
     <>
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      {!isQuestionnaire && <Navbar />}
+      {!hideNavbar && <Navbar />}
       <main id="main-content" tabIndex="-1" style={{ flex: 1, outline: 'none' }}>
         <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -76,15 +79,29 @@ function AppContent() {
             <Route path="/crisis" element={<CrisisSupport />} />
             <Route path="/settings" element={<SettingsPrivacy />} />
 
-            {/* Clinician Portal */}
-            <Route path="/clinical" element={<TherapistDashboard />} />
-            <Route path="/therapist" element={<TherapistDashboard />} />
+            {/* Clinician Portal (Therapist role only) */}
+            <Route
+              path="/clinical"
+              element={
+                <ProtectedRoute allowedRoles={['therapist', 'clinician']}>
+                  <TherapistDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/therapist"
+              element={
+                <ProtectedRoute allowedRoles={['therapist', 'clinician']}>
+                  <TherapistDashboard />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Admin Governance Portal */}
             <Route
               path="/admin"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
                   <AdminDashboard />
                 </ProtectedRoute>
               }
@@ -176,8 +193,8 @@ function AppContent() {
           </Routes>
         </Suspense>
       </main>
-      {!isQuestionnaire && <Footer />}
-      {!isQuestionnaire && <CompanionDrawer />}
+      {!hideNavbar && <Footer />}
+      {!hideNavbar && <CompanionDrawer />}
       <SanctuaryCursor />
     </>
   );

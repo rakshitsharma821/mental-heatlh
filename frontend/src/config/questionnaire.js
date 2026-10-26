@@ -76,22 +76,30 @@ export const QUESTIONNAIRE_CONFIG = {
       badge: 'Steady State',
       themeColor: '#52b788',
       summary: 'Your emotional rhythm shows solid coping capacity. Daily micro-moments of mindful focus and sensory awareness will nurture this foundation.',
+      recommendedTherapist: {
+        category: 'Wellness Counselor & Mindfulness Practitioner',
+        subtitle: 'Recommended for proactive resilience, focus cultivation, and balanced daily habits',
+        focusAreas: ['Stress resilience', 'Focus and routine building', 'Burnout prevention', 'Work-study balance'],
+        modality: 'Solution-Focused Brief Practice (SFBT) & Mindfulness-Based Stress Reduction (MBSR)',
+        cadence: 'Bi-weekly check-ins or as-needed guidance',
+        rationale: 'Your score reflects healthy baseline resilience with manageable everyday stress. A wellness counselor provides supportive, structured accountability to sustain your well-being without requiring clinical diagnostic treatment.'
+      },
       recommendations: {
         games: [
-          { title: 'Zen Garden Sand Drawing', desc: 'Rake calming patterns and cultivate spatial stillness.', route: '/games', icon: '🎋' },
-          { title: 'Sensory Ripple Focus', desc: 'Gentle tactile taps that soothe attention.', route: '/games', icon: '🫧' }
+          { title: 'Zen Garden Ripple Focus', desc: 'Rake calming patterns and cultivate spatial stillness.', route: '/games' },
+          { title: 'Sensory Ripple Focus', desc: 'Gentle tactile taps that soothe attention.', route: '/games' }
         ],
         breathing: [
-          { title: 'Balanced Resonance Breath (5.5s)', desc: 'Optimizes heart rate variability and mental presence.', route: '/breathing', icon: '🌬️' }
+          { title: 'Balanced Resonance Breath (5.5s)', desc: 'Optimizes heart rate variability and mental presence.', route: '/breathing' }
         ],
         meditation: [
-          { title: '10-Minute Morning Forest Solitude', desc: 'Grounding visualization amidst ancient pine and cedar.', icon: '🌲' }
+          { title: '10-Minute Morning Forest Solitude', desc: 'Grounding visualization amidst ancient pine and cedar.' }
         ],
         yoga: [
-          { title: 'Light Spinal Awakening & Cat-Cow Flow', desc: 'Unwinds desk stiffness and restores posture.', icon: '🧘' }
+          { title: 'Light Spinal Awakening & Cat-Cow Flow', desc: 'Unwinds desk stiffness and restores posture.' }
         ],
         music: [
-          { title: 'Gentle Acoustic Guitar & Birdsong Harmony', desc: '432Hz natural frequency warmth.', icon: '🎵' }
+          { title: 'Gentle Acoustic Harmony & Natural Warmth', desc: '432Hz natural frequency warmth.' }
         ]
       }
     },
@@ -104,22 +112,30 @@ export const QUESTIONNAIRE_CONFIG = {
       badge: 'Rest & Reset',
       themeColor: '#d97706',
       summary: 'You have been carrying a noticeable load between career, studies, and personal transitions. Let us soothe physical tension and soften mental urgency.',
+      recommendedTherapist: {
+        category: 'Licensed Clinical Psychologist (CBT & ACT Specialist)',
+        subtitle: 'Recommended for cognitive loop defusion, nervous tension, and emotional fatigue',
+        focusAreas: ['Overthinking & worry cycles', 'Performance and study pressure', 'Somatic tension & sleep quality', 'Emotional overwhelm'],
+        modality: 'Cognitive Behavioral Therapy (CBT) & Acceptance and Commitment Therapy (ACT)',
+        cadence: 'Weekly structured therapy sessions',
+        rationale: 'Your score indicates accumulated emotional tension and persistent fatigue. A clinical psychologist trained in CBT and ACT can guide you with proven cognitive tools to unhook from worry loops, regulate somatic tension, and restore restorative rest.'
+      },
       recommendations: {
         games: [
-          { title: 'Color Harmony & Hue Gradient Flow', desc: 'Cognitive grounding that eases racing thoughts.', route: '/games', icon: '🎨' },
-          { title: 'Thought Defusion Zen Rake', desc: 'Symbolically release unhelpful worry loops.', route: '/games', icon: '🌿' }
+          { title: 'Color Harmony & Hue Gradient Flow', desc: 'Cognitive grounding that eases racing thoughts.', route: '/games' },
+          { title: 'Thought Defusion Zen Rake', desc: 'Symbolically release unhelpful worry loops.', route: '/games' }
         ],
         breathing: [
-          { title: '4-7-8 Parasympathetic Down-Regulation', desc: 'Vagal nerve activation to drop adrenaline.', route: '/breathing', icon: '🍃' }
+          { title: '4-7-8 Parasympathetic Down-Regulation', desc: 'Vagal nerve activation to drop adrenaline.', route: '/breathing' }
         ],
         meditation: [
-          { title: 'Body Scan & Shoulder Softening Journey', desc: 'Release unconscious somatic holding patterns.', icon: '🌊' }
+          { title: 'Body Scan & Shoulder Softening Journey', desc: 'Release unconscious somatic holding patterns.' }
         ],
         yoga: [
-          { title: 'Restorative Child’s Pose & Hip Unwind', desc: 'Releases stored cortisol from lower back and hips.', icon: '🧘' }
+          { title: 'Restorative Child’s Pose & Hip Unwind', desc: 'Releases stored cortisol from lower back and hips.' }
         ],
         music: [
-          { title: 'Binaural Delta Waves with Warm Soft Rain', desc: 'Slows brainwaves from beta to peaceful alpha-theta.', icon: '🌧️' }
+          { title: 'Binaural Delta Waves with Soft Rain', desc: 'Slows brainwaves from beta to peaceful alpha-theta.' }
         ]
       }
     },
@@ -132,21 +148,29 @@ export const QUESTIONNAIRE_CONFIG = {
       badge: 'Gentle Support',
       themeColor: '#b91c1c',
       summary: 'Things feel heavy, overwhelming, or deeply draining right now. You do not have to carry this alone. MindCare prioritizes urgent nervous system soothing alongside access to dedicated professional guidance.',
+      recommendedTherapist: {
+        category: 'Senior Clinical Psychologist / Psychiatrist',
+        subtitle: 'Recommended for compassionate clinical evaluation, trauma-informed care, and acute emotional relief',
+        focusAreas: ['Acute emotional distress', 'Severe exhaustion & burnout', 'Depressive fatigue or panic surges', 'Comprehensive mental health assessment'],
+        modality: 'Trauma-Informed Psychotherapy & Comprehensive Clinical Diagnostics',
+        cadence: 'Priority consultation & comprehensive care pathway',
+        rationale: 'Your responses reflect substantial emotional burden and nervous system strain. Consulting a senior clinical psychologist or psychiatrist provides a safe, non-judgmental space with specialized clinical care, ensuring you have the deepest support and an individual recovery roadmap.'
+      },
       recommendations: {
         games: [
-          { title: 'Gentle Flowing Water Sandbox', desc: 'Zero pressure, meditative kinetic relaxation.', route: '/games', icon: '💧' }
+          { title: 'Gentle Flowing Water Sandbox', desc: 'Zero pressure, meditative kinetic relaxation.', route: '/games' }
         ],
         breathing: [
-          { title: 'Box Breathing (4-4-4-4 Square Respiration)', desc: 'Proven autonomic stabilization for acute surge.', route: '/breathing', icon: '🌬️' }
+          { title: 'Box Breathing (4-4-4-4 Square Respiration)', desc: 'Proven autonomic stabilization for acute surge.', route: '/breathing' }
         ],
         meditation: [
-          { title: '5-4-3-2-1 Sensory Safety Grounding', desc: 'Anchors your mind safely into the physical present.', icon: '🛡️' }
+          { title: '5-4-3-2-1 Sensory Safety Grounding', desc: 'Anchors your mind safely into the physical present.' }
         ],
         yoga: [
-          { title: 'Legs-Up-The-Wall Restorative Pose', desc: 'Promotes rapid circulatory down-regulation and deep relaxation.', icon: '🧘' }
+          { title: 'Legs-Up-The-Wall Restorative Pose', desc: 'Promotes rapid circulatory down-regulation and deep relaxation.' }
         ],
         music: [
-          { title: '528Hz Solfeggio Deep Peace Sanctuary', desc: 'Subtle harmonic frequency to nurture self-compassion.', icon: '🕊️' }
+          { title: '528Hz Solfeggio Deep Peace Sanctuary', desc: 'Subtle harmonic frequency to nurture self-compassion.' }
         ]
       }
     }

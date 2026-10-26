@@ -13,6 +13,7 @@ router.post('/focus-start', authenticateToken, assessmentController.startFocusMo
 router.post('/focus-heartbeat', authenticateToken, assessmentController.heartbeatFocusMode);
 router.post('/focus-end', authenticateToken, assessmentController.endFocusMode);
 router.post('/submit', optionalAuth, assessmentController.saveAssessment);
+router.post('/analyze', optionalAuth, assessmentController.analyzeReport);
 router.get('/latest', authenticateToken, requireRole('client'), assessmentController.getLatestAssessment);
 
 export default router;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getQuoteOfDay } from '../services/quotes';
+import { getBandForScore } from '../config/questionnaire';
 import { Storage } from '../services/storage';
 import { generateExplainableInsights } from '../services/aiInsights';
 import { generateDailyPlan } from '../services/wellnessCoach';
@@ -27,6 +28,17 @@ export default function Dashboard() {
   const [isQuestionnaireOpen, setIsQuestionnaireOpen] = useState(false);
   const [mySessions, setMySessions] = useState([]);
   const [activeLiveSession, setActiveLiveSession] = useState(null);
+  const [assessment, setAssessment] = useState(() => Storage.get('mindcare_assessment_result', null));
+  const latestBand = assessment ? getBandForScore(assessment.totalScore) : null;
+  const therapistRec = assessment?.ai_analysis?.recommendedTherapy ? {
+    category: assessment.ai_analysis.recommendedSpecialist || latestBand?.recommendedTherapist?.category,
+    subtitle: assessment.ai_analysis.recommendedTherapy,
+    focusAreas: assessment.ai_analysis.focusAreas || latestBand?.recommendedTherapist?.focusAreas,
+    modality: assessment.ai_analysis.recommendedTherapy,
+    cadence: assessment.ai_analysis.sessionFrequency || latestBand?.recommendedTherapist?.cadence,
+    rationale: assessment.ai_analysis.rationale || latestBand?.recommendedTherapist?.rationale,
+    clinicalSummary: assessment.ai_analysis.clinicalSummary || latestBand?.summary
+  } : latestBand?.recommendedTherapist;
 
   const loadSessions = async () => {
     try {
@@ -75,7 +87,7 @@ export default function Dashboard() {
     const calculatedInsights = generateExplainableInsights(user, journals, storedRoutines);
     setInsights(calculatedInsights);
 
-    // Daily Plan from AI Wellness Coach
+    // Daily Plan from Wellness Coach
     const savedPlan = Storage.getDailyPlan();
     if (savedPlan && savedPlan.length > 0) {
       setDailyPlan(savedPlan);
@@ -115,7 +127,7 @@ export default function Dashboard() {
         }}>
           <div>
             <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.6rem)', marginBottom: '6px' }}>
-              Welcome back, {user?.name || 'Friend'} 👋
+              Welcome back, {user?.name || 'Friend'} 
             </h1>
             <p style={{ color: '#8aa9c4', fontSize: '0.95rem' }}>
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
@@ -131,7 +143,7 @@ export default function Dashboard() {
             padding: '10px 20px',
             borderRadius: '100px'
           }}>
-            <span style={{ fontSize: '1.3rem' }}>🔥</span>
+            <span style={{ fontSize: '1.3rem' }}></span>
             <div>
               <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {user?.streak || 1} Day Sanctuary Streak
@@ -155,7 +167,7 @@ export default function Dashboard() {
               boxShadow: '0 4px 14px rgba(82, 183, 136, 0.35)'
             }}
           >
-            <span>📋</span>
+            
             <span>Assessment & Onboarding Pulse</span>
           </button>
         </div>
@@ -169,7 +181,6 @@ export default function Dashboard() {
           alignItems: 'center',
           gap: '20px'
         }}>
-          <div style={{ fontSize: '2rem' }}>🌿</div>
           <div>
             <p style={{ fontStyle: 'italic', fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
               "{quote.text}"
@@ -178,7 +189,68 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* AI Early Warning System (Supportive Nudge) */}
+        {/* Clinician Recommendation Card based on Assessment */}
+        {therapistRec && (
+          <div className="glass-card" style={{
+            padding: '24px 28px',
+            marginBottom: '32px',
+            backgroundColor: '#ffffff',
+            border: `1.5px solid ${latestBand?.themeColor || 'var(--primary)'}44`,
+            borderRadius: '20px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.03)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <span style={{
+                  display: 'inline-block',
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: `${latestBand?.themeColor || '#2d6a4f'}18`,
+                  color: latestBand?.themeColor || '#2d6a4f',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  marginBottom: '6px'
+                }}>
+                  Assessment-Matched Clinician Recommendation
+                </span>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  {therapistRec.category}
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.86rem', color: 'var(--text-secondary)' }}>
+                  Based on your reflection score ({assessment?.totalScore}/24 · {latestBand?.title}): {therapistRec.subtitle}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <Link
+                  to="/recommendations"
+                  className="btn-ghost"
+                  style={{ padding: '9px 18px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none' }}
+                >
+                  View Full Report
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setIsBookingOpen(true)}
+                  className="btn-primary"
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: '10px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    backgroundColor: latestBand?.themeColor || 'var(--primary)',
+                    borderColor: latestBand?.themeColor || 'var(--primary)'
+                  }}
+                >
+                  Consult Matched Specialist →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Early Warning Wellness Monitor (Supportive Nudge) */}
         <EarlyWarningNudge
           warning={digitalTwin?.earlyWarning}
           onDismiss={() => {
@@ -203,7 +275,7 @@ export default function Dashboard() {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>🌱</span>
+              
               <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--primary-dark)', fontWeight: 700 }}>
                 Your Evolving Sanctuary
               </span>
@@ -242,14 +314,14 @@ export default function Dashboard() {
 
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <Link to="/breathing" className="btn-primary" style={{ padding: '9px 18px', fontSize: '0.82rem' }}>
-                Expand Aura in Breathwork 🌬️
+                Expand Aura in Breathwork
               </Link>
               <button
                 onClick={() => setIsBookingOpen(true)}
                 className="btn-ghost"
                 style={{ padding: '9px 18px', fontSize: '0.82rem', borderColor: 'var(--border-subtle)' }}
               >
-                Connect with Therapist 🩺
+                Connect with Therapist
               </button>
             </div>
           </div>
@@ -268,7 +340,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* AI Mood Prediction: Emotional Horizon */}
+        {/* Mood Forecast Horizon: Emotional Horizon */}
         <MoodForecastHorizon forecast={digitalTwin?.moodForecast} />
 
         {/* Digital Twin Profile: Evolving Metrics */}
@@ -279,11 +351,11 @@ export default function Dashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.25rem' }}>🩺</span>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>My Clinical Consultations</h3>
+                
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>My Therapist Consultations</h3>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginTop: '2px' }}>
-                Private, end-to-end encrypted sessions with verified clinicians
+                Private, end-to-end encrypted 1-on-1 sessions with verified therapists & doctors
               </p>
             </div>
             <button
@@ -379,7 +451,7 @@ export default function Dashboard() {
                           className="btn-primary"
                           style={{ padding: '7px 16px', fontSize: '0.82rem' }}
                         >
-                          📹 Enter Live Room
+                           Enter Live Room
                         </button>
                       )}
                       {canCancel && (
@@ -423,8 +495,8 @@ export default function Dashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: 'var(--primary)', fontSize: '1.2rem' }}>✦</span>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>AI Wellness Coach • Today's Sanctuary Rhythm</h3>
+                <span style={{ color: 'var(--primary)', fontSize: '1.2rem' }}></span>
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>Wellness Coach • Today's Sanctuary Rhythm</h3>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '2px' }}>
                 Auto-generated daily restoration plan based on your recent activity
@@ -474,7 +546,7 @@ export default function Dashboard() {
                     fontSize: '0.8rem',
                     fontWeight: 800
                   }}>
-                    {item.completed && '✓'}
+                    {item.completed && ''}
                   </div>
                 </div>
                 <h4 style={{
@@ -511,15 +583,15 @@ export default function Dashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.2rem' }}>🔍</span>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>Explainable AI Insights</h3>
+                <span style={{ fontSize: '1.2rem' }}></span>
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>Explainable Reflective Insights</h3>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '2px' }}>
                 Transparent observations backed by specific patterns in your logged data
               </p>
             </div>
             <Link to="/roadmap" className="btn-ghost" style={{ padding: '8px 18px', fontSize: '0.82rem' }}>
-              View Therapy Roadmap 🗺️
+              View Therapy Roadmap 
             </Link>
           </div>
 
@@ -592,37 +664,37 @@ export default function Dashboard() {
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
             <Link to="/mood" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📊</div>
+              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
               <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Mood Tracker</h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Log feelings and view 3D aura</p>
             </Link>
 
             <Link to="/breathing" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🌬️</div>
+              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
               <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>3D Breathwork</h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>4-7-8 and Box breathing guide</p>
             </Link>
 
             <Link to="/journal" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>✍️</div>
+              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
               <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Private Journal</h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Thought defusion and gratitude</p>
             </Link>
 
             <Link to="/routine" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🌱</div>
+              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
               <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Daily Routine</h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Build gentle restorative habits</p>
             </Link>
 
             <Link to="/progress" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📈</div>
+              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
               <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Progress & Stats</h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Weekly chart and achievements</p>
             </Link>
 
             <Link to="/crisis" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)', borderLeft: '4px solid #dc2626' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🛡️</div>
+              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
               <h4 style={{ fontSize: '1.1rem', marginBottom: '6px', color: '#b91c1c' }}>Crisis Support</h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>24/7 helplines & safety plan</p>
             </Link>

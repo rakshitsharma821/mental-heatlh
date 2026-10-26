@@ -42,7 +42,13 @@ export default function CompanionDrawer() {
         id: 'msg-init',
         sender: 'aria',
         text: greeting,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        quickReplies: [
+          { label: ' Feeling tired today', action: 'chat' },
+          { label: ' Guide me through a breath', action: 'breath' },
+          { label: ' Lot on my mind', action: 'journal' },
+          { label: ' Just want to chat', action: 'chat' }
+        ]
       }];
       setMessages(initial);
       Storage.saveCompanionMessages(initial);
@@ -89,7 +95,7 @@ export default function CompanionDrawer() {
             content: m.text
           }))
         }),
-        signal: AbortSignal.timeout(9000)
+        signal: AbortSignal.timeout(15000)
       });
 
       if (response.ok) {
@@ -232,7 +238,7 @@ export default function CompanionDrawer() {
       >
         <span className="companion-glow-ring"></span>
         <span className="companion-btn-icon">{UI_STRINGS.brand.sparkle}</span>
-        <span className="companion-btn-label">{UI_STRINGS.companion.title}</span>
+        <span className="companion-btn-label">{UI_STRINGS.companion.title} AI</span>
       </button>
 
       {/* Slide-out Companion Window */}
@@ -244,8 +250,8 @@ export default function CompanionDrawer() {
               <div className="companion-title-group">
                 <div className="companion-avatar">{UI_STRINGS.brand.sparkle}</div>
                 <div>
-                  <h4>{UI_STRINGS.companion.title} • {UI_STRINGS.companion.subtitle}</h4>
-                  <p className="companion-status">{UI_STRINGS.companion.status}</p>
+                  <h4>Aria • Care Companion</h4>
+                  <p className="companion-status">Personal Sanctuary AI • Powered by OpenRouter</p>
                 </div>
               </div>
               <div className="companion-header-actions">
@@ -261,7 +267,7 @@ export default function CompanionDrawer() {
                   onClick={() => setIsOpen(false)}
                   aria-label="Close"
                 >
-                  ✕
+                  
                 </button>
               </div>
             </div>
@@ -269,14 +275,14 @@ export default function CompanionDrawer() {
             {/* Safety banner inside companion */}
             <div className="companion-safety-bar">
               <span>Need immediate urgent care?</span>
-              <Link to="/crisis" onClick={() => setIsOpen(false)}>Get Crisis Support 🛡️</Link>
+              <Link to="/crisis" onClick={() => setIsOpen(false)}>Get Crisis Support </Link>
             </div>
 
             {/* Messages Body */}
             <div className="companion-body">
               {messages.map(msg => (
                 <div key={msg.id} className={`chat-bubble-row ${msg.sender === 'user' ? 'user-row' : 'aria-row'}`}>
-                  {msg.sender === 'aria' && <div className="chat-avatar-mini">✦</div>}
+                  {msg.sender === 'aria' && <div className="chat-avatar-mini"></div>}
                   <div className={`chat-bubble ${msg.sender === 'user' ? 'user-bubble' : 'aria-bubble'} ${msg.isCrisis ? 'crisis-highlight' : ''}`}>
                     <p style={{ whiteSpace: 'pre-line' }}>{msg.text}</p>
                     {msg.actionLink && (
@@ -321,7 +327,7 @@ export default function CompanionDrawer() {
 
               {isTyping && (
                 <div className="chat-bubble-row aria-row">
-                  <div className="chat-avatar-mini">✦</div>
+                  <div className="chat-avatar-mini"></div>
                   <div className="chat-bubble aria-bubble typing-indicator">
                     <span></span><span></span><span></span>
                   </div>
@@ -340,7 +346,7 @@ export default function CompanionDrawer() {
                 maxLength={400}
               />
               <button type="submit" disabled={!inputText.trim()} aria-label="Send message">
-                ➤
+                
               </button>
             </form>
           </div>

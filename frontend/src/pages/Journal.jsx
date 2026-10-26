@@ -91,7 +91,7 @@ export default function Journal() {
             marginBottom: '24px',
             fontWeight: 600
           }}>
-            ✓ Reflection preserved in your private client-side vault.
+             Reflection preserved in your private client-side vault.
           </div>
         )}
 
@@ -107,7 +107,7 @@ export default function Journal() {
           borderLeft: '4px solid var(--primary)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <span style={{ fontSize: '1.6rem', color: 'var(--primary)' }}>💡</span>
+            <span style={{ fontSize: '1.6rem', color: 'var(--primary)' }}></span>
             <div>
               <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--primary-dark)', fontWeight: 700 }}>
                 Today's Inquiry
@@ -200,7 +200,7 @@ export default function Journal() {
                 {wordCount} words • {text.length} characters
               </div>
               <button type="submit" className="btn-primary" disabled={!text.trim()}>
-                Save Reflection ✦
+                Save Reflection 
               </button>
             </div>
           </form>
@@ -238,7 +238,7 @@ export default function Journal() {
                       className="icon-btn-ghost"
                       title="Delete entry"
                     >
-                      🗑️
+                      
                     </button>
                   </div>
 

@@ -139,7 +139,7 @@ export default function Welcome() {
         position: 'relative',
         zIndex: 1
       }}>
-        <div style={{ fontSize: '3.2rem', marginBottom: '14px' }}>🌿</div>
+        <div style={{ fontSize: '3.2rem', marginBottom: '14px' }}></div>
 
         <span style={{
           display: 'inline-block',
@@ -240,7 +240,7 @@ export default function Welcome() {
                 }}
                 title="Generate a fresh personalized note with AI"
               >
-                ✨ Generate New Reflection
+                 Generate New Reflection
               </button>
             </>
           )}
@@ -277,7 +277,7 @@ export default function Welcome() {
               boxShadow: '0 8px 24px rgba(82, 183, 136, 0.35)'
             }}
           >
-            Begin 2-Minute Questionnaire 🌱
+            Begin 2-Minute Questionnaire 
           </button>
 
           <button

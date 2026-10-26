@@ -194,13 +194,13 @@ export default function BiometricSandboxModal({ isOpen, onClose, onCalibrationCo
           className="icon-btn-ghost"
           style={{ position: 'absolute', top: '18px', right: '18px' }}
         >
-          ✕
+          
         </button>
 
         {/* Title */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.2rem' }}>🔬</span>
+            <span style={{ fontSize: '1.2rem' }}></span>
             <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--primary-dark)' }}>
               Ephemeral Sensor Sandbox
             </span>
@@ -223,7 +223,7 @@ export default function BiometricSandboxModal({ isOpen, onClose, onCalibrationCo
             textAlign: 'center',
             marginBottom: '20px'
           }}>
-            <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🛡️</div>
+            <div style={{ fontSize: '2rem', marginBottom: '8px' }}></div>
             <h4 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '6px' }}>
               Biometrics are Disabled by Default
             </h4>
@@ -253,7 +253,7 @@ export default function BiometricSandboxModal({ isOpen, onClose, onCalibrationCo
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div>
                     <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>
-                      🎙️ Acoustic Voice Cadence
+                       Acoustic Voice Cadence
                     </h4>
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Ephemeral pitch & tempo analysis</span>
                   </div>
@@ -269,7 +269,7 @@ export default function BiometricSandboxModal({ isOpen, onClose, onCalibrationCo
 
                 {isListeningVoice && (
                   <div style={{ textAlign: 'center', padding: '14px 0', color: 'var(--primary-dark)', fontSize: '0.84rem' }}>
-                    <div style={{ fontSize: '1.5rem', animation: 'pulse 1s infinite' }}>〰️ 🎙️ 〰️</div>
+                    <div style={{ fontSize: '1.5rem', animation: 'pulse 1s infinite' }}>〰  〰</div>
                     <div>Reading microphone wave in RAM (no audio saved)...</div>
                   </div>
                 )}
@@ -303,7 +303,7 @@ export default function BiometricSandboxModal({ isOpen, onClose, onCalibrationCo
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div>
                     <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>
-                      📷 Facial Micro-Expression
+                       Facial Micro-Expression
                     </h4>
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>On-device momentary valence check</span>
                   </div>
@@ -361,7 +361,7 @@ export default function BiometricSandboxModal({ isOpen, onClose, onCalibrationCo
                   cursor: 'pointer'
                 }}
               >
-                Purge All Biometric Weights 🗑️
+                Purge All Biometric Weights 
               </button>
               <button onClick={() => { stopHardware(); onClose(); }} className="btn-ghost" style={{ padding: '6px 16px', fontSize: '0.8rem' }}>
                 Done
@@ -370,7 +370,7 @@ export default function BiometricSandboxModal({ isOpen, onClose, onCalibrationCo
 
             {purgeNotice && (
               <div style={{ marginTop: '10px', color: 'var(--primary-dark)', fontSize: '0.78rem', fontWeight: 600, textAlign: 'center' }}>
-                ✓ Biometric calibration weights successfully erased.
+                 Biometric calibration weights successfully erased.
               </div>
             )}
           </div>

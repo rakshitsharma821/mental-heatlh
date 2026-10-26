@@ -31,7 +31,7 @@ export default function EarlyWarningNudge({ warning, onDismiss }) {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '1.6rem' }}>🌿</span>
+          <span style={{ fontSize: '1.6rem' }}></span>
           <div>
             <span style={{
               fontSize: '0.72rem',
@@ -54,7 +54,7 @@ export default function EarlyWarningNudge({ warning, onDismiss }) {
           style={{ padding: '6px 14px', fontSize: '0.75rem', borderColor: 'rgba(212, 163, 115, 0.35)', color: '#b07d3b' }}
           title="Pause nudge for 48 hours"
         >
-          Snooze Nudge (48h) ✕
+          Snooze Nudge (48h) 
         </button>
       </div>
 
@@ -95,7 +95,7 @@ export default function EarlyWarningNudge({ warning, onDismiss }) {
           to="/crisis"
           style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textDecoration: 'underline' }}
         >
-          Need urgent human support? Open Crisis Lifelines 🛡️
+          Need urgent human support? Open Crisis Lifelines 
         </Link>
       </div>
     </div>

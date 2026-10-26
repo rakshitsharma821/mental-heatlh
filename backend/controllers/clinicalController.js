@@ -33,7 +33,9 @@ function decryptIfEncrypted(val) {
     if (val.startsWith('{') && val.includes('"ciphertext"')) {
       const parsed = JSON.parse(val);
       if (parsed.ciphertext && parsed.iv && parsed.authTag) {
-        return decryptField(parsed.ciphertext, parsed.iv, parsed.authTag);
+        const res = decryptField(parsed.ciphertext, parsed.iv, parsed.authTag);
+        if (!res || res.includes('Decryption Error')) return null;
+        return res;
       }
     }
   } catch (e) {
@@ -1327,6 +1329,36 @@ export const clinicalController = {
         ORDER BY sb.preferred_slot DESC
       `, [therapistId]);
 
+      // Fetch latest assessment & AI clinical intake analysis for each client
+      const clientIds = [...new Set(result.rows.map(r => r.client_id).filter(Boolean))];
+      let assessmentsMap = {};
+      if (clientIds.length > 0) {
+        try {
+          const assessRes = await db.query(`
+            SELECT DISTINCT ON (user_id) user_id, id, total_score, band, 
+                   ai_analysis, recommended_therapy, recommended_specialist, clinical_notes, completed_at
+            FROM user_assessments
+            WHERE user_id = ANY($1)
+            ORDER BY user_id, completed_at DESC
+          `, [clientIds]);
+
+          assessRes.rows.forEach(a => {
+            assessmentsMap[a.user_id] = {
+              id: a.id,
+              total_score: a.total_score,
+              band: a.band,
+              completed_at: a.completed_at,
+              ai_analysis: typeof a.ai_analysis === 'string' ? JSON.parse(a.ai_analysis) : a.ai_analysis,
+              recommended_therapy: a.recommended_therapy,
+              recommended_specialist: a.recommended_specialist,
+              clinical_notes: a.clinical_notes
+            };
+          });
+        } catch (e) {
+          console.warn('Error fetching client assessments in getTherapistSessions:', e.message);
+        }
+      }
+
       const sessions = result.rows.map(s => {
         let note = null;
         if (s.consent_share_note && s.client_encrypted_note) {
@@ -1348,7 +1380,8 @@ export const clinicalController = {
           consent_share_note: Boolean(s.consent_share_note),
           decline_reason: s.decline_reason,
           decline_note: s.decline_note,
-          created_at: s.created_at
+          created_at: s.created_at,
+          latest_assessment: assessmentsMap[s.client_id] || null
         };
       });
 
@@ -1359,6 +1392,54 @@ export const clinicalController = {
     } catch (err) {
       console.error('getTherapistSessions error:', err);
       return res.status(500).json({ success: false, message: 'Failed to retrieve therapist appointments.' });
+    }
+  },
+
+  /**
+   * Therapist views a client's full AI Assessment Report & Clinical Intake Briefing
+   */
+  getClientAssessmentReport: async (req, res) => {
+    try {
+      const therapistId = req.user.id;
+      const { clientId } = req.params;
+
+      const clientRes = await db.query('SELECT id, public_id, full_name, age, city FROM users WHERE id = $1', [clientId]);
+      if (clientRes.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Client not found.' });
+      }
+
+      const client = clientRes.rows[0];
+
+      const assessRes = await db.query(`
+        SELECT id, total_score, band, answers_json, ai_analysis, 
+               recommended_therapy, recommended_specialist, clinical_notes, completed_at
+        FROM user_assessments
+        WHERE user_id = $1
+        ORDER BY completed_at DESC
+        LIMIT 1
+      `, [clientId]);
+
+      if (assessRes.rows.length === 0) {
+        return res.json({
+          success: true,
+          client: { id: client.id, public_id: client.public_id, name: client.full_name, age: client.age },
+          assessment: null,
+          message: 'Client has not completed an onboarding assessment yet.'
+        });
+      }
+
+      const row = assessRes.rows[0];
+      return res.json({
+        success: true,
+        client: { id: client.id, public_id: client.public_id, name: client.full_name, age: client.age },
+        assessment: {
+          ...row,
+          ai_analysis: typeof row.ai_analysis === 'string' ? JSON.parse(row.ai_analysis) : row.ai_analysis
+        }
+      });
+    } catch (err) {
+      console.error('getClientAssessmentReport error:', err);
+      return res.status(500).json({ success: false, message: 'Failed to retrieve assessment report.' });
     }
   },
 

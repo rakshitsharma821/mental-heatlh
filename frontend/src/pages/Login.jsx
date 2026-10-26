@@ -18,7 +18,7 @@ const PORTALS = {
     tabLabel: 'User',
     title: 'User',
     tag: 'Ages 20–25',
-    icon: '🌿',
+    icon: '',
     header: 'User Login',
     subtitle: 'Enter your Email or User ID (MC-XXXXXX) to access your reflection space.',
     primaryColor: '#52b788',
@@ -31,7 +31,7 @@ const PORTALS = {
     tabLabel: 'Therapist',
     title: 'Therapist',
     tag: 'Licensed Clinician',
-    icon: '🩺',
+    icon: '',
     header: 'Therapist Login',
     subtitle: 'Sign in with your Therapist ID (THR-XXXXXX), registered email, and clinical password.',
     primaryColor: '#2b5f7d',
@@ -44,7 +44,7 @@ const PORTALS = {
     tabLabel: 'Admin',
     title: 'Admin',
     tag: 'Governance',
-    icon: '🛡️',
+    icon: '',
     header: 'Admin Console Login',
     subtitle: 'Sign in with your Admin ID (ADM-XXXXXX), password, and confidential access code.',
     primaryColor: '#8e44ad',
@@ -362,7 +362,7 @@ export default function Login() {
             {activePortal === 'member' && (
               <div>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  Login ID (Email or MC-XXXXXX User ID)
+                  Username / Email (or MC-XXXXXX User ID)
                 </label>
                 <input
                   type="text"
@@ -506,7 +506,7 @@ export default function Login() {
           /* ── OTP VERIFICATION STEP ── */
           <form onSubmit={handleOtpVerify} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div style={{ textAlign: 'center', padding: '10px 0' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🔐</div>
+              <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}></div>
               <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>Two-Factor Security Code</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                 A 6-digit verification code has been dispatched to <strong>{maskedDestination}</strong>.
@@ -582,7 +582,7 @@ export default function Login() {
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
-                {activePortal === 'therapist' ? '🩺 Therapist ID & Credential Recovery' : '🌿 Account Password Recovery'}
+                {activePortal === 'therapist' ? ' Therapist ID & Credential Recovery' : ' Account Password Recovery'}
               </h3>
               <button
                 type="button"

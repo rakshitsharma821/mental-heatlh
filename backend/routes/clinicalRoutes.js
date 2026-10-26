@@ -45,6 +45,7 @@ router.get('/session-requests/:id/history', authenticateToken, clinicalControlle
 // Part 5: Session Request Management (Therapist Facing)
 router.get('/therapist/sessions', authenticateToken, requireTherapist, clinicalController.getTherapistSessions);
 router.patch('/session-requests/:id/therapist-action', authenticateToken, requireTherapist, clinicalController.therapistSessionAction);
+router.get('/clients/:clientId/assessment-report', authenticateToken, requireAnyTherapist, clinicalController.getClientAssessmentReport);
 
 // Gated Session Requests (Approved Therapists / Admins only)
 router.get('/requests', authenticateToken, requireTherapist, clinicalController.getRequests);

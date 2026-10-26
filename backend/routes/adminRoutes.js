@@ -23,6 +23,7 @@ router.get('/therapists/queue', adminController.getTherapistQueue);
 router.get('/therapists/:id/dossier', adminController.getTherapistDossier);
 router.post('/therapists/:id/documents/:docId/review', adminController.reviewTherapistDocument);
 router.post('/therapists/:id/verification-decision', adminController.makeVerificationDecision);
+router.delete('/therapists/:id', adminController.deleteTherapist);
 
 // ── 3. Users, Assignments & DPDP Anonymization ──
 router.get('/users', adminController.getUsers);

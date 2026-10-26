@@ -589,7 +589,7 @@ export default function InnerWorldCanvas({
         }}
         title="Sanctuary Garden (Static Mode)"
       >
-        <span style={{ fontSize: '3.2rem', marginBottom: '8px' }}>🌳</span>
+        <span style={{ fontSize: '3.2rem', marginBottom: '8px' }}></span>
         <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1.05rem' }}>Your Living Sanctuary Tree</div>
         <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Static visual mode active for sensory comfort and battery conservation.</div>
       </div>

@@ -1036,5 +1036,92 @@ export const authController = {
       console.error('Session sync error:', err);
       return res.status(500).json({ success: false, message: 'Server error during session synchronization.' });
     }
+  },
+
+  /**
+   * Send 6-digit OTP code for email verification during registration
+   */
+  sendRegistrationOtp: async (req, res) => {
+    try {
+      const { email } = req.body;
+      const cleanEmail = (email || '').trim().toLowerCase();
+
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+      }
+
+      // Generate 6 digit numeric OTP
+      const otpCode = Math.floor(100000 + crypto.randomInt(900000)).toString();
+      const otpHash = hashOTP(otpCode);
+      const challengeId = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      // Clear any prior pending OTPs for this email
+      await db.query('DELETE FROM user_otps WHERE identifier = $1', [cleanEmail]);
+
+      await db.query(`
+        INSERT INTO user_otps (id, identifier, otp_hash, challenge_id, expires_at, attempts, verified)
+        VALUES ($1, $2, $3, $4, $5, 0, FALSE)
+      `, [crypto.randomUUID(), cleanEmail, otpHash, challengeId, expiresAt]);
+
+      await otpService.send(cleanEmail, otpCode);
+
+      return res.json({
+        success: true,
+        challenge_id: challengeId,
+        message: `Verification code sent to ${cleanEmail}.`
+      });
+    } catch (err) {
+      console.error('sendRegistrationOtp error:', err);
+      return res.status(500).json({ success: false, message: 'Failed to send verification code.' });
+    }
+  },
+
+  /**
+   * Verify registration 6-digit OTP code
+   */
+  verifyRegistrationOtp: async (req, res) => {
+    try {
+      const { email, otp } = req.body;
+      const cleanEmail = (email || '').trim().toLowerCase();
+      const cleanOtp = (otp || '').trim();
+
+      if (!cleanEmail || !cleanOtp) {
+        return res.status(400).json({ success: false, message: 'Email and verification code are required.' });
+      }
+
+      const otpRes = await db.query(
+        'SELECT * FROM user_otps WHERE identifier = $1 ORDER BY expires_at DESC LIMIT 1',
+        [cleanEmail]
+      );
+
+      if (otpRes.rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'No verification code found. Please request a new OTP.' });
+      }
+
+      const record = otpRes.rows[0];
+
+      if (new Date() > new Date(record.expires_at)) {
+        return res.status(400).json({ success: false, message: 'Verification code has expired. Please request a new one.' });
+      }
+
+      const inputHash = hashOTP(cleanOtp);
+      if (inputHash !== record.otp_hash) {
+        await db.query('UPDATE user_otps SET attempts = attempts + 1 WHERE id = $1', [record.id]);
+        return res.status(400).json({ success: false, message: 'Invalid verification code. Please check and try again.' });
+      }
+
+      // Mark verified
+      await db.query('UPDATE user_otps SET verified = TRUE WHERE id = $1', [record.id]);
+
+      return res.json({
+        success: true,
+        emailVerified: true,
+        message: 'Email address verified successfully!'
+      });
+    } catch (err) {
+      console.error('verifyRegistrationOtp error:', err);
+      return res.status(500).json({ success: false, message: 'Server error verifying OTP code.' });
+    }
   }
 };

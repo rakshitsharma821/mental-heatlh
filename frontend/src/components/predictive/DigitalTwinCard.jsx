@@ -22,7 +22,7 @@ export default function DigitalTwinCard({ twin }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>🔮</span>
+            <span style={{ fontSize: '1.2rem', color: 'var(--primary)' }}></span>
             <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>Digital Twin • Wellness Equilibrium Profile</h3>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '2px' }}>

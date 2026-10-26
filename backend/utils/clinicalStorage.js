@@ -28,43 +28,35 @@ if (!fs.existsSync(VAULT_DIR)) {
  * Validates buffer against file type magic bytes
  */
 export function validateMagicBytes(buffer, mimeType) {
-  if (!buffer || buffer.length < 4) return false;
+  if (!buffer || buffer.length < 3) return false;
 
-  if (mimeType === 'application/pdf') {
-    // %PDF- (25 50 44 46)
-    return (
-      buffer[0] === 0x25 &&
-      buffer[1] === 0x50 &&
-      buffer[2] === 0x44 &&
-      buffer[3] === 0x46
-    );
-  }
+  const isPdf = buffer.length >= 4 &&
+    buffer[0] === 0x25 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x44 &&
+    buffer[3] === 0x46; // %PDF-
 
-  if (mimeType === 'image/jpeg') {
-    // FF D8 FF
-    return (
-      buffer[0] === 0xFF &&
-      buffer[1] === 0xD8 &&
-      buffer[2] === 0xFF
-    );
-  }
+  const isJpeg = buffer.length >= 3 &&
+    buffer[0] === 0xFF &&
+    buffer[1] === 0xD8 &&
+    buffer[2] === 0xFF; // JPEG SOI
 
-  if (mimeType === 'image/png') {
-    // 89 50 4E 47 0D 0A 1A 0A
-    if (buffer.length < 8) return false;
-    return (
-      buffer[0] === 0x89 &&
-      buffer[1] === 0x50 &&
-      buffer[2] === 0x4E &&
-      buffer[3] === 0x47 &&
-      buffer[4] === 0x0D &&
-      buffer[5] === 0x0A &&
-      buffer[6] === 0x1A &&
-      buffer[7] === 0x0A
-    );
-  }
+  const isPng = buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4E &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0D &&
+    buffer[5] === 0x0A &&
+    buffer[6] === 0x1A &&
+    buffer[7] === 0x0A; // PNG header
 
-  return false;
+  if (mimeType === 'application/pdf') return isPdf;
+  if (mimeType === 'image/jpeg' || mimeType === 'image/jpg' || mimeType === 'image/pjpeg') return isJpeg;
+  if (mimeType === 'image/png') return isPng;
+
+  // Fallback: if magic bytes identify any of our 3 accepted types
+  return isPdf || isJpeg || isPng;
 }
 
 /**
@@ -98,7 +90,7 @@ export const clinicalStorage = {
   /**
    * Validates and saves an uploaded document buffer to the private vault
    */
-  saveDocument: async (therapistId, docType, originalFilename, buffer, mimeType) => {
+  saveDocument: async (therapistId, docType, originalFilename, buffer, rawMimeType) => {
     // 1. Validate doc_type
     const typeDef = CLINICAL_CONFIG.documentRules.types[docType];
     if (!typeDef) {
@@ -110,13 +102,23 @@ export const clinicalStorage = {
       throw new Error(`File size exceeds maximum permitted limit (${CLINICAL_CONFIG.documentRules.maxFileSizeMB} MB)`);
     }
 
-    // 3. Validate MIME type
-    if (!CLINICAL_CONFIG.documentRules.allowedMimeTypes.includes(mimeType)) {
-      throw new Error(`Unsupported MIME type: ${mimeType}. Only PDF, JPG, and PNG are allowed.`);
+    // 3. Normalize MIME type & validate extension
+    let mimeType = (rawMimeType || '').toLowerCase();
+    const ext = path.extname(originalFilename || '').toLowerCase();
+
+    if (mimeType === 'image/jpg' || mimeType === 'image/pjpeg') {
+      mimeType = 'image/jpeg';
+    } else if (!mimeType || mimeType === 'application/octet-stream') {
+      if (ext === '.pdf') mimeType = 'application/pdf';
+      else if (ext === '.png') mimeType = 'image/png';
+      else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
+    }
+
+    if (!CLINICAL_CONFIG.documentRules.allowedMimeTypes.includes(mimeType) && mimeType !== 'image/jpg') {
+      throw new Error(`Unsupported MIME type: ${rawMimeType || 'unknown'}. Only PDF, JPG, and PNG are allowed.`);
     }
 
     // 4. Validate extension and guard against path traversal
-    const ext = path.extname(originalFilename || '').toLowerCase();
     if (!CLINICAL_CONFIG.documentRules.allowedExtensions.includes(ext)) {
       throw new Error(`Invalid file extension: ${ext}`);
     }
@@ -126,7 +128,7 @@ export const clinicalStorage = {
       throw new Error('Path traversal detected in file name');
     }
 
-    // 5. Validate magic bytes
+    // 5. Validate magic bytes (or detect and align)
     const isValidBytes = validateMagicBytes(buffer, mimeType);
     if (!isValidBytes) {
       throw new Error('File content does not match reported MIME type (magic bytes mismatch)');

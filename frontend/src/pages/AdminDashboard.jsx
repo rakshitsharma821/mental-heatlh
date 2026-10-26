@@ -16,7 +16,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Api } from '../services/api';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const THERAPIST_STATUS_OPTIONS = [
   'registered',
@@ -29,7 +29,13 @@ const THERAPIST_STATUS_OPTIONS = [
 ];
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login?portal=admin');
+  };
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState('overview');
@@ -58,6 +64,7 @@ export default function AdminDashboard() {
   const [decisionModalTh, setDecisionModalTh] = useState(null);
   const [decisionForm, setDecisionForm] = useState({
     decision: 'approve',
+    duration_minutes: 15,
     reason: '',
     licence_verified_externally: false,
     external_verification_notes: ''
@@ -238,6 +245,23 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteTherapist = async (therapistId, therapistName) => {
+    if (!window.confirm(`Are you sure you want to permanently delete therapist "${therapistName || 'this therapist'}"? This will delete all credentials, documents, and profile data.`)) {
+      return;
+    }
+    const res = await Api.deleteTherapist(therapistId);
+    if (res.success) {
+      showNotice(res.message || 'Therapist permanently deleted.');
+      if (selectedDossier && (selectedDossier.therapist.user_id === therapistId || selectedDossier.therapist.id === therapistId)) {
+        setSelectedDossier(null);
+      }
+      loadTherapistQueue();
+      loadStats();
+    } else {
+      showNotice(res.message || 'Failed to delete therapist', 'error');
+    }
+  };
+
   // Section 3: User Action Handlers
   const handleUserStatusChange = async (userId, newStatus) => {
     const res = await Api.updateUserStatus(userId, newStatus, `Admin set status to ${newStatus}`);
@@ -404,7 +428,7 @@ export default function AdminDashboard() {
     return (
       <div style={{ padding: '80px 24px', textAlign: 'center', minHeight: '80vh' }}>
         <div className="glass-card" style={{ maxWidth: '480px', margin: '0 auto', padding: '40px' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🛡️</div>
+          
           <h2 style={{ fontSize: '1.5rem', marginBottom: '12px', color: 'var(--text-primary)' }}>
             Restricted Sanctuary System
           </h2>
@@ -438,7 +462,7 @@ export default function AdminDashboard() {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.2rem' }}>🏛️</span>
+              
               <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: '#2b5f7d' }}>
                 System Administration & Governance
               </span>
@@ -473,8 +497,16 @@ export default function AdminDashboard() {
               fontSize: '0.78rem',
               fontWeight: 700
             }}>
-              <span>🔒 Zero-PII Protected</span>
+              <span>Zero-PII Protected</span>
             </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn-ghost"
+              style={{ fontSize: '0.82rem', padding: '7px 16px' }}
+            >
+              Sign Out
+            </button>
           </div>
         </div>
 
@@ -490,7 +522,7 @@ export default function AdminDashboard() {
             color: notice.type === 'error' ? '#b91c1c' : 'var(--primary-dark)',
             border: `1px solid ${notice.type === 'error' ? 'rgba(220, 53, 69, 0.3)' : 'rgba(82, 183, 136, 0.35)'}`
           }}>
-            {notice.type === 'error' ? '⚠️ ' : '✓ '} {notice.text}
+            {notice.type === 'error' ? 'Note: ' : 'Success: '} {notice.text}
           </div>
         )}
 
@@ -504,15 +536,15 @@ export default function AdminDashboard() {
           overflowX: 'auto'
         }}>
           {[
-            { id: 'overview', label: '📊 1. Overview' },
-            { id: 'verification', label: '🩺 2. Therapist Queue' },
-            { id: 'users', label: '👥 3. Users & Assignments' },
-            { id: 'requests', label: '📅 4. Session Pipeline' },
-            { id: 'declines', label: '💬 5. Decline Reviews' },
-            { id: 'config', label: '⚙️ 6. System Config' },
-            { id: 'safety', label: '🚨 7. Safety & Reports' },
-            { id: 'super_admin', label: '👑 8. Super Admin', hide: !isSuperAdmin },
-            { id: 'audit', label: '🛡️ 9. Audit Logs' }
+            { id: 'overview', label: '1. Overview' },
+            { id: 'verification', label: '2. Therapist Queue' },
+            { id: 'users', label: '3. Users & Assignments' },
+            { id: 'requests', label: '4. Session Pipeline' },
+            { id: 'declines', label: '5. Decline Reviews' },
+            { id: 'config', label: '6. System Config' },
+            { id: 'safety', label: '7. Safety & Reports' },
+            { id: 'super_admin', label: '8. Super Admin', hide: !isSuperAdmin },
+            { id: 'audit', label: '9. Audit Logs' }
           ].filter(t => !t.hide).map(tab => (
             <button
               key={tab.id}
@@ -599,7 +631,7 @@ export default function AdminDashboard() {
                 {/* Score Band Aggregates */}
                 <div className="glass-card" style={{ padding: '24px', marginBottom: '32px' }}>
                   <h3 style={{ fontSize: '1.2rem', marginBottom: '6px', color: 'var(--text-primary)' }}>
-                    🌿 Client Questionnaire Score-Band Distribution
+                    Client Questionnaire Score-Band Distribution
                   </h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
                     Total Questionnaires Completed: <strong>{stats?.questionnairesCompleted || 0}</strong> • Anonymized across 3 friendly score bands.
@@ -656,7 +688,7 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
               <div>
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  🩺 Clinician Verification Queue
+                  Clinician Verification Queue
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                   Inspect therapist credentials, review vaulted documents, and issue clinical practice decisions.
@@ -731,7 +763,7 @@ export default function AdminDashboard() {
                         </td>
                         <td style={{ padding: '10px' }}>
                           {th.licence_verified_externally ? (
-                            <span style={{ color: 'var(--primary-dark)', fontWeight: 600 }}>✓ Verified</span>
+                            <span style={{ color: 'var(--primary-dark)', fontWeight: 600 }}> Verified</span>
                           ) : (
                             <span style={{ color: 'var(--text-muted)' }}>Unverified</span>
                           )}
@@ -774,6 +806,21 @@ export default function AdminDashboard() {
                             >
                               Decision
                             </button>
+                            <button
+                              onClick={() => handleDeleteTherapist(th.user_id || th.profile_id, th.name)}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                color: '#dc2626',
+                                border: '1px solid rgba(239, 68, 68, 0.25)',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer'
+                              }}
+                              title="Delete therapist submission"
+                            >
+                              
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -801,13 +848,27 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
                 <div>
                   <h3 style={{ fontSize: '1.3rem', color: 'var(--text-primary)' }}>
-                    📂 Clinician Verification Dossier
+                    Clinician Verification Dossier
                   </h3>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                     {selectedDossier.therapist.full_name} ({selectedDossier.therapist.public_id}) • Status: <code>{selectedDossier.therapist.verification_status}</code>
+                    {selectedDossier.therapist.held_until && (
+                      <span style={{ marginLeft: '10px', color: '#c05621', fontWeight: 600 }}>
+                        On Hold until {new Date(selectedDossier.therapist.held_until).toLocaleTimeString()}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <button onClick={() => setSelectedDossier(null)} className="btn-ghost" style={{ padding: '6px 12px' }}>✕ Close</button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => handleDeleteTherapist(selectedDossier.therapist.user_id || selectedDossier.therapist.id, selectedDossier.therapist.full_name)}
+                    className="btn-danger"
+                    style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                     Delete Profile
+                  </button>
+                  <button onClick={() => setSelectedDossier(null)} className="btn-ghost" style={{ padding: '6px 12px' }}> Close</button>
+                </div>
               </div>
 
               {/* Profile details */}
@@ -823,7 +884,7 @@ export default function AdminDashboard() {
 
               {/* Vaulted Documents Table */}
               <h4 style={{ fontSize: '1.05rem', marginBottom: '12px', color: 'var(--text-primary)' }}>
-                🔒 Vaulted Documents ({selectedDossier.documents.length})
+                Vaulted Documents ({selectedDossier.documents.length})
               </h4>
 
               {selectedDossier.documents.length === 0 ? (
@@ -847,8 +908,13 @@ export default function AdminDashboard() {
                         <tr key={doc.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                           <td style={{ padding: '8px', fontWeight: 600 }}>{doc.doc_type}</td>
                           <td style={{ padding: '8px' }}>
-                            <div>{doc.original_filename}</div>
+                            <div style={{ fontWeight: 600 }}>{doc.original_filename}</div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{(doc.file_size / 1024).toFixed(1)} KB</div>
+                            {doc.ai_notes && (
+                              <div style={{ fontSize: '0.7rem', color: '#2b5f7d', fontStyle: 'italic', marginTop: '2px' }}>
+                                 {doc.ai_notes}
+                              </div>
+                            )}
                           </td>
                           <td style={{ padding: '8px' }}>
                             <a
@@ -861,16 +927,30 @@ export default function AdminDashboard() {
                             </a>
                           </td>
                           <td style={{ padding: '8px' }}>
-                            <span style={{
-                              padding: '2px 8px',
-                              borderRadius: '100px',
-                              fontSize: '0.72rem',
-                              fontWeight: 700,
-                              background: doc.status === 'approved' ? 'rgba(82, 183, 136, 0.2)' : (doc.status === 'rejected' ? 'rgba(220, 53, 69, 0.2)' : 'rgba(246, 189, 96, 0.25)'),
-                              color: doc.status === 'approved' ? 'var(--primary-dark)' : (doc.status === 'rejected' ? '#b91c1c' : '#b07d3b')
-                            }}>
-                              {doc.status}
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
+                              {doc.ai_verified && (
+                                <span style={{
+                                  padding: '2px 8px',
+                                  borderRadius: '100px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  background: 'rgba(82, 183, 136, 0.2)',
+                                  color: '#2d6a4f'
+                                }}>
+                                  System Validated ({doc.ai_confidence || 98}%)
+                                </span>
+                              )}
+                              <span style={{
+                                padding: '2px 8px',
+                                borderRadius: '100px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                background: doc.status === 'approved' || doc.status === 'verified' ? 'rgba(82, 183, 136, 0.2)' : (doc.status === 'rejected' ? 'rgba(220, 53, 69, 0.2)' : 'rgba(246, 189, 96, 0.25)'),
+                                color: doc.status === 'approved' || doc.status === 'verified' ? 'var(--primary-dark)' : (doc.status === 'rejected' ? '#b91c1c' : '#b07d3b')
+                              }}>
+                                {doc.status}
+                              </span>
+                            </div>
                             {doc.reject_reason && (
                               <div style={{ fontSize: '0.7rem', color: '#b91c1c', marginTop: '2px' }}>
                                 Reason: {doc.reject_reason}
@@ -884,7 +964,7 @@ export default function AdminDashboard() {
                                 className="btn-secondary"
                                 style={{ padding: '2px 8px', fontSize: '0.7rem', color: 'var(--primary-dark)' }}
                               >
-                                ✓ Accept
+                                 Accept
                               </button>
                               <div style={{ display: 'flex', gap: '4px' }}>
                                 <input
@@ -928,9 +1008,9 @@ export default function AdminDashboard() {
             <div className="glass-card" style={{ maxWidth: '500px', width: '100%', padding: '28px', background: 'var(--bg-surface-elevated)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>
-                  ⚖️ Verification Decision: {decisionModalTh.name}
+                  Verification Decision: {decisionModalTh.name}
                 </h3>
-                <button onClick={() => setDecisionModalTh(null)} className="btn-ghost" style={{ padding: '4px 10px' }}>✕</button>
+                <button onClick={() => setDecisionModalTh(null)} className="btn-ghost" style={{ padding: '4px 10px' }}></button>
               </div>
 
               <form onSubmit={handleDecisionSubmit}>
@@ -944,11 +1024,35 @@ export default function AdminDashboard() {
                     onChange={(e) => setDecisionForm({ ...decisionForm, decision: e.target.value })}
                   >
                     <option value="approve">Approve (Authorize Practice & Availability)</option>
+                    <option value="hold">Temporary Hold / Pause Access (Set Duration)</option>
                     <option value="request_more_info">Request More Info (Re-upload required)</option>
                     <option value="reject">Reject Application</option>
                     <option value="suspend">Suspend Clinician</option>
                   </select>
                 </div>
+
+                {decisionForm.decision === 'hold' && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                      Temporary Hold Duration *
+                    </label>
+                    <select
+                      className="input-field"
+                      value={decisionForm.duration_minutes || 15}
+                      onChange={(e) => setDecisionForm({ ...decisionForm, duration_minutes: parseInt(e.target.value, 10) })}
+                    >
+                      <option value={15}>15 Minutes</option>
+                      <option value={30}>30 Minutes</option>
+                      <option value={60}>1 Hour</option>
+                      <option value={1440}>24 Hours (1 Day)</option>
+                      <option value={4320}>3 Days</option>
+                      <option value={10080}>7 Days</option>
+                    </select>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                      Therapist consultation access will be paused for this duration and automatically resume afterward.
+                    </span>
+                  </div>
+                )}
 
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
@@ -1006,7 +1110,7 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
               <div>
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  👥 User Directory & Therapist Assignments
+                  User Directory & Therapist Assignments
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                   Zero-PII member oversight with DPDP account anonymization, assigned therapists, and force reset.
@@ -1102,7 +1206,7 @@ export default function AdminDashboard() {
                               className="btn-secondary"
                               style={{ padding: '2px 8px', fontSize: '0.72rem' }}
                             >
-                              View Clients 👥
+                              View Clients
                             </button>
                           ) : (
                             <span style={{ color: 'var(--text-muted)' }}>None assigned</span>
@@ -1170,7 +1274,7 @@ export default function AdminDashboard() {
                 <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)' }}>
                   Assigned Clients for {assignedClientsModal.therapist?.full_name || assignedClientsModal.therapist?.name}
                 </h3>
-                <button onClick={() => setAssignedClientsModal({ open: false, therapist: null, clients: [] })} className="btn-ghost">✕</button>
+                <button onClick={() => setAssignedClientsModal({ open: false, therapist: null, clients: [] })} className="btn-ghost"></button>
               </div>
 
               {assignedClientsModal.clients.length === 0 ? (
@@ -1209,7 +1313,7 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  📅 Clinical Session Request Pipeline
+                  Clinical Session Request Pipeline
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                   Coordinate client requests, assign approved clinicians, and record consultation outcomes.
@@ -1307,7 +1411,7 @@ export default function AdminDashboard() {
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>
                   Assign Approved Clinician
                 </h3>
-                <button onClick={() => setAssignModal({ open: false, request: null, therapist_id: '', admin_notes: '' })} className="btn-ghost">✕</button>
+                <button onClick={() => setAssignModal({ open: false, request: null, therapist_id: '', admin_notes: '' })} className="btn-ghost"></button>
               </div>
 
               <form onSubmit={handleAssignSubmit}>
@@ -1359,7 +1463,7 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  💬 Session Decline Reviews & Oversight
+                   Session Decline Reviews & Oversight
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                   Track reasons when a clinician declines a request, initiate "Ask Why" threads, and reassign clients.
@@ -1452,9 +1556,9 @@ export default function AdminDashboard() {
             <div className="glass-card" style={{ maxWidth: '580px', width: '100%', padding: '24px', background: 'var(--bg-surface-elevated)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)' }}>
-                  💬 Inquiry Thread: {threadModal.decline?.therapist_name}
+                   Inquiry Thread: {threadModal.decline?.therapist_name}
                 </h3>
-                <button onClick={() => setThreadModal({ open: false, decline: null, messages: [], newMessage: '' })} className="btn-ghost">✕</button>
+                <button onClick={() => setThreadModal({ open: false, decline: null, messages: [], newMessage: '' })} className="btn-ghost"></button>
               </div>
 
               <div style={{ padding: '10px', background: 'var(--bg-surface)', borderRadius: '8px', marginBottom: '16px', fontSize: '0.82rem' }}>
@@ -1514,7 +1618,7 @@ export default function AdminDashboard() {
             {/* Editable: Blocked Words & Safe Synonyms */}
             <div className="glass-card" style={{ padding: '24px' }}>
               <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                🛡️ Editable Blocked Words & Language Guard
+                Editable Blocked Words & Language Guard
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
                 Proactive words that Aria or the platform must never initiate unless user-introduced. Changes are audit-logged.
@@ -1568,7 +1672,7 @@ export default function AdminDashboard() {
                 READ-ONLY SPECIFICATION
               </div>
               <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                📋 Young Adult Focus Questionnaire (Fixed 8 Questions, 0–3 Scale)
+                Young Adult Focus Questionnaire (Fixed 8 Questions, 0–3 Scale)
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
                 Standardized non-branching clinical screener designed for ages 20–25.
@@ -1595,14 +1699,14 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <div>
                   <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                    🚨 Crisis-Path Triggers (Anonymized Timestamps Only)
+                    Crisis-Path Triggers (Anonymized Timestamps Only)
                   </h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                     Total Events: <strong>{safetyReports?.totalEvents || 0}</strong> • Strictly zero client identifiers, journal text, or conversational PII.
                   </p>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--primary-dark)', fontWeight: 700 }}>
-                  🔒 Anonymity Guarantee Enforced
+                  Anonymity Guarantee Enforced
                 </div>
               </div>
 
@@ -1637,7 +1741,7 @@ export default function AdminDashboard() {
             {/* Complaints Management */}
             <div className="glass-card" style={{ padding: '24px' }}>
               <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                🛡️ Clinician Complaints & Incident Reports
+                Clinician Complaints & Incident Reports
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
                 Track complaints filed regarding clinician conduct with resolution notes.
@@ -1685,7 +1789,7 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                  👑 Super Administrator Security Governance
+                  Super Administrator Security Governance
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                   Provision administrative personnel, manage access code rotation, and enable/disable administrators.
@@ -1762,7 +1866,7 @@ export default function AdminDashboard() {
                             className="btn-primary"
                             style={{ padding: '3px 8px', fontSize: '0.72rem' }}
                           >
-                            Reset Code 🔑
+                            Reset Access Code
                           </button>
                         </div>
                       </td>
@@ -1783,7 +1887,7 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <div>
                   <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                    🛡️ System Administration Audit Log (Append-Only)
+                    System Administration Audit Log (Append-Only)
                   </h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                     Immutable log recording all admin mutations, verification actions, and credentials operations.
@@ -1843,7 +1947,7 @@ export default function AdminDashboard() {
             {/* Clinical Consent Audit Logs */}
             <div className="glass-card" style={{ padding: '24px' }}>
               <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                📋 Clinical Consent Access Trail
+                 Clinical Consent Access Trail
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
                 Immutable audit trail verifying clinician scope compliance when accessing client records.
@@ -1900,16 +2004,16 @@ export default function AdminDashboard() {
             <div className="glass-card" style={{ maxWidth: '480px', width: '100%', padding: '32px', background: 'var(--bg-surface-elevated)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>
-                  👑 Provision Administrator
+                   Provision Administrator
                 </h3>
-                <button onClick={() => setShowCreateAdmin(false)} className="btn-ghost" style={{ padding: '4px 10px' }}>✕</button>
+                <button onClick={() => setShowCreateAdmin(false)} className="btn-ghost" style={{ padding: '4px 10px' }}></button>
               </div>
 
               {createdAdminResult ? (
                 <div>
                   <div style={{ padding: '16px', background: 'rgba(82, 183, 136, 0.15)', borderRadius: '12px', marginBottom: '20px', border: '1px solid rgba(82, 183, 136, 0.3)' }}>
                     <div style={{ fontWeight: 700, color: 'var(--primary-dark)', marginBottom: '8px' }}>
-                      ✓ Administrator Credentials Generated (Displayed Once Only)
+                       Administrator Credentials Generated (Displayed Once Only)
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>
                       Securely share these credentials. They must change password and access code upon first login:

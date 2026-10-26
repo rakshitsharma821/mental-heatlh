@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Storage } from '../services/storage';
 
 const DEFAULT_ROUTINES = [
-  { id: 1, category: 'Morning', title: 'Gentle hydration & window sunlight', desc: '1 glass of water + 2 mins daylight', completed: false, icon: '☀️' },
-  { id: 2, category: 'Morning', title: '3-minute morning breathwork', desc: 'Soothes cortisol awakening spike', completed: false, icon: '🌬️' },
-  { id: 3, category: 'Day', title: 'Midday screen break & posture reset', desc: 'Step away and unclench shoulders', completed: false, icon: '🚶' },
-  { id: 4, category: 'Day', title: 'Emotional check-in pulse', desc: 'Log current feeling in Mood Tracker', completed: false, icon: '📊' },
-  { id: 5, category: 'Evening', title: 'Unfiltered reflection journal', desc: 'Empty racing thoughts before sleep', completed: false, icon: '✍️' },
-  { id: 6, category: 'Evening', title: 'Dim lights & digital sunset', desc: 'Turn off harsh blue light 30m prior to rest', completed: false, icon: '🌙' }
+  { id: 1, category: 'Morning', title: 'Gentle hydration & window sunlight', desc: '1 glass of water + 2 mins daylight', completed: false, icon: '' },
+  { id: 2, category: 'Morning', title: '3-minute morning breathwork', desc: 'Soothes cortisol awakening spike', completed: false, icon: '' },
+  { id: 3, category: 'Day', title: 'Midday screen break & posture reset', desc: 'Step away and unclench shoulders', completed: false, icon: '' },
+  { id: 4, category: 'Day', title: 'Emotional check-in pulse', desc: 'Log current feeling in Mood Tracker', completed: false, icon: '' },
+  { id: 5, category: 'Evening', title: 'Unfiltered reflection journal', desc: 'Empty racing thoughts before sleep', completed: false, icon: '' },
+  { id: 6, category: 'Evening', title: 'Dim lights & digital sunset', desc: 'Turn off harsh blue light 30m prior to rest', completed: false, icon: '' }
 ];
 
 export default function Routine() {
@@ -42,7 +42,7 @@ export default function Routine() {
       title: newTitle.trim(),
       desc: 'Personal wellness intention',
       completed: false,
-      icon: newCategory === 'Morning' ? '☀️' : newCategory === 'Day' ? '🌱' : '🌙'
+      icon: newCategory === 'Morning' ? '' : newCategory === 'Day' ? '' : ''
     };
 
     const updated = [...routines, newTask];
@@ -142,7 +142,7 @@ export default function Routine() {
                 fontSize: '0.85rem',
                 flexShrink: 0
               }}>
-                {item.completed && '✓'}
+                {item.completed && ''}
               </div>
 
               <span style={{ fontSize: '1.6rem', flexShrink: 0 }}>{item.icon}</span>

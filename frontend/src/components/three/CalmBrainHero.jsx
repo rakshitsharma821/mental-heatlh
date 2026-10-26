@@ -744,7 +744,7 @@ export default function CalmBrainHero({ className = '', style = {} }) {
             boxShadow: 'var(--shadow-sm)'
           }}
         >
-          <span style={{ color: 'var(--accent-mint)' }}>✦</span>
+          <span style={{ color: 'var(--accent-mint)' }}></span>
           <span>{UI_STRINGS.hero?.breatheCycleCaption || '9s Natural Respiratory Cycle • Adaptive Calming'}</span>
         </div>
       </div>

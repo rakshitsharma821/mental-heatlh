@@ -50,6 +50,14 @@ export default function Register() {
   const [bio, setBio] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(true);
 
+  // Email OTP Verification state
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpNotice, setOtpNotice] = useState({ type: '', text: '' });
+
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -57,6 +65,40 @@ export default function Register() {
   const [memberSuccess, setMemberSuccess] = useState(null); // { publicId, recoveryPhrase }
   const [therapistSuccess, setTherapistSuccess] = useState(null); // { therapistId }
   const [copiedId, setCopiedId] = useState(false);
+
+  const handleSendOtp = async () => {
+    if (!email || !email.includes('@')) {
+      setOtpNotice({ type: 'error', text: 'Please enter a valid email address first.' });
+      return;
+    }
+    setOtpSending(true);
+    setOtpNotice({ type: '', text: '' });
+    const res = await Api.sendRegistrationOtp(email);
+    setOtpSending(false);
+    if (res.success) {
+      setOtpSent(true);
+      setOtpNotice({ type: 'success', text: `Verification code sent to ${email}!` });
+    } else {
+      setOtpNotice({ type: 'error', text: res.message || 'Failed to send verification code.' });
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpCode || otpCode.trim().length < 6) {
+      setOtpNotice({ type: 'error', text: 'Please enter the 6-digit verification code.' });
+      return;
+    }
+    setOtpVerifying(true);
+    setOtpNotice({ type: '', text: '' });
+    const res = await Api.verifyRegistrationOtp(email, otpCode);
+    setOtpVerifying(false);
+    if (res.success) {
+      setEmailVerified(true);
+      setOtpNotice({ type: 'success', text: 'Email verified successfully! You can now proceed.' });
+    } else {
+      setOtpNotice({ type: 'error', text: res.message || 'Invalid or expired OTP code.' });
+    }
+  };
 
   useEffect(() => {
     if (user && !memberSuccess && !therapistSuccess) {
@@ -92,6 +134,11 @@ export default function Register() {
 
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please verify both entries.');
+      return;
+    }
+
+    if (!emailVerified) {
+      setError('Please click "Get OTP" and verify your email address with the 6-digit code before proceeding.');
       return;
     }
 
@@ -134,6 +181,11 @@ export default function Register() {
 
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please verify both entries.');
+      return;
+    }
+
+    if (!emailVerified) {
+      setError('Please click "Get OTP" and verify your official email address before submitting credentials.');
       return;
     }
 
@@ -200,7 +252,7 @@ export default function Register() {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div style={{ fontSize: '2.4rem', marginBottom: '8px' }}>
-            {activePortal === 'therapist' ? '🩺' : '🌿'}
+            {activePortal === 'therapist' ? '' : ''}
           </div>
           <h1 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginBottom: '6px' }}>
             {activePortal === 'therapist' ? 'Join the Clinical Care Team' : 'Create Your Sanctuary Space'}
@@ -237,7 +289,7 @@ export default function Register() {
               transition: 'all 0.2s ease'
             }}
           >
-            🌿 User (Ages 20–25)
+             User (Ages 20–25)
           </button>
           <button
             type="button"
@@ -254,7 +306,7 @@ export default function Register() {
               transition: 'all 0.2s ease'
             }}
           >
-            🩺 Therapist
+             Therapist
           </button>
         </div>
 
@@ -290,17 +342,91 @@ export default function Register() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Email Address
-              </label>
-              <input
-                type="email"
-                className="input-field"
-                placeholder="alex@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Email Address *
+                </label>
+                {emailVerified && (
+                  <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#2d6a4f' }}>
+                     Verified
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="email"
+                  className="input-field"
+                  placeholder="alex@example.com"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailVerified(false);
+                    setOtpSent(false);
+                    setOtpNotice({ type: '', text: '' });
+                  }}
+                  disabled={emailVerified}
+                  required
+                />
+                {!emailVerified && (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={otpSending || !email || !email.includes('@')}
+                    className="btn-secondary"
+                    style={{ whiteSpace: 'nowrap', padding: '0 16px', fontSize: '0.8rem', fontWeight: 600 }}
+                  >
+                    {otpSending ? 'Sending...' : otpSent ? 'Resend OTP' : 'Get OTP'}
+                  </button>
+                )}
+              </div>
+
+              {otpSent && !emailVerified && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(82, 183, 136, 0.08)',
+                  border: '1px solid rgba(82, 183, 136, 0.25)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    Enter the 6-digit verification code sent to <strong>{email}</strong>:
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      maxLength="6"
+                      placeholder="123456"
+                      className="input-field"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      style={{ width: '130px', textAlign: 'center', letterSpacing: '3px', fontWeight: 700 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={otpVerifying || otpCode.length < 6}
+                      className="btn-primary"
+                      style={{ padding: '0 18px', fontSize: '0.8rem' }}
+                    >
+                      {otpVerifying ? 'Verifying...' : 'Verify OTP →'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {otpNotice.text && (
+                <div style={{
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  marginTop: '6px',
+                  color: otpNotice.type === 'success' ? '#2d6a4f' : '#dc2626'
+                }}>
+                  {otpNotice.text}
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
@@ -487,17 +613,91 @@ export default function Register() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  Official Email
-                </label>
-                <input
-                  type="email"
-                  className="input-field"
-                  placeholder="dr.clinician@clinic.org"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    Official Email *
+                  </label>
+                  {emailVerified && (
+                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#2d6a4f' }}>
+                       Verified
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="email"
+                    className="input-field"
+                    placeholder="dr.clinician@clinic.org"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailVerified(false);
+                      setOtpSent(false);
+                      setOtpNotice({ type: '', text: '' });
+                    }}
+                    disabled={emailVerified}
+                    required
+                  />
+                  {!emailVerified && (
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={otpSending || !email || !email.includes('@')}
+                      className="btn-secondary"
+                      style={{ whiteSpace: 'nowrap', padding: '0 12px', fontSize: '0.78rem', fontWeight: 600 }}
+                    >
+                      {otpSending ? '...' : otpSent ? 'Resend' : 'Get OTP'}
+                    </button>
+                  )}
+                </div>
+
+                {otpSent && !emailVerified && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    backgroundColor: 'rgba(82, 183, 136, 0.08)',
+                    border: '1px solid rgba(82, 183, 136, 0.25)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                      6-digit OTP code sent to <strong>{email}</strong>:
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <input
+                        type="text"
+                        maxLength="6"
+                        placeholder="123456"
+                        className="input-field"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                        style={{ width: '110px', textAlign: 'center', letterSpacing: '2px', fontWeight: 700 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        disabled={otpVerifying || otpCode.length < 6}
+                        className="btn-primary"
+                        style={{ padding: '0 14px', fontSize: '0.76rem' }}
+                      >
+                        {otpVerifying ? 'Verifying...' : 'Verify →'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {otpNotice.text && (
+                  <div style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    marginTop: '4px',
+                    color: otpNotice.type === 'success' ? '#2d6a4f' : '#dc2626'
+                  }}>
+                    {otpNotice.text}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -572,7 +772,7 @@ export default function Register() {
                         cursor: 'pointer'
                       }}
                     >
-                      {isSelected ? '✓ ' : '+ '}{spec}
+                      {isSelected ? ' ' : '+ '}{spec}
                     </button>
                   );
                 })}
@@ -605,7 +805,7 @@ export default function Register() {
                         cursor: 'pointer'
                       }}
                     >
-                      {isSelected ? '✓ ' : '+ '}{skill}
+                      {isSelected ? ' ' : '+ '}{skill}
                     </button>
                   );
                 })}
@@ -760,7 +960,7 @@ export default function Register() {
         {/* ── MEMBER SUCCESS MODAL ── */}
         {memberSuccess && (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '14px' }}>🌱</div>
+            <div style={{ fontSize: '3rem', marginBottom: '14px' }}></div>
             <h2 style={{ fontSize: '1.6rem', color: 'var(--text-primary)', marginBottom: '8px' }}>
               Welcome to MindCare Sanctuary!
             </h2>
@@ -793,7 +993,7 @@ export default function Register() {
                 onClick={() => copyToClipboard(memberSuccess.publicId)}
                 style={{ padding: '12px 20px' }}
               >
-                {copiedId ? '✓ Copied ID' : '📋 Copy User ID'}
+                {copiedId ? ' Copied ID' : ' Copy User ID'}
               </button>
               <button
                 type="button"
@@ -810,7 +1010,7 @@ export default function Register() {
         {/* ── THERAPIST SUCCESS MODAL ── */}
         {therapistSuccess && (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '14px' }}>🎉</div>
+            <div style={{ fontSize: '3rem', marginBottom: '14px' }}></div>
             <h2 style={{ fontSize: '1.6rem', color: 'var(--text-primary)', marginBottom: '8px' }}>
               Practitioner Account Created!
             </h2>
@@ -832,7 +1032,7 @@ export default function Register() {
                 {therapistSuccess.therapistId}
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                ⚠️ <strong>Important:</strong> You must enter this <strong>Therapist ID</strong> along with your registered email and password whenever you log in.
+                 <strong>Important:</strong> You must enter this <strong>Therapist ID</strong> along with your registered email and password whenever you log in.
               </div>
             </div>
 
@@ -843,7 +1043,7 @@ export default function Register() {
                 onClick={() => copyToClipboard(therapistSuccess.therapistId)}
                 style={{ padding: '12px 20px' }}
               >
-                {copiedId ? '✓ Copied ID' : '📋 Copy Therapist ID'}
+                {copiedId ? ' Copied ID' : ' Copy Therapist ID'}
               </button>
               <button
                 type="button"

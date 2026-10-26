@@ -274,7 +274,7 @@ export default function Community() {
           gap: '14px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <span style={{ fontSize: '1.8rem' }}>🛡️</span>
+            <span style={{ fontSize: '1.8rem' }}></span>
             <div>
               <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--primary-dark)' }}>
                 Zero Clinical & Identity Leakage Guarantee
@@ -297,7 +297,7 @@ export default function Community() {
         {!optedIn ? (
           /* Opt-In Gate State */
           <div className="glass-card" style={{ maxWidth: '600px', margin: '40px auto', textAlign: 'center', padding: '48px 36px' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🌱</div>
+            <div style={{ fontSize: '3rem', marginBottom: '16px' }}></div>
             <h2 style={{ fontSize: '1.6rem', color: 'var(--text-primary)', marginBottom: '12px' }}>
               Connect with Mindful Companions
             </h2>
@@ -305,12 +305,12 @@ export default function Community() {
               MindCare Peer Circles are completely voluntary and gentle. When you opt in, you choose wholesome intentions you'd like to cultivate (such as breathwork or restful sleep rhythms).
             </p>
             <ul style={{ textAlign: 'left', maxWidth: '400px', margin: '0 auto 28px', fontSize: '0.86rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <li>✓ <strong>100% Anonymous:</strong> You are represented solely by a calming nature alias.</li>
-              <li>✓ <strong>No Comparison:</strong> No scores, streaks, or ranks.</li>
-              <li>✓ <strong>Content Guardrails:</strong> Every reflection is filtered for safe, compassionate language.</li>
+              <li> <strong>100% Anonymous:</strong> You are represented solely by a calming nature alias.</li>
+              <li> <strong>No Comparison:</strong> No scores, streaks, or ranks.</li>
+              <li> <strong>Content Guardrails:</strong> Every reflection is filtered for safe, compassionate language.</li>
             </ul>
             <button onClick={handleToggleOptIn} className="btn-primary" style={{ padding: '12px 32px', fontSize: '0.95rem' }}>
-              I Understand — Opt In to Sanctuary Circles 🌿
+              I Understand — Opt In to Sanctuary Circles 
             </button>
           </div>
         ) : (
@@ -344,7 +344,7 @@ export default function Community() {
                         Save
                       </button>
                       <button onClick={() => setIsEditingAlias(false)} className="btn-ghost" style={{ padding: '4px 8px', fontSize: '0.75rem' }}>
-                        ✕
+                        
                       </button>
                     </div>
                   ) : (
@@ -353,7 +353,7 @@ export default function Community() {
                         {alias || 'Gentle Traveler'}
                       </span>
                       <button onClick={() => setIsEditingAlias(true)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: '0.72rem' }}>
-                        ✏️ Change
+                         Change
                       </button>
                     </div>
                   )}
@@ -381,7 +381,7 @@ export default function Community() {
                         boxShadow: isSelected ? '0 4px 12px rgba(64, 145, 108, 0.2)' : 'none'
                       }}
                     >
-                      {intent.label} {isSelected && '✓'}
+                      {intent.label} {isSelected && ''}
                     </button>
                   );
                 })}
@@ -412,7 +412,7 @@ export default function Community() {
                       className="btn-ghost"
                       style={{ padding: '6px 14px', fontSize: '0.78rem', color: '#b91c1c' }}
                     >
-                      Peacefully Unpair ✕
+                      Peacefully Unpair 
                     </button>
                   ) : (
                     <button
@@ -421,7 +421,7 @@ export default function Community() {
                       className="btn-primary"
                       style={{ padding: '8px 18px', fontSize: '0.82rem' }}
                     >
-                      {isMatching ? 'Finding Kindred Soul...' : '✦ Request Peer Match'}
+                      {isMatching ? 'Finding Kindred Soul...' : ' Request Peer Match'}
                     </button>
                   )}
                 </div>
@@ -429,7 +429,7 @@ export default function Community() {
 
               {peerNotice && (
                 <div style={{ marginTop: '10px', fontSize: '0.82rem', color: 'var(--primary-dark)', fontWeight: 600 }}>
-                  ℹ️ {peerNotice}
+                  ℹ {peerNotice}
                 </div>
               )}
             </div>
@@ -508,7 +508,7 @@ export default function Community() {
                     color: '#b91c1c'
                   }}>
                     <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '6px' }}>
-                      ❤️ We are here for you
+                       We are here for you
                     </div>
                     <p style={{ fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '12px' }}>
                       {crisisNudge.message}
@@ -529,7 +529,7 @@ export default function Community() {
                             border: '1px solid rgba(239, 68, 68, 0.3)'
                           }}
                         >
-                          📞 {h.name}: {h.number}
+                           {h.name}: {h.number}
                         </a>
                       ))}
                     </div>
@@ -554,7 +554,7 @@ export default function Community() {
                       className="btn-primary"
                       style={{ padding: '12px 24px', whiteSpace: 'nowrap' }}
                     >
-                      {isPosting ? 'Sharing...' : 'Share Seedling 🌱'}
+                      {isPosting ? 'Sharing...' : 'Share Seedling '}
                     </button>
                   </div>
                 </form>
@@ -562,7 +562,7 @@ export default function Community() {
                 {/* Posts Stream */}
                 {posts.length === 0 ? (
                   <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '24px', fontSize: '0.88rem' }}>
-                    No reflections in this circle yet. Be the first to plant a gentle word! 🌱
+                    No reflections in this circle yet. Be the first to plant a gentle word! 
                   </p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -595,7 +595,7 @@ export default function Community() {
                                 padding: '2px 8px',
                                 borderRadius: '100px'
                               }}>
-                                🌿 Clinical Facilitator
+                                 Clinical Facilitator
                               </span>
                             )}
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -622,7 +622,7 @@ export default function Community() {
                               borderColor: post.hasHearted ? 'var(--primary)' : 'var(--border-subtle)'
                             }}
                           >
-                            <span>💚</span>
+                            <span></span>
                             <span>{post.hearts}</span>
                           </button>
 
@@ -632,7 +632,7 @@ export default function Community() {
                             style={{ fontSize: '0.75rem', opacity: 0.6 }}
                             title="Report reflection"
                           >
-                            🚩
+                            
                           </button>
                         </div>
                       </div>
@@ -668,7 +668,7 @@ export default function Community() {
 
             {reportNotice ? (
               <div style={{ color: 'var(--primary-dark)', fontWeight: 600, fontSize: '0.88rem', padding: '12px 0' }}>
-                ✓ {reportNotice}
+                 {reportNotice}
               </div>
             ) : (
               <>

@@ -10,6 +10,8 @@ const router = express.Router();
 
 router.post('/register', authController.register);
 router.post('/register-therapist', authController.registerTherapist);
+router.post('/send-registration-otp', authController.sendRegistrationOtp);
+router.post('/verify-registration-otp', authController.verifyRegistrationOtp);
 router.post('/login', authController.login);
 router.post('/verify-otp', authController.verifyOtp);
 router.post('/resend-otp', authController.resendOtp);

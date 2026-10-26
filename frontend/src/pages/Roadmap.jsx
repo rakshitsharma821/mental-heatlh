@@ -58,7 +58,7 @@ export default function Roadmap() {
                   color: 'var(--text-primary)'
                 }}
               >
-                ✦ {tip}
+                 {tip}
               </span>
             ))}
           </div>

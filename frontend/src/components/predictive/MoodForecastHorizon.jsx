@@ -26,7 +26,7 @@ export default function MoodForecastHorizon({ forecast }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '18px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.2rem', color: 'var(--primary)' }}>🌅</span>
+            <span style={{ fontSize: '1.2rem', color: 'var(--primary)' }}></span>
             <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>AI Mood Prediction • Emotional Horizon</h3>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '2px' }}>
@@ -95,7 +95,7 @@ export default function MoodForecastHorizon({ forecast }) {
             <strong>Suggested Nurture:</strong> {recommendation}
           </div>
           <Link to="/breathing" className="btn-primary" style={{ padding: '8px 20px', fontSize: '0.82rem' }}>
-            3-Min Breathwork 🌬️
+            3-Min Breathwork 
           </Link>
         </div>
       </div>

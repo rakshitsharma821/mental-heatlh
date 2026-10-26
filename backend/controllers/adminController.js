@@ -214,7 +214,8 @@ export const adminController = {
 
       // Fetch uploaded documents and sign view tokens
       const docsRes = await db.query(`
-        SELECT id, doc_type, original_filename, file_size, mime_type, status, reject_reason, uploaded_at, reviewed_by, reviewed_at
+        SELECT id, doc_type, original_filename, file_size, mime_type, status, reject_reason, uploaded_at, reviewed_by, reviewed_at,
+               ai_verified, ai_confidence, ai_notes, ai_verified_at
         FROM therapist_documents
         WHERE therapist_id = $1
         ORDER BY uploaded_at ASC
@@ -310,7 +311,7 @@ export const adminController = {
       const { decision, reason, licence_verified_externally, external_verification_notes } = req.body;
       const adminId = req.user.id;
 
-      const validDecisions = ['approve', 'reject', 'request_more_info', 'suspend'];
+      const validDecisions = ['approve', 'reject', 'request_more_info', 'suspend', 'hold'];
       if (!decision || !validDecisions.includes(decision)) {
         return res.status(400).json({
           success: false,
@@ -337,7 +338,7 @@ export const adminController = {
         });
       }
 
-      // Reason required if rejecting, requesting more info, or suspending
+      // Reason required if rejecting, requesting more info, suspending, or holding
       if (decision !== 'approve' && (!reason || !reason.trim())) {
         return res.status(400).json({
           success: false,
@@ -349,22 +350,35 @@ export const adminController = {
         approve: 'approved',
         reject: 'rejected',
         request_more_info: 'more_info_required',
-        suspend: 'suspended'
+        suspend: 'suspended',
+        hold: 'held'
       };
       const newStatus = statusMap[decision];
+
+      let heldUntil = null;
+      let holdReason = null;
+      if (decision === 'hold') {
+        const durationMinutes = parseInt(req.body.duration_minutes, 10) || 15;
+        heldUntil = new Date(Date.now() + durationMinutes * 60 * 1000);
+        holdReason = reason ? reason.trim() : `Temporary hold for ${durationMinutes} minutes`;
+      }
 
       await db.query(`
         UPDATE therapist_profiles
         SET verification_status = $1,
             rejection_reason = $2,
             licence_verified_externally = COALESCE($3, licence_verified_externally),
-            external_verification_notes = COALESCE($4, external_verification_notes)
-        WHERE id = $5
+            external_verification_notes = COALESCE($4, external_verification_notes),
+            held_until = $5,
+            hold_reason = $6
+        WHERE id = $7
       `, [
         newStatus,
         reason ? reason.trim() : null,
         licence_verified_externally !== undefined ? Boolean(licence_verified_externally) : null,
         external_verification_notes ? external_verification_notes.trim() : null,
+        heldUntil,
+        holdReason,
         profile.id
       ]);
 
@@ -375,24 +389,79 @@ export const adminController = {
         profile.id,
         reason || `Verification decision: ${decision} (${newStatus})`,
         req.ip,
-        { decision, newStatus, licence_verified_externally }
+        { decision, newStatus, licence_verified_externally, heldUntil }
       );
 
       NotificationService.dispatchNotification(profile.user_id, {
         title: 'Therapist Verification Update',
-        message: `Your clinical verification dossier status has been updated to "${newStatus}".`,
+        message: decision === 'hold'
+          ? `Your clinical consultation access has been temporarily paused by administration until ${heldUntil.toLocaleTimeString()}. Reason: ${holdReason}`
+          : `Your clinical verification dossier status has been updated to "${newStatus}".`,
         type: NOTIFICATION_CONFIG.TYPES.THERAPIST_VERIFICATION,
         overrideQuietHours: true
       }).catch(e => console.error('Notification dispatch error:', e));
 
       return res.json({
         success: true,
-        message: `Therapist verification updated to "${newStatus}".`,
-        verification_status: newStatus
+        message: decision === 'hold'
+          ? `Therapist paused on hold until ${heldUntil.toLocaleTimeString()}.`
+          : `Therapist verification updated to "${newStatus}".`,
+        verification_status: newStatus,
+        held_until: heldUntil
       });
     } catch (err) {
       console.error('makeVerificationDecision error:', err);
       return res.status(500).json({ success: false, message: 'Server error recording verification decision.' });
+    }
+  },
+
+  /**
+   * Delete therapist profile and documents completely
+   */
+  deleteTherapist: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const adminId = req.user.id;
+
+      const profRes = await db.query(
+        'SELECT id, user_id FROM therapist_profiles WHERE user_id = $1 OR id = $1',
+        [id]
+      );
+      if (profRes.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Therapist record not found.' });
+      }
+
+      const { user_id, id: profile_id } = profRes.rows[0];
+
+      // Remove uploaded physical documents
+      const docsRes = await db.query('SELECT storage_key FROM therapist_documents WHERE therapist_id = $1', [user_id]);
+      for (const d of docsRes.rows) {
+        try {
+          const filePath = clinicalStorage.getFilePath(d.storage_key);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } catch (_) {}
+      }
+
+      await db.query('DELETE FROM therapist_documents WHERE therapist_id = $1', [user_id]);
+      await db.query('DELETE FROM therapist_profiles WHERE id = $1', [profile_id]);
+      await db.query("UPDATE users SET status = 'deleted' WHERE id = $1 AND role = 'therapist'", [user_id]);
+
+      await logAdminAction(
+        adminId,
+        'delete_therapist',
+        'therapist_profile',
+        profile_id,
+        'Therapist account and submission permanently deleted by administrator',
+        req.ip
+      );
+
+      return res.json({
+        success: true,
+        message: 'Therapist dossier and profile permanently deleted by administration.'
+      });
+    } catch (err) {
+      console.error('deleteTherapist error:', err);
+      return res.status(500).json({ success: false, message: 'Server error deleting therapist.' });
     }
   },
 
