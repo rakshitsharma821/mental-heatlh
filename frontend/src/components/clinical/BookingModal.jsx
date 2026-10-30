@@ -115,9 +115,13 @@ export default function BookingModal({ isOpen, onClose, initialReason = '', onBo
         <button
           onClick={onClose}
           className="icon-btn-ghost"
-          style={{ position: 'absolute', top: '20px', right: '20px' }}
+          style={{ position: 'absolute', top: '20px', right: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
+          aria-label="Close booking dialog"
         >
-          
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
 
         {submitted ? (

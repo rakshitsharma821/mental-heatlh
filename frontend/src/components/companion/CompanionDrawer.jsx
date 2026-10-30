@@ -251,7 +251,7 @@ export default function CompanionDrawer() {
                 <div className="companion-avatar">{UI_STRINGS.brand.sparkle}</div>
                 <div>
                   <h4>Aria • Care Companion</h4>
-                  <p className="companion-status">Personal Sanctuary AI • Powered by OpenRouter</p>
+                  <p className="companion-status">Personal Sanctuary Companion</p>
                 </div>
               </div>
               <div className="companion-header-actions">
@@ -265,9 +265,13 @@ export default function CompanionDrawer() {
                 <button 
                   className="icon-btn-ghost" 
                   onClick={() => setIsOpen(false)}
-                  aria-label="Close"
+                  aria-label="Close Companion Window"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -345,8 +349,16 @@ export default function CompanionDrawer() {
                 onChange={(e) => setInputText(e.target.value)}
                 maxLength={400}
               />
-              <button type="submit" disabled={!inputText.trim()} aria-label="Send message">
-                
+              <button 
+                type="submit" 
+                disabled={!inputText.trim()} 
+                aria-label="Send message to Aria"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
               </button>
             </form>
           </div>

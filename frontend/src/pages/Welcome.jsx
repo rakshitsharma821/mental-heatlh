@@ -116,8 +116,8 @@ export default function Welcome() {
         aria-hidden="true"
         style={{
           position: 'absolute',
-          width: '540px',
-          height: '540px',
+          width: 'min(540px, 90vw)',
+          height: 'min(540px, 90vw)',
           borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(116, 198, 157, 0.25) 0%, rgba(157, 132, 183, 0.16) 42%, rgba(246, 189, 96, 0.10) 70%, transparent 80%)',
           filter: 'blur(64px)',

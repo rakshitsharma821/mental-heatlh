@@ -39,6 +39,7 @@ export default function Navbar() {
     { to: '/dashboard', label: UI_STRINGS.nav.dashboard },
     { to: '/mood', label: UI_STRINGS.nav.mood },
     { to: '/breathing', label: UI_STRINGS.nav.breathing },
+    { to: '/journal', label: 'Journal' },
     { to: '/routine', label: UI_STRINGS.nav.routine },
     { to: '/progress', label: UI_STRINGS.nav.progress },
     { to: '/community', label: UI_STRINGS.nav.community },
@@ -423,6 +424,13 @@ export default function Navbar() {
           )}
         </div>
       </div>
+      {menuOpen && (
+        <div
+          className="nav-mobile-backdrop"
+          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
     </nav>
   );
 }

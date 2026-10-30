@@ -1,18 +1,49 @@
+# ============================================
+# MindCare Sanctuary — Master .gitignore
+# Strictly prevents any secrets, keys, database files,
+# or user documents from ever being committed to source control
+# ============================================
+
+# Secrets & Environment Variables (NEVER COMMIT)
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+*.pem
+*.key
+*.cert
+*.pfx
+*.p12
+
+# Clinical Uploads & Vaults (DPDP / HIPAA compliance)
+uploads/
+backend/uploads/
+backend/data/*.db*
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+
+# Dependencies & Build artifacts
 node_modules/
 dist/
 build/
-.history/
 coverage/
-backend/data/*.db*
-backend/uploads/
+.history/
+.kilo/
 
-.env*
-!.env.example
-
+# Logs & Diagnostics
+*.log
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
+# OS & Editor configurations
 .DS_Store
 Thumbs.db
 Desktop.ini
+.vscode/
+.idea/

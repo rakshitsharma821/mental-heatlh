@@ -526,45 +526,63 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* 9 Section Navigation Tabs */}
+        {/* Section Navigation Tabs */}
         <div style={{
           display: 'flex',
-          gap: '8px',
+          gap: '6px',
           marginBottom: '24px',
-          borderBottom: '1px solid var(--border-subtle)',
-          paddingBottom: '12px',
+          background: 'rgba(0, 0, 0, 0.03)',
+          padding: '6px 8px',
+          borderRadius: '12px',
+          border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.06))',
           overflowX: 'auto'
         }}>
           {[
-            { id: 'overview', label: '1. Overview' },
-            { id: 'verification', label: '2. Therapist Queue' },
-            { id: 'users', label: '3. Users & Assignments' },
-            { id: 'requests', label: '4. Session Pipeline' },
-            { id: 'declines', label: '5. Decline Reviews' },
-            { id: 'config', label: '6. System Config' },
-            { id: 'safety', label: '7. Safety & Reports' },
-            { id: 'super_admin', label: '8. Super Admin', hide: !isSuperAdmin },
-            { id: 'audit', label: '9. Audit Logs' }
-          ].filter(t => !t.hide).map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                border: 'none',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                background: activeTab === tab.id ? 'var(--primary)' : 'transparent',
-                color: activeTab === tab.id ? '#ffffff' : 'var(--text-secondary)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
+            { id: 'overview', title: 'Overview' },
+            { id: 'verification', title: 'Therapist Queue' },
+            { id: 'users', title: 'Users & Assignments' },
+            { id: 'requests', title: 'Session Pipeline' },
+            { id: 'declines', title: 'Decline Reviews' },
+            { id: 'config', title: 'System Config' },
+            { id: 'safety', title: 'Safety & Reports' },
+            { id: 'super_admin', title: 'Super Admin', hide: !isSuperAdmin },
+            { id: 'audit', title: 'Audit Logs' }
+          ]
+            .filter(t => !t.hide)
+            .map((tab, idx) => ({
+              ...tab,
+              label: `${idx + 1}. ${tab.title}`
+            }))
+            .map(tab => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: isActive ? 700 : 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    background: isActive ? '#1a2e22' : 'transparent',
+                    color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                    boxShadow: isActive ? '0 2px 8px rgba(26, 46, 34, 0.25)' : 'none',
+                    transition: 'all 0.18s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) e.currentTarget.style.background = 'rgba(26, 46, 34, 0.07)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
         </div>
 
         {/* ========================================================= */}
@@ -1010,7 +1028,7 @@ export default function AdminDashboard() {
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>
                   Verification Decision: {decisionModalTh.name}
                 </h3>
-                <button onClick={() => setDecisionModalTh(null)} className="btn-ghost" style={{ padding: '4px 10px' }}></button>
+                <button onClick={() => setDecisionModalTh(null)} className="btn-ghost" style={{ padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }} aria-label="Close modal">✕</button>
               </div>
 
               <form onSubmit={handleDecisionSubmit}>
@@ -1274,7 +1292,7 @@ export default function AdminDashboard() {
                 <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)' }}>
                   Assigned Clients for {assignedClientsModal.therapist?.full_name || assignedClientsModal.therapist?.name}
                 </h3>
-                <button onClick={() => setAssignedClientsModal({ open: false, therapist: null, clients: [] })} className="btn-ghost"></button>
+                <button onClick={() => setAssignedClientsModal({ open: false, therapist: null, clients: [] })} className="btn-ghost" style={{ padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }} aria-label="Close modal">✕</button>
               </div>
 
               {assignedClientsModal.clients.length === 0 ? (
@@ -1411,7 +1429,7 @@ export default function AdminDashboard() {
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>
                   Assign Approved Clinician
                 </h3>
-                <button onClick={() => setAssignModal({ open: false, request: null, therapist_id: '', admin_notes: '' })} className="btn-ghost"></button>
+                <button onClick={() => setAssignModal({ open: false, request: null, therapist_id: '', admin_notes: '' })} className="btn-ghost" style={{ padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }} aria-label="Close modal">✕</button>
               </div>
 
               <form onSubmit={handleAssignSubmit}>
@@ -1558,7 +1576,7 @@ export default function AdminDashboard() {
                 <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)' }}>
                    Inquiry Thread: {threadModal.decline?.therapist_name}
                 </h3>
-                <button onClick={() => setThreadModal({ open: false, decline: null, messages: [], newMessage: '' })} className="btn-ghost"></button>
+                <button onClick={() => setThreadModal({ open: false, decline: null, messages: [], newMessage: '' })} className="btn-ghost" style={{ padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }} aria-label="Close modal">✕</button>
               </div>
 
               <div style={{ padding: '10px', background: 'var(--bg-surface)', borderRadius: '8px', marginBottom: '16px', fontSize: '0.82rem' }}>
@@ -2006,7 +2024,7 @@ export default function AdminDashboard() {
                 <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>
                    Provision Administrator
                 </h3>
-                <button onClick={() => setShowCreateAdmin(false)} className="btn-ghost" style={{ padding: '4px 10px' }}></button>
+                <button onClick={() => setShowCreateAdmin(false)} className="btn-ghost" style={{ padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }} aria-label="Close modal">✕</button>
               </div>
 
               {createdAdminResult ? (

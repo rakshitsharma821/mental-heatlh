@@ -228,8 +228,16 @@ export function initPostgresDatabase() {
         total_score INT NOT NULL,
         band VARCHAR(32) NOT NULL,
         answers_json JSONB NOT NULL,
+        ai_analysis JSONB,
+        recommended_therapy VARCHAR(250),
+        recommended_specialist VARCHAR(250),
+        clinical_notes TEXT,
         completed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
+      ALTER TABLE user_assessments ADD COLUMN IF NOT EXISTS ai_analysis JSONB;
+      ALTER TABLE user_assessments ADD COLUMN IF NOT EXISTS recommended_therapy VARCHAR(250);
+      ALTER TABLE user_assessments ADD COLUMN IF NOT EXISTS recommended_specialist VARCHAR(250);
+      ALTER TABLE user_assessments ADD COLUMN IF NOT EXISTS clinical_notes TEXT;
       CREATE INDEX IF NOT EXISTS idx_user_assessments_user ON user_assessments(user_id, completed_at DESC);
 
       -- 2. Phase 2 Tables
@@ -453,11 +461,19 @@ export function initPostgresDatabase() {
         mime_type VARCHAR(100) NOT NULL,
         storage_key VARCHAR(255) NOT NULL,
         status VARCHAR(30) DEFAULT 'submitted',
+        ai_verified BOOLEAN DEFAULT FALSE,
+        ai_confidence INT,
+        ai_notes TEXT,
+        ai_verified_at TIMESTAMPTZ,
         reject_reason TEXT,
         uploaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         reviewed_by VARCHAR(64) REFERENCES users(id),
         reviewed_at TIMESTAMPTZ
       );
+      ALTER TABLE therapist_documents ADD COLUMN IF NOT EXISTS ai_verified BOOLEAN DEFAULT FALSE;
+      ALTER TABLE therapist_documents ADD COLUMN IF NOT EXISTS ai_confidence INT;
+      ALTER TABLE therapist_documents ADD COLUMN IF NOT EXISTS ai_notes TEXT;
+      ALTER TABLE therapist_documents ADD COLUMN IF NOT EXISTS ai_verified_at TIMESTAMPTZ;
       CREATE INDEX IF NOT EXISTS idx_therapist_docs_therapist ON therapist_documents(therapist_id);
 
       CREATE TABLE IF NOT EXISTS session_declines (

@@ -15,6 +15,8 @@ import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
 import { db } from './models/db.js';
 import { encryptField } from './utils/crypto.js';
+import { securityHeaders, globalLimiter, authLimiter, aiLimiter } from './middleware/security.js';
+import { sanitizeInput } from './middleware/sanitize.js';
 
 // Load environment variables from .env
 const __filename = fileURLToPath(import.meta.url);
@@ -42,13 +44,33 @@ const allowedOrigins = [
   'http://127.0.0.1:5173'
 ];
 
-// Middlewares
+// Security Hardening Middlewares
+app.disable('x-powered-by');
+app.use(securityHeaders);
+
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow non-browser requests (e.g. mobile apps, curl, internal tests) without origin header
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS Policy: Origin not permitted by MindCare Sanctuary security firewall.'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
-app.use(express.json());
+// Body Parsing with strict size limits to prevent Denial-of-Service attacks
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Anti-XSS & Prototype Pollution Input Sanitizer
+app.use(sanitizeInput);
+
+// Global Rate Limiting across all API routes
+app.use('/api', globalLimiter);
 
 // Routes
 import authRoutes from './routes/authRoutes.js';
@@ -63,7 +85,11 @@ import assessmentRoutes from './routes/assessmentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 
-app.use('/api/auth', authRoutes);
+// Route-level Rate Limiters
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/companion/chat', aiLimiter);
+app.use('/api/assessment/analyze', aiLimiter);
+
 app.use('/api/mood', moodRoutes);
 app.use('/api/journal', journalRoutes);
 app.use('/api/activity', activityRoutes);
@@ -466,6 +492,46 @@ io.on('connection', (socket) => {
 // Startup reset: ensure all therapists default to offline until active connection
 db.query("UPDATE therapist_profiles SET is_available = FALSE")
   .catch(err => console.warn('Could not reset therapist availability on startup:', err.message));
+
+// 404 Not Found Handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'NotFound',
+    message: 'The requested API endpoint was not found on this server.'
+  });
+});
+
+// Centralized Security Error Handler (Turn Off Verbose Debug Stack Traces in Production)
+app.use((err, req, res, next) => {
+  console.error('[MindCare Security Guard Error]', err);
+
+  // Handle CORS errors gracefully
+  if (err.message && err.message.includes('CORS Policy')) {
+    return res.status(403).json({
+      success: false,
+      error: 'CorsForbidden',
+      message: err.message
+    });
+  }
+
+  // Handle payload too large
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      success: false,
+      error: 'PayloadTooLarge',
+      message: 'Request payload exceeds the maximum allowed 1MB limit.'
+    });
+  }
+
+  const isDev = (process.env.NODE_ENV || 'development').trim() === 'development';
+  return res.status(err.status || 500).json({
+    success: false,
+    error: err.name || 'InternalServerError',
+    message: isDev ? err.message : 'A protected internal server error occurred. Please try again later.',
+    ...(isDev && { stack: err.stack })
+  });
+});
 
 // Start Server
 httpServer.listen(PORT, () => {

@@ -41,7 +41,9 @@ export default function CrisisSupport() {
           textAlign: 'center',
           boxShadow: '0 10px 30px rgba(220, 53, 69, 0.06)'
         }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}></div>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'rgba(220, 53, 69, 0.12)', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+          </div>
           <h1 style={{ fontSize: '2.2rem', color: '#991b1b', marginBottom: '10px' }}>Immediate Crisis Support</h1>
           <p style={{ color: '#7f1d1d', fontSize: '1.05rem', maxWidth: '650px', margin: '0 auto', lineHeight: 1.6 }}>
             If you are in danger, feeling overwhelmed, or experiencing thoughts of self-harm, please know you are not alone. Compassionate human help is ready for you right now — free, confidential, and 24/7.
@@ -70,8 +72,22 @@ export default function CrisisSupport() {
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{h.country}</span>
                   </div>
                   <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '4px' }}>{h.service}</h3>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#b91c1c', marginBottom: '6px' }}>
-                    {h.number}
+                  <div style={{ marginBottom: '6px' }}>
+                    <a
+                      href={h.callUrl}
+                      style={{
+                        fontSize: '1.3rem',
+                        fontWeight: 800,
+                        color: '#b91c1c',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      title={`Call ${h.service} directly`}
+                    >
+                      {h.number}
+                    </a>
                   </div>
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>{h.availability}</p>
                 </div>
@@ -100,7 +116,9 @@ export default function CrisisSupport() {
         {/* Somatic 5-4-3-2-1 Grounding Tool */}
         <div className="glass-card" style={{ padding: '32px', marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '1.6rem' }}></span>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent-sage-soft, #eaf4ee)', color: 'var(--accent-forest, #245741)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+            </div>
             <h2 style={{ fontSize: '1.3rem', color: 'var(--text-primary)' }}>5-4-3-2-1 Sensory Grounding Technique</h2>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '24px' }}>

@@ -53,15 +53,18 @@ test('Step 0: Comprehensive Verification & Hardening', async (t) => {
     INSERT INTO users (id, email, password_hash, salt, recovery_key_hash, full_name, role, status)
     VALUES
       ('th_approved_test_01', 'therapist01@mindcare.test', 'h', 's', 'r', 'Dr. Marcus Vance', 'therapist', 'active'),
+      ('th_sarah_vance', 'sarah.vance@mindcare.test', 'h', 's', 'r', 'Dr. Sarah Vance', 'therapist', 'active'),
       ('client_user_test_01', 'c1@mindcare.test', 'h', 's', 'r', 'Client One', 'client', 'active'),
       ('client_user_test_02', 'c2@mindcare.test', 'h', 's', 'r', 'Client Two', 'client', 'active'),
       ('admin_system_root', 'admin@mindcare.com', 'h', 's', 'r', 'Admin System', 'admin', 'active'),
       ('super_admin_test_root', 'superadmin@mindcare.test', 'h', 's', 'rec_hash', 'Super Admin Test', 'super_admin', 'active')
     ON CONFLICT (id) DO NOTHING;
 
-    INSERT INTO therapist_profiles (id, user_id, license_number, licensing_board, title, verification_status, is_available)
-    VALUES ('tp_approved_test_01', 'th_approved_test_01', 'RCI-APP-001', 'State Board', 'Clinical Psychologist', 'approved', true)
-    ON CONFLICT (user_id) DO UPDATE SET verification_status = 'approved';
+    INSERT INTO therapist_profiles (id, user_id, license_number, licensing_board, title, verification_status, is_available, is_demo)
+    VALUES 
+      ('tp_approved_test_01', 'th_approved_test_01', 'RCI-APP-001', 'State Board', 'Clinical Psychologist', 'approved', true, false),
+      ('tp_sarah_vance', 'th_sarah_vance', 'RCI-SARAH-001', 'State Board', 'Clinical Psychologist', 'documents_pending', false, true)
+    ON CONFLICT (user_id) DO UPDATE SET verification_status = EXCLUDED.verification_status, is_demo = EXCLUDED.is_demo;
   `);
 
   // T1

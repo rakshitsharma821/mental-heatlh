@@ -423,7 +423,7 @@ export default function Landing() {
                 {UI_STRINGS.landing?.pillar4Title || 'Crisis Lifeline & Safety Plan'}
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                {UI_STRINGS.landing?.pillar4Desc || 'Zero-barrier emergency helplines (Tele-MANAS 14416, KIRAN) and an interactive 5-step digital safety plan that functions independently of all other systems.'}
+                Zero-barrier emergency helplines (<a href="tel:14416" style={{ color: '#b91c1c', fontWeight: 700, textDecoration: 'underline' }}>Tele-MANAS: 14416</a>, <a href="tel:988" style={{ color: '#b91c1c', fontWeight: 700, textDecoration: 'underline' }}>Lifeline: 988</a>) and an interactive 5-step digital safety plan that functions independently of all other systems.
               </p>
               <Link to="/crisis" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '18px', color: 'var(--color-error-text)', fontWeight: 700, fontSize: '0.88rem' }}>
                 <span>{UI_STRINGS.landing?.pillar4Cta || 'Immediate Lifeline →'}</span>

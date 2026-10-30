@@ -16,7 +16,7 @@ export default function Register() {
   const { user, register } = useAuth();
 
   const searchParams = new URLSearchParams(location.search);
-  const requestedPortal = searchParams.get('portal');
+  const requestedPortal = searchParams.get('portal') || searchParams.get('role');
   const [activePortal, setActivePortal] = useState(
     requestedPortal === 'therapist' ? 'therapist' : 'member'
   );
@@ -31,7 +31,8 @@ export default function Register() {
   const [gender, setGender] = useState('Prefer not to say');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
-  const [agree, setAgree] = useState(true);
+  const [agreeTerms, setAgreeTerms] = useState(true);
+  const [agreeDpdp, setAgreeDpdp] = useState(true);
 
   // Therapist Specific Fields (Part 3)
   const [therapistType, setTherapistType] = useState(CLINICAL_CONFIG.therapistTypes[0]);
@@ -142,8 +143,13 @@ export default function Register() {
       return;
     }
 
-    if (!agree) {
-      setError('Please acknowledge the client privacy notice to proceed.');
+    if (!agreeTerms) {
+      setError('Please agree to the Terms & Conditions and Refund Policy to proceed.');
+      return;
+    }
+
+    if (!agreeDpdp) {
+      setError('Please provide explicit consent under India’s DPDP Act 2023 for processing health and wellness data.');
       return;
     }
 
@@ -539,17 +545,45 @@ export default function Register() {
               <label htmlFor="showPass" style={{ color: 'var(--text-secondary)', cursor: 'pointer' }}>Show password</label>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.82rem', marginTop: '4px' }}>
-              <input
-                type="checkbox"
-                id="agree"
-                checked={agree}
-                onChange={(e) => setAgree(e.target.checked)}
-                style={{ marginTop: '3px' }}
-              />
-              <label htmlFor="agree" style={{ color: 'var(--text-secondary)', lineHeight: 1.4, cursor: 'pointer' }}>
-                I agree to the MindCare Sanctuary confidentiality terms. Client data is protected with end-to-end field encryption.
-              </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.82rem' }}>
+                <input
+                  type="checkbox"
+                  id="agreeTerms"
+                  checked={agreeTerms}
+                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                  style={{ marginTop: '3px', cursor: 'pointer' }}
+                  required
+                />
+                <label htmlFor="agreeTerms" style={{ color: 'var(--text-secondary)', lineHeight: 1.45, cursor: 'pointer' }}>
+                  I have read and agree to the{' '}
+                  <Link to="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-dark)', fontWeight: 600, textDecoration: 'underline' }}>
+                    Terms & Conditions
+                  </Link>{' '}
+                  and acknowledge the{' '}
+                  <Link to="/refund-policy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-dark)', fontWeight: 600, textDecoration: 'underline' }}>
+                    Refund & Cancellation Policy
+                  </Link>.
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.82rem' }}>
+                <input
+                  type="checkbox"
+                  id="agreeDpdp"
+                  checked={agreeDpdp}
+                  onChange={(e) => setAgreeDpdp(e.target.checked)}
+                  style={{ marginTop: '3px', cursor: 'pointer' }}
+                  required
+                />
+                <label htmlFor="agreeDpdp" style={{ color: 'var(--text-secondary)', lineHeight: 1.45, cursor: 'pointer' }}>
+                  I provide explicit consent for the processing of my personal and health data under India’s{' '}
+                  <strong>Digital Personal Data Protection (DPDP) Act, 2023</strong> as outlined in the{' '}
+                  <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-dark)', fontWeight: 600, textDecoration: 'underline' }}>
+                    Privacy Policy
+                  </Link>. (Zero ad tracking, client-side encryption).
+                </label>
+              </div>
             </div>
 
             <button
@@ -932,7 +966,15 @@ export default function Register() {
                 required
               />
               <label htmlFor="therapistTerms" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                {CLINICAL_CONFIG.consentNotice}
+                {CLINICAL_CONFIG.consentNotice}{' '}
+                I have read and agree to the{' '}
+                <Link to="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2b5f7d', fontWeight: 600, textDecoration: 'underline' }}>
+                  Terms & Conditions
+                </Link>{' '}
+                and the{' '}
+                <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ color: '#2b5f7d', fontWeight: 600, textDecoration: 'underline' }}>
+                  DPDP Act Privacy Notice
+                </Link>.
               </label>
             </div>
 

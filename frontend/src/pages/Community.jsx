@@ -274,7 +274,9 @@ export default function Community() {
           gap: '14px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <span style={{ fontSize: '1.8rem' }}></span>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'rgba(82, 183, 136, 0.15)', color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+            </div>
             <div>
               <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--primary-dark)' }}>
                 Zero Clinical & Identity Leakage Guarantee

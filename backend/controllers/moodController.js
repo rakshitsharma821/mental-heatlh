@@ -8,18 +8,11 @@ import { db } from '../models/db.js';
 export const moodController = {
   logMood: async (req, res) => {
     try {
-      let userId = req.user ? req.user.id : null;
-      const { mood_label, energy_level = 3, valence_score = 0.0, notes = '', user_email } = req.body;
+      const userId = req.user ? req.user.id : null;
+      const { mood_label, energy_level = 3, valence_score = 0.0, notes = '' } = req.body;
 
       if (!mood_label) {
         return res.status(400).json({ success: false, message: 'Mood label is required.' });
-      }
-
-      if (!userId && user_email) {
-        const uRes = await db.query('SELECT id FROM users WHERE email = $1', [user_email.trim().toLowerCase()]);
-        if (uRes.rows.length > 0) {
-          userId = uRes.rows[0].id;
-        }
       }
 
       if (!userId) {

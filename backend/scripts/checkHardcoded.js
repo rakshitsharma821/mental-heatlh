@@ -46,7 +46,8 @@ const ALLOWED_CONTACTS_FILES = [
   'setup_demo_accounts.js',
   'seedAdmin.js',
   'cleanDevDatabase.js',
-  'notifications.js'
+  'notifications.js',
+  'legalConfig.js'
 ];
 
 const FORBIDDEN_RULES = [

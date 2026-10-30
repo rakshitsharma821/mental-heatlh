@@ -1813,13 +1813,20 @@ export default function TherapistDashboard() {
                 right: '18px',
                 border: 'none',
                 background: 'transparent',
-                fontSize: '1.2rem',
                 cursor: 'pointer',
-                color: 'var(--text-muted)'
+                color: 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '4px'
               }}
-              title="Close popup (never blocks dashboard)"
+              title="Close popup"
+              aria-label="Close completion notice"
             >
-              
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
             </button>
 
             
