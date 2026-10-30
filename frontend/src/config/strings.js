@@ -98,6 +98,24 @@ export const UI_STRINGS = {
     privacyNote: 'Zero ad tracking • AES-256 Encrypted Journals • DPDP Compliant'
   },
 
+  story: {
+    p1Eyebrow: '01 — Notice',
+    p1Title: 'Most of us don’t notice the tension',
+    p1Em: 'until we stop.',
+    p1Desc: 'The check-in shows you where you are right now. No diagnosis, no score to chase.',
+    p2Eyebrow: '02 — Breathe',
+    p2Title: 'One slow breath is',
+    p2Em: 'enough to begin.',
+    p2Desc: 'Breathe with the brain beside you. That is the whole exercise.',
+    p3Eyebrow: '03 — Talk',
+    p3Title: 'And when you want a person,',
+    p3Em: 'there are people.',
+    p3Desc: 'Verified therapists, matched by our team, by chat or call at a time you choose.',
+    p3Cta: 'See how a session works ↓',
+    helpNow: 'I need help now',
+    meterBusy: 'Busy', meterSettling: 'Settling', meterCalm: 'Calm'
+  },
+
   sessionFlow: {
     heading: 'How a session happens',
     subheading: 'A transparent, steady process designed around your schedule and comfort.',

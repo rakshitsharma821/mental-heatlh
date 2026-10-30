@@ -5,6 +5,7 @@
 // Clean, grounded UI (no 3D slope, zero tacky emojis).
 // ============================================
 
+import BubbleGame from '../components/common/BubbleGame';
 import React, { useState, useEffect, useRef } from 'react';
 import { soundEngine } from '../services/audio';
 import AmbientCanvas from '../components/three/AmbientCanvas';
@@ -368,85 +369,40 @@ export default function Games() {
           </p>
         </div>
 
-        {/* ── 1. PLAYABLE BUBBLE FIELD AT THE TOP (NO SCORE, NO TIMER, NO LEVELS) ── */}
-        <PlayableBubbleField />
-
-        {/* ── 2. REMAINING GAMES AS TILTING CARDS, EACH WITH ITS OWN PASTEL COLOR ── */}
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '20px'
-          }}>
-            {/* Game 1: Thought Defusion (Pastel Sage) */}
-            <div onClick={() => setActiveGame('defusion')} style={{ cursor: 'pointer' }}>
-              <TiltCard style={{ height: '100%' }}>
-                <div className="sanctuary-card-elevated" style={{
-                  height: '100%',
-                  padding: '24px 22px',
-                  borderTop: '4px solid var(--accent-leaf, #357255)',
-                  background: activeGame === 'defusion' ? 'var(--accent-sage-soft, #eaf4ee)' : '#ffffff',
-                  boxShadow: activeGame === 'defusion' ? '0 12px 32px rgba(45, 106, 79, 0.12)' : 'var(--shadow-sm)'
-                }}>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--accent-forest)' }}>
-                    ACT Defusion
-                  </span>
-                  <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, margin: '6px 0 8px' }}>
-                    Thought Cloud Defusion
-                  </h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                    Unhook your nervous system from recurring worries and cognitive strain.
-                  </p>
-                </div>
-              </TiltCard>
-            </div>
-
-            {/* Game 2: Zen Water Ripple Pond (Pastel Sky) */}
-            <div onClick={() => setActiveGame('pond')} style={{ cursor: 'pointer' }}>
-              <TiltCard style={{ height: '100%' }}>
-                <div className="sanctuary-card-elevated" style={{
-                  height: '100%',
-                  padding: '24px 22px',
-                  borderTop: '4px solid var(--accent-sky, #6ba3c7)',
-                  background: activeGame === 'pond' ? 'var(--accent-sky-soft, #edf5fa)' : '#ffffff',
-                  boxShadow: activeGame === 'pond' ? '0 12px 32px rgba(62, 118, 153, 0.12)' : 'var(--shadow-sm)'
-                }}>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--accent-sky-dark)' }}>
-                    Sensory Water
-                  </span>
-                  <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, margin: '6px 0 8px' }}>
-                    Zen Ripple Water Pond
-                  </h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                    Gentle tactile wave oscillations and swimming koi for focus grounding.
-                  </p>
-                </div>
-              </TiltCard>
-            </div>
-
-            {/* Game 3: Gratitude Bloom Garden (Pastel Lavender) */}
-            <div onClick={() => setActiveGame('garden')} style={{ cursor: 'pointer' }}>
-              <TiltCard style={{ height: '100%' }}>
-                <div className="sanctuary-card-elevated" style={{
-                  height: '100%',
-                  padding: '24px 22px',
-                  borderTop: '4px solid var(--accent-lavender, #9d84b7)',
-                  background: activeGame === 'garden' ? 'var(--accent-lavender-soft, #f3eef8)' : '#ffffff',
-                  boxShadow: activeGame === 'garden' ? '0 12px 32px rgba(157, 132, 183, 0.12)' : 'var(--shadow-sm)'
-                }}>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--accent-lavender-dark)' }}>
-                    Self-Compassion
-                  </span>
-                  <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, margin: '6px 0 8px' }}>
-                    Bloom Garden
-                  </h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                    Plant small moments of courage and watch your personal sanctuary garden blossom.
-                  </p>
-                </div>
-              </TiltCard>
-            </div>
-          </div>
+{/* Game Navigation Selector Tabs */}
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          marginBottom: '28px'
+        }}>
+          {[
+            { id: 'defusion', label: '1. Thought Cloud Defusion (ACT)' },
+            { id: 'pond', label: '2. Zen Water Ripple Pond' },
+            { id: 'garden', label: '3. Gratitude Bloom Garden' },
+            { id: 'bubbles', label: '4. StressBurst Kinetic Canvas' },
+            { id: 'drift', label: '5. Bubble Drift' }
+          ].map(g => (
+            <button
+              key={g.id}
+              onClick={() => setActiveGame(g.id)}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '10px',
+                fontSize: '0.86rem',
+                fontWeight: 600,
+                border: activeGame === g.id ? '1.5px solid var(--primary)' : '1px solid var(--border-subtle, #e2e8f0)',
+                background: activeGame === g.id ? 'var(--primary)' : '#ffffff',
+                color: activeGame === g.id ? '#ffffff' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: activeGame === g.id ? '0 4px 12px rgba(45, 106, 79, 0.2)' : '0 2px 6px rgba(0, 0, 0, 0.02)'
+              }}
+            >
+              {g.label}
+            </button>
+          ))}
         </div>
 
         {/* ========================================================= */}
@@ -767,6 +723,19 @@ export default function Games() {
         {/* ========================================================= */}
         {/* GAME 4: STRESSBURST KINETIC BUBBLES */}
         {/* ========================================================= */}
+        {activeGame === 'drift' && (
+          <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '28px 32px 8px' }}>
+              <div className="eyebrow">Slow game · no score, no timer</div>
+              <h3 style={{ fontSize: '1.8rem', margin: '8px 0 6px' }}>Bubble Drift</h3>
+              <p style={{ color: 'var(--text-secondary)' }}>Move over a bubble to pop it. Nothing to win — just something to do with your hands.</p>
+            </div>
+            <div style={{ position: 'relative', height: 'clamp(280px, 42vh, 420px)' }}>
+              <BubbleGame />
+            </div>
+          </div>
+        )}
+
         {activeGame === 'bubbles' && (
           <div className="glass-card" style={{ padding: '32px', borderRadius: '24px', backgroundColor: '#ffffff', boxShadow: '0 6px 24px rgba(0,0,0,0.04)', marginBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>

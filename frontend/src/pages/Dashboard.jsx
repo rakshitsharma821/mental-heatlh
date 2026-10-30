@@ -695,42 +695,20 @@ export default function Dashboard() {
           <h3 style={{ fontSize: '1.15rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '20px' }}>
             Sanctuary Hub
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            <Link to="/mood" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Mood Tracker</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Log feelings and view 3D aura</p>
-            </Link>
-
-            <Link to="/breathing" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>3D Breathwork</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>4-7-8 and Box breathing guide</p>
-            </Link>
-
-            <Link to="/journal" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Private Journal</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Thought defusion and gratitude</p>
-            </Link>
-
-            <Link to="/routine" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Daily Routine</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Build gentle restorative habits</p>
-            </Link>
-
-            <Link to="/progress" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Progress & Stats</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Weekly chart and achievements</p>
-            </Link>
-
-            <Link to="/crisis" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)', borderLeft: '4px solid #dc2626' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px', color: '#b91c1c' }}>Crisis Support</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>24/7 helplines & safety plan</p>
-            </Link>
+          <div className="rd-rows">
+            {[
+              ['/mood', 'Mood Tracker', 'Log feelings and view 3D aura'],
+              ['/breathing', '3D Breathwork', '4-7-8 and Box breathing guide'],
+              ['/journal', 'Private Journal', 'Thought defusion and gratitude'],
+              ['/routine', 'Daily Routine', 'Build gentle restorative habits'],
+              ['/progress', 'Progress & Stats', 'Weekly chart and achievements'],
+              ['/crisis', 'Crisis Support', '24/7 helplines & safety plan']
+            ].map(([to, title, sub]) => (
+              <Link key={to} to={to} className="rd-row">
+                <span><b style={to === '/crisis' ? { color: 'var(--color-error-text, #b91c1c)' } : undefined}>{title}</b><span className="sub">{sub}</span></span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            ))}
           </div>
         </div>
         {/* Onboarding & Clinical Questionnaire Popup */}

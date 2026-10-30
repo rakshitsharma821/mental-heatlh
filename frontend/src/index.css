@@ -5,7 +5,7 @@
    WCAG AA Contrast Compliant (> 4.5:1 text contrast)
    =================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+/* fonts now self-hosted via @fontsource (main.jsx) — no third-party font requests */
 
 :root {
   /* Canvas & Base Surfaces (Warm off-white base, no dark mode by default) */

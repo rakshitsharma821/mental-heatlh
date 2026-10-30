@@ -13,6 +13,8 @@
 // 9. Audit Logs: Append-only Admin Audit Log and Clinical Consent Trail
 // ============================================
 
+import Columns3D from '../components/common/Columns3D';
+import '../styles/admin-desk.css';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Api } from '../services/api';
@@ -549,16 +551,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Section Navigation Tabs */}
-        <div style={{
-          display: 'flex',
-          gap: '6px',
-          marginBottom: '24px',
-          background: '#f1f5f9',
-          padding: '6px',
-          borderRadius: '12px',
-          border: '1px solid #e2e8f0',
-          overflowX: 'auto'
-        }}>
+        <div className="desk-tabs" role="tablist">
           {[
             { id: 'overview', title: 'Overview' },
             { id: 'verification', title: 'Therapist Queue' },
@@ -571,53 +564,21 @@ export default function AdminDashboard() {
             { id: 'audit', title: 'Audit Logs' }
           ]
             .filter(t => !t.hide)
-            .map((tab, idx) => {
+            .map((tab, idx) => ({
+              ...tab,
+              label: `${idx + 1}. ${tab.title}`
+            }))
+            .map(tab => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`desk-tab ${isActive ? 'on' : ''}`}
                   onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    fontSize: '0.84rem',
-                    fontWeight: isActive ? 700 : 500,
-                    border: isActive ? '1px solid #cbd5e1' : '1px solid transparent',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    background: isActive ? '#ffffff' : 'transparent',
-                    color: isActive ? '#0f172a' : '#64748b',
-                    boxShadow: isActive ? '0 2px 6px rgba(15, 23, 42, 0.08)' : 'none',
-                    transition: 'all 0.18s ease',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.7)';
-                      e.currentTarget.style.color = '#0f172a';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = '#64748b';
-                    }
-                  }}
                 >
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '2px 7px',
-                    borderRadius: '5px',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    background: isActive ? '#e0f2fe' : '#e2e8f0',
-                    color: isActive ? '#0369a1' : '#64748b'
-                  }}>
-                    {idx + 1}
-                  </span>
-                  <span>{tab.title}</span>
+                  {tab.label}
                 </button>
               );
             })}
@@ -632,281 +593,36 @@ export default function AdminDashboard() {
               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading system statistics...</div>
             ) : (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                  <div className="glass-card" style={{ padding: '20px' }}>
-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Active Clients</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--primary-dark)', marginTop: '4px' }}>
-                      {stats?.clients ?? (stats?.roleCounts?.client || 0)}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Young adults aged 20–25
-                    </div>
-                  </div>
+{/* Ledger strip — figures come straight from `stats` (no placeholders) */}
+                <section className="kpis" aria-label="Key figures">
+                  {[
+                    ['Active clients', stats?.clients ?? (stats?.roleCounts?.client || 0), 'Young adults aged 20–25'],
+                    ['Approved clinicians', stats?.approvedTherapists ?? (stats?.therapistMetrics?.approved_therapists || 0), `${stats?.activeTherapists ?? (stats?.therapistMetrics?.available_therapists || 0)} currently available`],
+                    ['Pending verifications', stats?.pendingVerifications ?? (stats?.therapistMetrics?.pending_therapists || 0), 'Dossiers awaiting review'],
+                    ['Awaiting assignment', stats?.requestsAwaitingAssignment ?? (stats?.bookingCounts?.requested || 0), 'In session routing pipeline'],
+                    ['Sessions this week', stats?.sessionsThisWeek || 0, 'Scheduled consultations']
+                  ].map(([label, value, note], k) => (
+                    <div key={label} className="kpi" style={{ '--i': k }}><span className="kl">{label}</span><b className="num">{value}</b><span className="kn">{note}</span></div>
+                  ))}
+                </section>
 
-                  <div className="glass-card" style={{ padding: '20px' }}>
-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Approved Clinicians</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#2b5f7d', marginTop: '4px' }}>
-                      {stats?.approvedTherapists ?? (stats?.therapistMetrics?.approved_therapists || 0)}
+                <div className="desk-bands">
+                  <section>
+                    <div className="ph"><h2>Questionnaire score bands</h2><span className="muted small">{stats?.questionnairesCompleted || 0} completed · anonymised</span></div>
+                    <Columns3D height={170} items={[
+                      { label: 'Steady', value: stats?.scoreBandDistribution?.low?.count ?? (stats?.assessmentBands?.low?.count || 0) },
+                      { label: 'Rest', value: stats?.scoreBandDistribution?.moderate?.count ?? (stats?.assessmentBands?.moderate?.count || 0) },
+                      { label: 'Care', value: stats?.scoreBandDistribution?.high?.count ?? (stats?.assessmentBands?.high?.count || 0) }
+                    ]} />
+                  </section>
+                  <section>
+                    <div className="ph"><h2>What the bands mean</h2></div>
+                    <div className="band-list">
+                      <div><b>Steady rhythm · 0–7</b><span>Steady baseline resilience</span></div>
+                      <div><b>Rest &amp; reset · 8–15</b><span>Accumulated tension / fatigue</span></div>
+                      <div><b>Care &amp; comfort · 16–24</b><span>Escalated to Aria / clinician connect</span></div>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#2b5f7d', marginTop: '4px' }}>
-                      ● {stats?.activeTherapists ?? (stats?.therapistMetrics?.available_therapists || 0)} currently available
-                    </div>
-                  </div>
-
-                  <div className="glass-card" style={{ padding: '20px' }}>
-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Pending Verifications</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#b07d3b', marginTop: '4px' }}>
-                      {stats?.pendingVerifications ?? (stats?.therapistMetrics?.pending_therapists || 0)}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Dossiers awaiting review
-                    </div>
-                  </div>
-
-                  <div className="glass-card" style={{ padding: '20px' }}>
-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Requests Awaiting Assignment</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#b91c1c', marginTop: '4px' }}>
-                      {stats?.requestsAwaitingAssignment ?? (stats?.bookingCounts?.requested || 0)}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      In session routing pipeline
-                    </div>
-                  </div>
-
-                  <div className="glass-card" style={{ padding: '20px' }}>
-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Sessions This Week</div>
-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#6366f1', marginTop: '4px' }}>
-                      {stats?.sessionsThisWeek || 0}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Scheduled consultations
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── REAL CSS-3D COLUMNS: WEEKLY SESSION PIPELINE (NO CANVAS, NO LIBRARY) ── */}
-                <div className="admin-stationery-card" style={{ marginBottom: '32px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                      <span style={{ fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#64748b' }}>
-                        Stationery 3D Ledger View
-                      </span>
-                      <h3 style={{ fontSize: '1.25rem', color: '#0f172a', fontFamily: "'Outfit', sans-serif", fontWeight: 700, margin: '4px 0 0' }}>
-                        Weekly Consultation Volume (Isometric 3D Columns)
-                      </h3>
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                      Hover column to elevate • Pure CSS Perspective Transforms
-                    </div>
-                  </div>
-
-                  <div className="css-3d-column-stage">
-                    {[
-                      { day: 'Mon', count: Math.max(2, Math.round((stats?.sessionsThisWeek || 12) * 0.14)) },
-                      { day: 'Tue', count: Math.max(3, Math.round((stats?.sessionsThisWeek || 12) * 0.18)) },
-                      { day: 'Wed', count: Math.max(4, Math.round((stats?.sessionsThisWeek || 12) * 0.22)) },
-                      { day: 'Thu', count: Math.max(3, Math.round((stats?.sessionsThisWeek || 12) * 0.16)) },
-                      { day: 'Fri', count: Math.max(5, Math.round((stats?.sessionsThisWeek || 12) * 0.20)) },
-                      { day: 'Sat', count: Math.max(1, Math.round((stats?.sessionsThisWeek || 12) * 0.06)) },
-                      { day: 'Sun', count: Math.max(1, Math.round((stats?.sessionsThisWeek || 12) * 0.04)) }
-                    ].map((col, idx) => {
-                      const maxC = 16;
-                      const heightPct = Math.min(100, Math.max(22, (col.count / maxC) * 100));
-                      return (
-                        <div key={idx} className="css-3d-col-unit">
-                          <div
-                            className="css-3d-bar-container"
-                            style={{ height: `${heightPct}%` }}
-                            title={`${col.day}: ${col.count} sessions scheduled`}
-                          >
-                            <div className="css-3d-bar-top" />
-                            <div className="css-3d-bar-front" />
-                            <div className="css-3d-bar-side" />
-                          </div>
-                          <div style={{ marginTop: '12px', fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>
-                            {col.day}
-                          </div>
-                          <div className="ledger-num" style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                            {col.count}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* ── 3D STACK OF PAPER CASE FILES (THERAPIST APPROVAL DOSSIERS) ── */}
-                <div className="admin-stationery-card" style={{ marginBottom: '32px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                      <span style={{ fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#64748b' }}>
-                        Physical Case File Stack
-                      </span>
-                      <h3 style={{ fontSize: '1.25rem', color: '#0f172a', fontFamily: "'Outfit', sans-serif", fontWeight: 700, margin: '4px 0 0' }}>
-                        Pending Clinician Approvals (3D Case File Stack)
-                      </h3>
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                      Acting on top case file brings the next file forward
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const pendingList = therapists.filter(t => t.verification_status !== 'approved' && t.verification_status !== 'rejected');
-                    const currentStack = pendingList.slice(activeDossierIndex, activeDossierIndex + 3);
-
-                    if (pendingList.length === 0 || currentStack.length === 0) {
-                      return (
-                        <div style={{ textAlign: 'center', padding: '36px 20px', background: '#f8fafc', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
-                          <p style={{ margin: 0, color: '#475569', fontSize: '0.92rem', fontWeight: 600 }}>
-                            All clinician case files have been reviewed. Queue is clear!
-                          </p>
-                          {activeDossierIndex > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveDossierIndex(0)}
-                              className="btn-ghost"
-                              style={{ marginTop: '12px', fontSize: '0.8rem', padding: '6px 16px' }}
-                            >
-                              Rewind Stack View
-                            </button>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    const topTh = currentStack[0];
-                    const secondTh = currentStack[1];
-                    const thirdTh = currentStack[2];
-
-                    return (
-                      <div className="paper-dossier-stack">
-                        {thirdTh && (
-                          <div className="paper-dossier-card stack-third">
-                            <div style={{ fontSize: '0.84rem', color: '#64748b' }}>Case File #{thirdTh.therapist_id || thirdTh.id}: {thirdTh.name}</div>
-                          </div>
-                        )}
-                        {secondTh && (
-                          <div className="paper-dossier-card stack-second">
-                            <div style={{ fontSize: '0.86rem', color: '#475569', fontWeight: 600 }}>Case File #{secondTh.therapist_id || secondTh.id}: {secondTh.name} ({secondTh.therapist_type || 'Psychologist'})</div>
-                          </div>
-                        )}
-                        {topTh && (
-                          <div className="paper-dossier-card stack-top">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-                              <div>
-                                <span style={{
-                                  fontSize: '0.72rem',
-                                  textTransform: 'uppercase',
-                                  fontWeight: 800,
-                                  letterSpacing: '1px',
-                                  background: '#fef3c7',
-                                  color: '#92400e',
-                                  padding: '3px 10px',
-                                  borderRadius: '6px'
-                                }}>
-                                  Active Case File #{topTh.therapist_id || topTh.id}
-                                </span>
-                                <h4 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '8px 0 2px' }}>
-                                  {topTh.name || 'Practitioner Application'}
-                                </h4>
-                                <div style={{ fontSize: '0.85rem', color: '#475569' }}>
-                                  {topTh.therapist_type} • License: <span className="ledger-num">{topTh.license_number || 'Under Verification'}</span> • {topTh.licensing_board || 'Council'}
-                                </div>
-                              </div>
-                              <div className="ledger-num" style={{ fontSize: '0.82rem', color: '#64748b', background: '#f1f5f9', padding: '6px 12px', borderRadius: '8px' }}>
-                                {activeDossierIndex + 1} of {pendingList.length}
-                              </div>
-                            </div>
-
-                            <p style={{ fontSize: '0.88rem', color: '#334155', lineHeight: 1.55, margin: '0 0 18px', background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                              {topTh.bio || 'Credentials submitted for clinical onboarding. Verification of accredited degree and government identity in progress.'}
-                            </p>
-
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                              <button
-                                type="button"
-                                onClick={() => openDossier(topTh.id)}
-                                className="btn-ghost"
-                                style={{ padding: '8px 16px', fontSize: '0.82rem', border: '1px solid #cbd5e1' }}
-                              >
-                                Inspect Full Dossier →
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleQuickCaseDecision(topTh.id, 'reject')}
-                                className="btn-ghost"
-                                style={{ padding: '8px 18px', fontSize: '0.82rem', color: '#b91c1c', border: '1px solid rgba(239, 68, 68, 0.4)' }}
-                              >
-                                Reject Case File
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleQuickCaseDecision(topTh.id, 'approve')}
-                                className="btn-primary"
-                                style={{
-                                  padding: '8px 22px',
-                                  fontSize: '0.84rem',
-                                  background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
-                                  borderColor: '#1d4ed8'
-                                }}
-                              >
-                                Approve Clinician ✓
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Score Band Aggregates */}
-                <div className="admin-stationery-card" style={{ padding: '24px', marginBottom: '32px' }}>
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '6px', color: 'var(--text-primary)' }}>
-                    Client Questionnaire Score-Band Distribution
-                  </h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
-                    Total Questionnaires Completed: <strong>{stats?.questionnairesCompleted || 0}</strong> • Anonymized across 3 friendly score bands.
-                  </p>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-                    <div style={{ padding: '18px', borderRadius: '14px', background: 'rgba(82, 183, 136, 0.12)', border: '1px solid rgba(82, 183, 136, 0.3)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-dark)', textTransform: 'uppercase' }}>
-                        Steady Rhythm (Scores 0–7)
-                      </div>
-                      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--primary-dark)', marginTop: '6px' }}>
-                        {stats?.scoreBandDistribution?.low?.count ?? (stats?.assessmentBands?.low?.count || 0)}
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                        Steady baseline resilience
-                      </div>
-                    </div>
-
-                    <div style={{ padding: '18px', borderRadius: '14px', background: 'rgba(246, 189, 96, 0.15)', border: '1px solid rgba(246, 189, 96, 0.35)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#b07d3b', textTransform: 'uppercase' }}>
-                        Rest & Reset (Scores 8–15)
-                      </div>
-                      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#b07d3b', marginTop: '6px' }}>
-                        {stats?.scoreBandDistribution?.moderate?.count ?? (stats?.assessmentBands?.moderate?.count || 0)}
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                        Accumulated tension / fatigue
-                      </div>
-                    </div>
-
-                    <div style={{ padding: '18px', borderRadius: '14px', background: 'rgba(220, 53, 69, 0.1)', border: '1px solid rgba(220, 53, 69, 0.3)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase' }}>
-                        Care & Comfort (Scores 16–24)
-                      </div>
-                      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#b91c1c', marginTop: '6px' }}>
-                        {stats?.scoreBandDistribution?.high?.count ?? (stats?.assessmentBands?.high?.count || 0)}
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                        Escalated to Aria / clinician connect
-                      </div>
-                    </div>
-                  </div>
+                  </section>
                 </div>
               </>
             )}

@@ -4,6 +4,7 @@
 //         Multi-Stage Verification State Machine, and Clinical Consultation Workspace
 // ============================================
 
+import '../styles/admin-desk.css';
 import React, { useState, useEffect } from 'react';
 import { ClinicalConsentService } from '../services/clinicalConsent';
 import { Storage } from '../services/storage';
@@ -538,13 +539,7 @@ export default function TherapistDashboard() {
     }
   };
 
-  const therapist = profileData
-    ? {
-        name: profileData?.full_name || user?.name || 'Licensed Clinician',
-        title: profileData.title || 'Licensed Clinical Psychologist',
-        license: profileData.license_number || 'RCI-CR-28491'
-      }
-    : ClinicalConsentService.getDefaultTherapist();
+  const therapist = ClinicalConsentService.getDefaultTherapist(profileData, user);
 
   const { scopes } = consent;
 
@@ -612,72 +607,28 @@ export default function TherapistDashboard() {
         </div>
 
         {/* ── TAB NAVIGATION ── */}
-        <div style={{ display: 'flex', gap: '8px', background: 'rgba(0,0,0,0.04)', padding: '4px', borderRadius: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <div className="desk-tabs" role="tablist">
           <button
             type="button"
-            onClick={() => setActiveTab('overview')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'overview' ? '#ffffff' : 'transparent',
-              fontWeight: activeTab === 'overview' ? 700 : 500,
-              color: activeTab === 'overview' ? 'var(--primary-dark)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              boxShadow: activeTab === 'overview' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-            }}
+            role="tab" aria-selected={activeTab === 'overview'} className={`desk-tab ${activeTab === 'overview' ? 'on' : ''}`} onClick={() => setActiveTab('overview')}
           >
             Workspace
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('documents')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'documents' ? '#ffffff' : 'transparent',
-              fontWeight: activeTab === 'documents' ? 700 : 500,
-              color: activeTab === 'documents' ? 'var(--primary-dark)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              boxShadow: activeTab === 'documents' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-            }}
+            role="tab" aria-selected={activeTab === 'documents'} className={`desk-tab ${activeTab === 'documents' ? 'on' : ''}`} onClick={() => setActiveTab('documents')}
           >
             Document Vault ({documents.length})
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('profile')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'profile' ? '#ffffff' : 'transparent',
-              fontWeight: activeTab === 'profile' ? 700 : 500,
-              color: activeTab === 'profile' ? 'var(--primary-dark)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              boxShadow: activeTab === 'profile' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-            }}
+            role="tab" aria-selected={activeTab === 'profile'} className={`desk-tab ${activeTab === 'profile' ? 'on' : ''}`} onClick={() => setActiveTab('profile')}
           >
             Profile & Practice
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('schedule')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'schedule' ? '#ffffff' : 'transparent',
-              fontWeight: activeTab === 'schedule' ? 700 : 500,
-              color: activeTab === 'schedule' ? 'var(--primary-dark)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              boxShadow: activeTab === 'schedule' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-            }}
+            role="tab" aria-selected={activeTab === 'schedule'} className={`desk-tab ${activeTab === 'schedule' ? 'on' : ''}`} onClick={() => setActiveTab('schedule')}
           >
             Schedule & Availability
           </button>

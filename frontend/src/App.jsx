@@ -199,6 +199,7 @@ function AppContent() {
       description: 'The page you are looking for is not in the sanctuary. Find calm navigation back to safety and wellness.'
     };
     document.title = meta.title;
+    document.body.dataset.portal = isAdminPortal ? 'admin' : isTherapistPortal ? 'therapist' : 'member';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute('content', meta.description);
