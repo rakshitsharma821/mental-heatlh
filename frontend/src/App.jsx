@@ -228,6 +228,7 @@ function AppContent() {
       });
 
       lenis.on('scroll', ScrollTrigger.update);
+      window.lenis = lenis;
 
       const raf = (time) => {
         lenis?.raf(time);
@@ -240,7 +241,7 @@ function AppContent() {
 
     return () => {
       if (reqId) cancelAnimationFrame(reqId);
-      if (lenis) lenis.destroy();
+      if (lenis) { lenis.destroy(); window.lenis = null; }
     };
   }, []);
 

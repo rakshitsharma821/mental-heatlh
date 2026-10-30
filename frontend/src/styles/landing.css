@@ -1,4 +1,4 @@
-#story.story{position:relative;height:430vh}
+#story.story{position:relative;height:260vh}
 .stage{position:sticky;top:66px;height:calc(100vh - 66px);min-height:520px;overflow:hidden;background:
  radial-gradient(60% 60% at 78% 42%,rgba(217,207,243,.55),transparent 70%),
  radial-gradient(50% 50% at 12% 88%,rgba(191,230,209,.45),transparent 70%),
@@ -11,7 +11,7 @@ h1,h2.big{font-size:clamp(2.35rem,5.4vw,5rem);letter-spacing:-.025em;line-height
 .crisis-link{color:var(--color-error-text,#B4432F)}
 .section-title{font-size:clamp(1.9rem,3.6vw,3.2rem);margin:14px 0 0;max-width:16em}
 .wrap{max-width:1680px;margin:0 auto;padding:0 var(--pad)}
-.landing-page{--pad:clamp(20px,5vw,72px);overflow-x:hidden}
+.landing-page{--pad:clamp(20px,5vw,72px);overflow-x:clip}
 .lede{margin-top:24px;font-size:clamp(1.02rem,1.35vw,1.2rem);color:var(--ink-2);max-width:34em}
 .cta{margin-top:34px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 .meter{position:absolute;left:var(--pad);bottom:34px;display:flex;align-items:center;gap:18px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -20,7 +20,8 @@ h1,h2.big{font-size:clamp(2.35rem,5.4vw,5rem);letter-spacing:-.025em;line-height
 .meter .bar i{position:absolute;left:0;top:-1px;height:3px;background:var(--forest);width:0;border-radius:2px}
 .cue{position:absolute;right:calc(var(--pad) + 4%);bottom:34px;font-family:var(--display);font-style:italic;font-size:1.15rem;color:var(--ink-2);opacity:0;transition:opacity .4s}
 
-.block{padding:clamp(64px,9vw,128px) 0}
+.block{padding:clamp(48px,7vw,96px) 0}
+#how.block{padding-top:clamp(24px,4vw,48px)}
 .block.alt{background:var(--bg-2)}
 .rows{margin-top:56px;border-top:1px solid var(--line)}
 .eyebrow + .rows{margin-top:24px}
