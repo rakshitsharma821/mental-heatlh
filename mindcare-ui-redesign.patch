@@ -1,0 +1,1799 @@
+diff --git a/frontend/index.html b/frontend/index.html
+index 8586a10..2c1dff7 100644
+--- a/frontend/index.html
++++ b/frontend/index.html
+@@ -12,9 +12,6 @@
+     <link rel="alternate icon" href="/favicon.svg" />
+     
+     <!-- Typography -->
+-    <link rel="preconnect" href="https://fonts.googleapis.com">
+-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+   </head>
+   <body>
+     <div id="root"></div>
+diff --git a/frontend/package.json b/frontend/package.json
+index 978ea03..8950b52 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -10,6 +10,10 @@
+     "test": "vitest run"
+   },
+   "dependencies": {
++    "@fontsource-variable/fraunces": "^5.3.0",
++    "@fontsource-variable/inter": "^5.3.0",
++    "gsap": "^3.15.0",
++    "lenis": "^1.3.27",
+     "react": "^18.3.1",
+     "react-dom": "^18.3.1",
+     "react-router-dom": "^6.26.2",
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 4070486..4cb7105 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -192,6 +192,7 @@ function AppContent() {
+       description: 'The page you are looking for is not in the sanctuary. Find calm navigation back to safety and wellness.'
+     };
+     document.title = meta.title;
++    document.body.dataset.portal = isAdminPortal ? 'admin' : isTherapistPortal ? 'therapist' : 'member';
+     const metaDesc = document.querySelector('meta[name="description"]');
+     if (metaDesc) {
+       metaDesc.setAttribute('content', meta.description);
+diff --git a/frontend/src/components/common/BubbleGame.jsx b/frontend/src/components/common/BubbleGame.jsx
+new file mode 100644
+index 0000000..52b6043
+--- /dev/null
++++ b/frontend/src/components/common/BubbleGame.jsx
+@@ -0,0 +1,27 @@
++import { useEffect, useRef } from 'react';
++import { prefersReduced } from '../../lib/env.js';
++/** Slow bubbles. Touch or hover to pop → a soft ripple. No score, no timer, no losing. */
++export default function BubbleGame({ tints = ['#D9CFF3', '#BFE6D1', '#F3C6A5', '#CBE6FA'] }) {
++  const ref = useRef(null);
++  useEffect(() => {
++    const c = ref.current, x = c.getContext('2d'); let W = 0, H = 0, raf, last = performance.now(); const bubbles = [], ripples = [];
++    const size = () => { const d = Math.min(devicePixelRatio, 1.5); W = c.clientWidth; H = c.clientHeight; c.width = W * d; c.height = H * d; x.setTransform(d, 0, 0, d, 0, 0); };
++    const spawn = (y) => bubbles.push({ x: Math.random() * W, y: y ?? H + 40, r: 20 + Math.random() * 38, vy: 10 + Math.random() * 18, ph: Math.random() * 6.28, col: tints[Math.floor(Math.random() * tints.length)] });
++    size(); for (let i = 0; i < 14; i++) spawn(Math.random() * H);
++    const pop = (px, py) => { for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; if (Math.hypot(b.x - px, b.y - py) < b.r) { ripples.push({ x: b.x, y: b.y, r: b.r, a: .55, col: b.col }); bubbles.splice(i, 1); spawn(); } } };
++    const pt = (e) => { const r = c.getBoundingClientRect(); pop(e.clientX - r.left, e.clientY - r.top); };
++    c.addEventListener('pointermove', pt); c.addEventListener('pointerdown', pt); addEventListener('resize', size);
++    const still = prefersReduced();
++    const tick = (now) => {
++      const dt = Math.min(.05, (now - last) / 1000); last = now; x.clearRect(0, 0, W, H);
++      for (const b of bubbles) { if (!still) { b.y -= b.vy * dt; b.x += Math.sin(now / 1800 + b.ph) * 8 * dt; } if (b.y < -60) { b.y = H + 40; b.x = Math.random() * W; }
++        const g = x.createRadialGradient(b.x - b.r * .35, b.y - b.r * .4, b.r * .1, b.x, b.y, b.r); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(.55, b.col + 'cc'); g.addColorStop(1, b.col + '88');
++        x.beginPath(); x.arc(b.x, b.y, b.r, 0, 6.283); x.fillStyle = g; x.fill(); x.strokeStyle = 'rgba(255,255,255,.8)'; x.lineWidth = 1.5; x.stroke(); }
++      for (let i = ripples.length - 1; i >= 0; i--) { const r = ripples[i]; r.r += 70 * dt; r.a -= .9 * dt; if (r.a <= 0) { ripples.splice(i, 1); continue; } x.beginPath(); x.arc(r.x, r.y, r.r, 0, 6.283); x.strokeStyle = r.col; x.globalAlpha = r.a; x.lineWidth = 3; x.stroke(); x.globalAlpha = 1; }
++      raf = requestAnimationFrame(tick);
++    };
++    raf = requestAnimationFrame(tick);
++    return () => { cancelAnimationFrame(raf); removeEventListener('resize', size); c.removeEventListener('pointermove', pt); c.removeEventListener('pointerdown', pt); };
++  }, [tints]);
++  return <canvas ref={ref} className="bubbles" role="img" aria-label="Floating bubbles. Move over them to pop them gently." />;
++}
+diff --git a/frontend/src/components/common/Columns3D.jsx b/frontend/src/components/common/Columns3D.jsx
+new file mode 100644
+index 0000000..64849f9
+--- /dev/null
++++ b/frontend/src/components/common/Columns3D.jsx
+@@ -0,0 +1,24 @@
++import { useState } from 'react';
++/** Weekly sessions as real CSS-3D columns (no library, no canvas). Hover / focus a column to read it. */
++export default function Columns3D({ items, max: maxProp, height = 180 }) {
++  const [hot, setHot] = useState(null);
++  const max = maxProp || Math.max(1, ...items.map((i) => i.value));
++  return (
++    <figure className="c3d" aria-label="Sessions per day this week">
++      <div className="c3d-scene">
++        <div className="c3d-floor" style={{ '--n': items.length }}>
++          {items.map((it, i) => {
++            const h = Math.max(6, (it.value / max) * height);
++            return (
++              <div key={it.label} className={`c3d-col ${hot === i ? 'hot' : ''}`} style={{ '--h': h + 'px', '--i': i }} tabIndex={0}
++                onPointerEnter={() => setHot(i)} onPointerLeave={() => setHot(null)} onFocus={() => setHot(i)} onBlur={() => setHot(null)} aria-label={`${it.label}: ${it.value}`}>
++                <span className="f top" /><span className="f front" /><span className="f side" />
++                <span className="bill"><b className="num">{it.value}</b><i>{it.label}</i></span>
++              </div>);
++          })}
++        </div>
++      </div>
++      <table className="sr"><caption>Sessions per day</caption><tbody>{items.map((it) => <tr key={it.label}><th>{it.label}</th><td>{it.value}</td></tr>)}</tbody></table>
++    </figure>
++  );
++}
+diff --git a/frontend/src/components/common/Magnetic.jsx b/frontend/src/components/common/Magnetic.jsx
+new file mode 100644
+index 0000000..4c37916
+--- /dev/null
++++ b/frontend/src/components/common/Magnetic.jsx
+@@ -0,0 +1,9 @@
++import { useRef } from 'react';
++import { prefersReduced, finePointer } from '../../lib/env.js';
++/** Button that leans a few px toward the cursor. Desktop pointer only. */
++export default function Magnetic({ as: Tag = 'a', strength = 10, className = '', children, ...rest }) {
++  const ref = useRef(null);
++  const on = (e) => { if (prefersReduced() || !finePointer()) return; const el = ref.current, r = el.getBoundingClientRect(); el.style.transform = `translate(${((e.clientX - r.left) / r.width - .5) * strength}px,${((e.clientY - r.top) / r.height - .5) * strength}px)`; };
++  const off = () => { ref.current.style.transform = ''; };
++  return <Tag ref={ref} className={className} onPointerMove={on} onPointerLeave={off} style={{ transition: 'transform .25s var(--ease)' }} {...rest}>{children}</Tag>;
++}
+diff --git a/frontend/src/components/common/Tilt.jsx b/frontend/src/components/common/Tilt.jsx
+new file mode 100644
+index 0000000..42a1599
+--- /dev/null
++++ b/frontend/src/components/common/Tilt.jsx
+@@ -0,0 +1,16 @@
++import { useRef } from 'react';
++import { prefersReduced } from '../../lib/env.js';
++/** Pointer-driven 3D tilt with a soft light sheen. Pattern after the Tilt / Motion-Primitives idea, written from scratch (no copied code). */
++export default function Tilt({ max = 8, as: Tag = 'div', className = '', children, ...rest }) {
++  const ref = useRef(null);
++  const move = (e) => {
++    if (prefersReduced()) return;
++    const el = ref.current, r = el.getBoundingClientRect();
++    const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
++    el.style.setProperty('--rx', `${((.5 - py) * max).toFixed(2)}deg`);
++    el.style.setProperty('--ry', `${((px - .5) * max).toFixed(2)}deg`);
++    el.style.setProperty('--gx', `${(px * 100).toFixed(1)}%`); el.style.setProperty('--gy', `${(py * 100).toFixed(1)}%`);
++  };
++  const leave = () => { const el = ref.current; el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg'); };
++  return <Tag ref={ref} className={`tilt ${className}`} onPointerMove={move} onPointerLeave={leave} {...rest}>{children}</Tag>;
++}
+diff --git a/frontend/src/components/landing/StoryStage.jsx b/frontend/src/components/landing/StoryStage.jsx
+new file mode 100644
+index 0000000..062c93b
+--- /dev/null
++++ b/frontend/src/components/landing/StoryStage.jsx
+@@ -0,0 +1,78 @@
++import React, { useEffect, useRef, useState } from 'react';
++import { Link } from 'react-router-dom';
++import gsap from 'gsap';
++import { ScrollTrigger } from 'gsap/ScrollTrigger';
++import Lenis from 'lenis';
++import { createBrain } from '../../lib/brain.js';
++import { createContours } from '../../lib/contours.js';
++import { webglOK, prefersReduced, finePointer } from '../../lib/env.js';
++import { UI_STRINGS as S } from '../../config/strings';
++gsap.registerPlugin(ScrollTrigger);
++
++const RANGES = [[-1, 0, .17, .24], [.24, .30, .45, .52], [.52, .58, .74, .80], [.80, .86, 1.01, 1.1]];
++
++/** Scroll-driven busy → calm hero. One WebGL canvas + one 2D canvas, both paused when off-screen. All copy comes from config/strings.js */
++export default function StoryStage({ user }) {
++  const story = useRef(null), brainEl = useRef(null), linesEl = useRef(null), cue = useRef(null), bar = useRef(null);
++  const panels = useRef([]), meters = useRef([]);
++  const [plain, setPlain] = useState(false);
++
++  useEffect(() => {
++    if (prefersReduced() || !webglOK()) { setPlain(true); return undefined; }
++    let lenis, raf = 0, run = true, P = 0, Ps = 0, tick; const t0 = performance.now(); const ptr = { x: 0, y: 0 };
++    if (finePointer()) { lenis = new Lenis({ lerp: .09 }); lenis.on('scroll', ScrollTrigger.update); tick = (t) => lenis.raf(t * 1000); gsap.ticker.add(tick); gsap.ticker.lagSmoothing(0); }
++    const brain = createBrain(brainEl.current, { offsetX: .22, onBreath: (d) => { if (cue.current) cue.current.textContent = d === 'in' ? S.hero.breatheIn : S.hero.breatheOut; } });
++    const lines = createContours(linesEl.current);
++    const size = () => { brain.resize(); lines.resize(); }; window.addEventListener('resize', size); size();
++    const mv = (e) => { ptr.x = e.clientX / innerWidth - .5; ptr.y = e.clientY / innerHeight - .5; }; window.addEventListener('pointermove', mv);
++
++    function applyPanels(p) {
++      panels.current.forEach((el, i) => { if (!el) return; const [a, b, c, d] = RANGES[i];
++        let o = p < a ? 0 : p < b ? (p - a) / (b - a) : p < c ? 1 : p < d ? 1 - (p - c) / (d - c) : 0; if (i === 0 && p < b) o = 1;
++        el.style.opacity = o.toFixed(3); el.style.transform = `translateY(${((1 - o) * 18 * (p < b ? 1 : -1)).toFixed(1)}px)`; el.style.pointerEvents = o > .5 ? 'auto' : 'none'; });
++      const m = p < .3 ? 0 : p < .7 ? 1 : 2; meters.current.forEach((e, i) => e && e.classList.toggle('on', i === m));
++      if (bar.current) bar.current.style.width = p * 100 + '%'; if (cue.current) cue.current.style.opacity = p > .5 && p < .82 ? 1 : 0;
++    }
++    function frame() {
++      if (!run) return; const t = (performance.now() - t0) / 1000;
++      const stageH = story.current.firstChild.offsetHeight; const r = story.current.getBoundingClientRect();
++      P = Math.min(1, Math.max(0, -r.top / (story.current.offsetHeight - stageH)));
++      Ps += (P - Ps) * .07; applyPanels(Ps); brain.render(t, Ps, ptr); lines.draw(t, Ps); raf = requestAnimationFrame(frame);
++    }
++    frame();
++    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting && !run) { run = true; frame(); } if (!e.isIntersecting) { run = false; cancelAnimationFrame(raf); } }); io.observe(story.current);
++    return () => { run = false; cancelAnimationFrame(raf); io.disconnect(); if (tick) gsap.ticker.remove(tick); lenis && lenis.destroy(); window.removeEventListener('resize', size); window.removeEventListener('pointermove', mv); brain.dispose(); ScrollTrigger.getAll().forEach((t) => t.kill()); };
++  }, []);
++
++  const setP = (i) => (el) => { panels.current[i] = el; };
++  const setM = (i) => (el) => { meters.current[i] = el; };
++  const st = S.story;
++  return (
++    <section id="story" ref={story} className={`story ${plain ? 'plain' : ''}`} aria-label="Introduction">
++      <div className="stage">
++        <canvas ref={linesEl} className="fill" aria-hidden="true" />
++        <canvas ref={brainEl} className="fill brain" aria-hidden="true" />
++        <div className="copy">
++          <div className="panel" ref={setP(0)}>
++            <div className="eyebrow">{S.hero.badge}</div>
++            <h1>{S.hero.titleLine1} <em>{S.hero.titleLine2}</em></h1>
++            <p className="lede">{S.hero.subtext}</p>
++            <div className="cta">
++              <Link className="btn-primary" to={user ? '/dashboard' : '/register'}>{user ? S.hero.ctaDashboard : S.hero.ctaRegister}</Link>
++              <Link className="arrow-link crisis-link" to="/crisis">{st.helpNow}</Link>
++            </div>
++          </div>
++          {[['p1', 1], ['p2', 2], ['p3', 3]].map(([k, i]) => (
++            <div className="panel" ref={setP(i)} key={k}>
++              <div className="eyebrow">{st[k + 'Eyebrow']}</div>
++              <h2 className="big">{st[k + 'Title']} <em>{st[k + 'Em']}</em></h2>
++              <p className="lede">{st[k + 'Desc']}</p>
++              {i === 3 && <div className="cta"><a className="arrow-link" href="#how">{st.p3Cta}</a></div>}
++            </div>))}
++        </div>
++        <div className="cue" ref={cue} aria-hidden="true">{S.hero.breatheIn}</div>
++        <div className="meter" aria-hidden="true"><span ref={setM(0)}>{st.meterBusy}</span><span ref={setM(1)}>{st.meterSettling}</span><span ref={setM(2)}>{st.meterCalm}</span><div className="bar"><i ref={bar} /></div></div>
++      </div>
++    </section>
++  );
++}
+diff --git a/frontend/src/config/strings.js b/frontend/src/config/strings.js
+index 9cb98cc..14399d1 100644
+--- a/frontend/src/config/strings.js
++++ b/frontend/src/config/strings.js
+@@ -98,6 +98,24 @@ export const UI_STRINGS = {
+     privacyNote: 'Zero ad tracking • AES-256 Encrypted Journals • DPDP Compliant'
+   },
+ 
++  story: {
++    p1Eyebrow: '01 — Notice',
++    p1Title: 'Most of us don’t notice the tension',
++    p1Em: 'until we stop.',
++    p1Desc: 'The check-in shows you where you are right now. No diagnosis, no score to chase.',
++    p2Eyebrow: '02 — Breathe',
++    p2Title: 'One slow breath is',
++    p2Em: 'enough to begin.',
++    p2Desc: 'Breathe with the brain beside you. That is the whole exercise.',
++    p3Eyebrow: '03 — Talk',
++    p3Title: 'And when you want a person,',
++    p3Em: 'there are people.',
++    p3Desc: 'Verified therapists, matched by our team, by chat or call at a time you choose.',
++    p3Cta: 'See how a session works ↓',
++    helpNow: 'I need help now',
++    meterBusy: 'Busy', meterSettling: 'Settling', meterCalm: 'Calm'
++  },
++
+   sessionFlow: {
+     heading: 'How a session happens',
+     subheading: 'A transparent, steady process designed around your schedule and comfort.',
+diff --git a/frontend/src/index.css b/frontend/src/index.css
+index 4963d1e..39ac58e 100644
+--- a/frontend/src/index.css
++++ b/frontend/src/index.css
+@@ -5,7 +5,7 @@
+    WCAG AA Contrast Compliant (> 4.5:1 text contrast)
+    =================================================== */
+ 
+-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
++/* fonts now self-hosted via @fontsource (main.jsx) — no third-party font requests */
+ 
+ :root {
+   /* Canvas & Base Surfaces (Warm off-white base, no dark mode by default) */
+diff --git a/frontend/src/lib/brain.js b/frontend/src/lib/brain.js
+new file mode 100644
+index 0000000..9a87a67
+--- /dev/null
++++ b/frontend/src/lib/brain.js
+@@ -0,0 +1,118 @@
++// Procedural pastel brain (three.js). No model files, no textures — ~0 KB of assets.
++import * as THREE from 'three';
++import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
++import { noise, lerp, ease } from './noise.js';
++
++export const BRAIN_CFG = {
++  breath: { inhale: 4, exhale: 5 }, dprCap: 1.5,
++  busy: { lav: '#eccbd8', sage: '#f3dcb8', peach: '#ffc4a0', sky: '#f4cbc3', pulse: '#ff8a6b' },
++  calm: { lav: '#d9ccf5', sage: '#bfe6d1', peach: '#ffdcc2', sky: '#cbe6fa', pulse: '#ff9d76' },
++};
++const ridged = (x, y, z) => { let a = 0, f = 1, amp = .62, n = 0; for (let i = 0; i < 2; i++) { a += amp * noise(x * f, y * f, z * f); n += amp; f *= 2.2; amp *= .5; } return a / n; };
++
++function hemisphere(side) {
++  let g = new THREE.IcosahedronGeometry(1, 44); g.deleteAttribute('uv'); g.deleteAttribute('normal'); g = mergeVertices(g, 1e-4);
++  const p = g.attributes.position, fold = new Float32Array(p.count), v = new THREE.Vector3();
++  for (let i = 0; i < p.count; i++) {
++    v.fromBufferAttribute(p, i); const n = v.clone(); let x = n.x * .5, y = n.y * .7, z = n.z;
++    const medial = side > 0 ? -x : x; if (medial > .28) x = side * (.22 - (medial - .28) * .15);
++    if (y < 0) { y *= .62; y -= .10 * Math.exp(-Math.pow((z - .05) / .45, 2)) * (-n.y); }
++    const taper = 1 - .16 * Math.pow(Math.abs(z), 3); x *= taper; y *= taper;
++    const wx = noise(n.x * 2.1 + 7, n.y * 2.1, n.z * 2.1) - .5, wy = noise(n.x * 2.1, n.y * 2.1 + 9, n.z * 2.1) - .5, wz = noise(n.x * 2.1, n.y * 2.1, n.z * 2.1 + 13) - .5;
++    const q = ridged(n.x * 3.1 + side * 5 + wx * 1.7, n.y * 3.1 + wy * 1.7, n.z * 3.1 + wz * 1.7);
++    const d = .05 * (q - .5); const nn = new THREE.Vector3(x, y, z).normalize();
++    p.setXYZ(i, x + nn.x * d + side * .255, y + nn.y * d + .05, z + nn.z * d);
++  }
++  g.setAttribute('fold', new THREE.BufferAttribute(fold, 1));
++  g.setAttribute('cortex', new THREE.BufferAttribute(new Float32Array(p.count).fill(1), 1));
++  g.computeVertexNormals(); return g;
++}
++function cerebellum() {
++  let g = new THREE.IcosahedronGeometry(1, 26); g.deleteAttribute('uv'); g.deleteAttribute('normal'); g = mergeVertices(g, 1e-4);
++  const p = g.attributes.position, fold = new Float32Array(p.count), v = new THREE.Vector3();
++  for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const r = .5 + .5 * Math.sin(v.y * 34 + noise(v.x * 3, v.y * 3, v.z * 3) * 2); fold[i] = 1 - r; const d = .018 * r; p.setXYZ(i, v.x * .42 * (1 + d), v.y * .20 * (1 + d) - .50, v.z * .30 * (1 + d) - .62); }
++  g.setAttribute('fold', new THREE.BufferAttribute(fold, 1)); g.setAttribute('cortex', new THREE.BufferAttribute(new Float32Array(p.count), 1)); g.computeVertexNormals(); return g;
++}
++function stem() {
++  const g = new THREE.CylinderGeometry(.075, .055, .42, 28, 12, true); g.rotateX(.35); g.translate(0, -.68, -.28);
++  g.setAttribute('fold', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count), 1));
++  g.setAttribute('cortex', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count), 1)); return g;
++}
++const VERT = `attribute float fold;attribute float cortex;varying float vFold,vCortex;varying vec3 vN,vP,vV;void main(){vFold=fold;vCortex=cortex;vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.);vV=-mv.xyz;vP=position;gl_Position=projectionMatrix*mv;}`;
++const FRAG = `uniform vec3 uLav,uSage,uPeach,uSky,uLight;varying float vFold,vCortex;varying vec3 vN,vP,vV;
++float h(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
++float vn(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);return mix(mix(mix(h(i),h(i+vec3(1,0,0)),f.x),mix(h(i+vec3(0,1,0)),h(i+vec3(1,1,0)),f.x),f.y),mix(mix(h(i+vec3(0,0,1)),h(i+vec3(1,0,1)),f.x),mix(h(i+vec3(0,1,1)),h(i+vec3(1,1,1)),f.x),f.y),f.z);}
++void main(){vec3 N=normalize(vN),V=normalize(vV);
++ float wrap=clamp(dot(N,normalize((viewMatrix*vec4(uLight,0.)).xyz))*.5+.5,0.,1.);
++ float t=clamp(vP.z*.5+.5,0.,1.),hh=clamp(vP.y*1.2+.5,0.,1.);
++ vec3 base=mix(mix(uSky,uSage,smoothstep(.0,.45,hh)),mix(uLav,uPeach,smoothstep(.2,.9,t)),smoothstep(.25,.8,hh));
++ vec3 p=vP*4.6; vec3 w=vec3(vn(p*.9+3.1),vn(p*.9+7.7),vn(p*.9+11.3))-.5;
++ float q=.65*vn(p*1.7+w*1.5)+.35*vn(p*3.4+w*1.8); float aa=fwidth(q)*1.4;
++ float sulcus=(1.-smoothstep(.006,.006+aa+.012,abs(q-.5)))*vCortex;
++ vec3 c=mix(base,base*vec3(.70,.62,.80),sulcus*.78); c*=(1.0-0.30*vFold);
++ c*=(0.82+0.26*wrap); c=mix(c,vec3(1.),.08);
++ float fres=pow(1.-max(dot(N,V),0.),2.4); c=mix(c,vec3(1.,.98,.96),fres*.36);
++ gl_FragColor=vec4(c,1.);
++ #include <colorspace_fragment>
++}`;
++function dotTex() {
++  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
++  const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.25, 'rgba(255,255,255,.85)'); g.addColorStop(1, 'rgba(255,255,255,0)');
++  x.fillStyle = g; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
++}
++
++/**
++ * createBrain(canvas, { pulses, offsetX, onBreath })
++ *  - returns { render(t, calm01, pointer), resize(), dispose() }
++ *  calm01: 0 = busy/agitated, 1 = calm. Everything (colour, pulse speed, jitter, breathing depth) follows it.
++ */
++export function createBrain(canvas, { pulses = 46, offsetX = 0, onBreath } = {}) {
++  const C = BRAIN_CFG;
++  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' });
++  renderer.setPixelRatio(Math.min(devicePixelRatio, C.dprCap)); renderer.outputColorSpace = THREE.SRGBColorSpace;
++  const scene = new THREE.Scene(); const camera = new THREE.PerspectiveCamera(30, 1, .1, 50); camera.position.set(3.5, .75, 1.55); camera.lookAt(0, 0, 0);
++  const col = (k) => new THREE.Color(C.calm[k]);
++  const mat = new THREE.ShaderMaterial({ uniforms: { uLav: { value: col('lav') }, uSage: { value: col('sage') }, uPeach: { value: col('peach') }, uSky: { value: col('sky') }, uLight: { value: new THREE.Vector3(.5, .8, .6).normalize() } }, vertexShader: VERT, fragmentShader: FRAG });
++  const group = new THREE.Group(); scene.add(group); const brain = new THREE.Group(); group.add(brain);
++  const hemis = [hemisphere(-1), hemisphere(1)]; const geos = [...hemis, cerebellum(), stem()];
++  hemis.forEach((g) => brain.add(new THREE.Mesh(g, mat))); brain.add(new THREE.Mesh(geos[2], mat)); brain.add(new THREE.Mesh(geos[3], mat)); brain.position.y = .02;
++
++  const tex = dotTex(); const rnd = (a, b) => a + Math.random() * (b - a);
++  const verts = []; hemis.forEach((g) => { const p = g.attributes.position, n = g.attributes.normal; for (let i = 0; i < p.count; i += 7) verts.push([new THREE.Vector3().fromBufferAttribute(p, i), new THREE.Vector3().fromBufferAttribute(n, i)]); });
++  const curves = [];
++  for (let k = 0; k < pulses; k++) {
++    let cur = verts[Math.floor(Math.random() * verts.length)]; const dir = new THREE.Vector3(rnd(-1, 1), rnd(-.4, .6), rnd(-1, 1)).normalize(); const pts = [cur[0].clone().addScaledVector(cur[1], .025)];
++    for (let s = 0; s < 8; s++) { const target = cur[0].clone().addScaledVector(dir, .2); let best = null, bd = 1e9; for (let j = 0; j < 260; j++) { const c = verts[Math.floor(Math.random() * verts.length)]; const d = c[0].distanceToSquared(target); if (d < bd) { bd = d; best = c; } } cur = best; pts.push(cur[0].clone().addScaledVector(cur[1], .025)); dir.add(new THREE.Vector3(rnd(-.4, .4), rnd(-.3, .3), rnd(-.4, .4))).normalize(); }
++    curves.push(new THREE.CatmullRomCurve3(pts));
++  }
++  const N = curves.length, pPos = new Float32Array(N * 3), pGeo = new THREE.BufferGeometry(); pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
++  const pMat = new THREE.PointsMaterial({ map: tex, size: .085, transparent: true, depthWrite: false, color: C.calm.pulse, sizeAttenuation: true, opacity: .9 });
++  const gMat = new THREE.PointsMaterial({ map: tex, size: .2, transparent: true, depthWrite: false, color: '#ffb48f', opacity: .2, sizeAttenuation: true });
++  brain.add(new THREE.Points(pGeo, pMat)); brain.add(new THREE.Points(pGeo, gMat));
++  const phase = curves.map(() => Math.random()), speed = curves.map(() => rnd(.05, .12));
++  const busy = {}, calm = {}; ['lav', 'sage', 'peach', 'sky'].forEach((k) => { busy[k] = new THREE.Color(C.busy[k]); calm[k] = new THREE.Color(C.calm[k]); });
++  const pB = new THREE.Color(C.busy.pulse), pC = new THREE.Color(C.calm.pulse), v = new THREE.Vector3();
++  let lastBreathLabel = '';
++
++  function resize() {
++    const w = canvas.clientWidth, h = canvas.clientHeight; if (!w || !h) return;
++    renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w / h < 1 ? 38 : 36;
++    if (offsetX && w / h > 1.2) camera.setViewOffset(w, h, -w * offsetX, 0, w, h); else camera.clearViewOffset();
++    camera.updateProjectionMatrix();
++  }
++  function render(t, calm01, pointer = { x: 0, y: 0 }) {
++    const e = ease(calm01), tot = C.breath.inhale + C.breath.exhale, cyc = t % tot;
++    const br = cyc < C.breath.inhale ? .5 - .5 * Math.cos(cyc / C.breath.inhale * Math.PI) : .5 + .5 * Math.cos((cyc - C.breath.inhale) / C.breath.exhale * Math.PI);
++    brain.scale.setScalar(1 + lerp(.012, .05, e) * br);
++    const jit = (1 - e) * .014; group.rotation.x = Math.sin(t * 9.1) * jit + pointer.y * .1; group.rotation.y = Math.sin(t * .18) * .3 + pointer.x * .3 + Math.sin(t * 7.3) * jit; group.position.y = Math.sin(t * .6) * .02;
++    ['lav', 'sage', 'peach', 'sky'].forEach((k) => mat.uniforms['u' + k[0].toUpperCase() + k.slice(1)].value.copy(busy[k]).lerp(calm[k], e));
++    pMat.color.copy(pB).lerp(pC, e); const sp = lerp(2.8, .5, e);
++    for (let i = 0; i < N; i++) { const u = (phase[i] + t * speed[i] * sp) % 1; curves[i].getPointAt(u, v); pPos[i * 3] = v.x; pPos[i * 3 + 1] = v.y; pPos[i * 3 + 2] = v.z; }
++    pGeo.attributes.position.needsUpdate = true;
++    const label = cyc < C.breath.inhale ? 'in' : 'out'; if (label !== lastBreathLabel) { lastBreathLabel = label; onBreath && onBreath(label); }
++    renderer.render(scene, camera);
++  }
++  function dispose() { geos.forEach((g) => g.dispose()); pGeo.dispose(); mat.dispose(); pMat.dispose(); gMat.dispose(); tex.dispose(); renderer.dispose(); }
++  resize();
++  return { render, resize, dispose };
++}
+diff --git a/frontend/src/lib/contours.js b/frontend/src/lib/contours.js
+new file mode 100644
+index 0000000..0af0ddf
+--- /dev/null
++++ b/frontend/src/lib/contours.js
+@@ -0,0 +1,19 @@
++// Soft topographic lines on a 2D canvas. amplitude falls as `calm01` rises — tangled -> flowing.
++import { noise, lerp, ease } from './noise.js';
++export function createContours(canvas, { lines = 26, rgb = '47,93,80' } = {}) {
++  const ctx = canvas.getContext('2d');
++  function resize() { const d = Math.min(devicePixelRatio, 1.25); canvas.width = canvas.clientWidth * d; canvas.height = canvas.clientHeight * d; ctx.setTransform(d, 0, 0, d, 0, 0); }
++  function draw(t, p) {
++    const W = canvas.clientWidth, H = canvas.clientHeight; ctx.clearRect(0, 0, W, H);
++    const amp = lerp(150, 14, ease(p)), freq = lerp(2.6, .7, ease(p)), spd = lerp(.22, .05, p);
++    for (let i = 0; i < lines; i++) {
++      const y0 = H * (.1 + .8 * i / (lines - 1)); ctx.beginPath();
++      for (let x = 0; x <= W; x += 14) {
++        const nx = x / W * freq, off = (noise(nx * 2.2 + t * spd, i * .35, t * spd * .7) - .5) * 2 * amp + Math.sin(x / W * Math.PI * 2 + i * .4 + t * .12) * lerp(6, 26, p);
++        const y = y0 + off; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
++      }
++      ctx.strokeStyle = `rgba(${rgb},${lerp(.16, .11, p).toFixed(3)})`; ctx.lineWidth = 1; ctx.stroke();
++    }
++  }
++  resize(); return { resize, draw };
++}
+diff --git a/frontend/src/lib/env.js b/frontend/src/lib/env.js
+new file mode 100644
+index 0000000..a7db068
+--- /dev/null
++++ b/frontend/src/lib/env.js
+@@ -0,0 +1,5 @@
++export const prefersReduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
++export function webglOK() {
++  try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; }
++}
++export const finePointer = () => matchMedia('(pointer:fine)').matches;
+diff --git a/frontend/src/lib/noise.js b/frontend/src/lib/noise.js
+new file mode 100644
+index 0000000..11f7357
+--- /dev/null
++++ b/frontend/src/lib/noise.js
+@@ -0,0 +1,10 @@
++export const lerp = (a, b, t) => a + (b - a) * t;
++export const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
++function hash(x, y, z) { let h = x * 374761393 + y * 668265263 + z * 2147483647; h = (h ^ (h >> 13)) * 1274126177; return ((h ^ (h >> 16)) >>> 0) / 4294967295; }
++export function noise(x, y, z) {
++  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), xf = x - xi, yf = y - yi, zf = z - zi;
++  const s = (t) => t * t * (3 - 2 * t); const u = s(xf), v = s(yf), w = s(zf);
++  return lerp(
++    lerp(lerp(hash(xi, yi, zi), hash(xi + 1, yi, zi), u), lerp(hash(xi, yi + 1, zi), hash(xi + 1, yi + 1, zi), u), v),
++    lerp(lerp(hash(xi, yi, zi + 1), hash(xi + 1, yi, zi + 1), u), lerp(hash(xi, yi + 1, zi + 1), hash(xi + 1, yi + 1, zi + 1), u), v), w);
++}
+diff --git a/frontend/src/lib/useReveal.js b/frontend/src/lib/useReveal.js
+new file mode 100644
+index 0000000..c46f8fb
+--- /dev/null
++++ b/frontend/src/lib/useReveal.js
+@@ -0,0 +1,12 @@
++import { useEffect, useRef } from 'react';
++/** adds .in when the element scrolls into view (CSS handles the animation, reduced-motion safe) */
++export function useReveal() {
++  const ref = useRef(null);
++  useEffect(() => {
++    const el = ref.current; if (!el) return;
++    if (!('IntersectionObserver' in window)) { el.classList.add('in'); return; }
++    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { el.classList.add('in'); io.disconnect(); } }, { rootMargin: '0px 0px -10% 0px' });
++    io.observe(el); return () => io.disconnect();
++  }, []);
++  return ref;
++}
+diff --git a/frontend/src/main.jsx b/frontend/src/main.jsx
+index 47742c1..1f86b56 100644
+--- a/frontend/src/main.jsx
++++ b/frontend/src/main.jsx
+@@ -1,7 +1,11 @@
+ import React from 'react';
+ import ReactDOM from 'react-dom/client';
+ import App from './App';
++import '@fontsource-variable/fraunces/index.css';
++import '@fontsource-variable/fraunces/wght-italic.css';
++import '@fontsource-variable/inter/index.css';
+ import './index.css';
++import './styles/redesign.css';
+ 
+ ReactDOM.createRoot(document.getElementById('root')).render(
+   <React.StrictMode>
+diff --git a/frontend/src/pages/AdminDashboard.jsx b/frontend/src/pages/AdminDashboard.jsx
+index d73b107..e6fdd39 100644
+--- a/frontend/src/pages/AdminDashboard.jsx
++++ b/frontend/src/pages/AdminDashboard.jsx
+@@ -13,6 +13,8 @@
+ // 9. Audit Logs: Append-only Admin Audit Log and Clinical Consent Trail
+ // ============================================
+ 
++import Columns3D from '../components/common/Columns3D';
++import '../styles/admin-desk.css';
+ import React, { useState, useEffect } from 'react';
+ import { useAuth } from '../context/AuthContext';
+ import { Api } from '../services/api';
+@@ -527,16 +529,7 @@ export default function AdminDashboard() {
+         )}
+ 
+         {/* Section Navigation Tabs */}
+-        <div style={{
+-          display: 'flex',
+-          gap: '6px',
+-          marginBottom: '24px',
+-          background: 'rgba(0, 0, 0, 0.03)',
+-          padding: '6px 8px',
+-          borderRadius: '12px',
+-          border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.06))',
+-          overflowX: 'auto'
+-        }}>
++        <div className="desk-tabs" role="tablist">
+           {[
+             { id: 'overview', title: 'Overview' },
+             { id: 'verification', title: 'Therapist Queue' },
+@@ -556,29 +549,7 @@ export default function AdminDashboard() {
+             .map(tab => {
+               const isActive = activeTab === tab.id;
+               return (
+-                <button
+-                  key={tab.id}
+-                  onClick={() => setActiveTab(tab.id)}
+-                  style={{
+-                    padding: '8px 16px',
+-                    borderRadius: '8px',
+-                    fontSize: '0.82rem',
+-                    fontWeight: isActive ? 700 : 600,
+-                    border: 'none',
+-                    cursor: 'pointer',
+-                    whiteSpace: 'nowrap',
+-                    background: isActive ? '#1a2e22' : 'transparent',
+-                    color: isActive ? '#ffffff' : 'var(--text-secondary)',
+-                    boxShadow: isActive ? '0 2px 8px rgba(26, 46, 34, 0.25)' : 'none',
+-                    transition: 'all 0.18s ease'
+-                  }}
+-                  onMouseEnter={(e) => {
+-                    if (!isActive) e.currentTarget.style.background = 'rgba(26, 46, 34, 0.07)';
+-                  }}
+-                  onMouseLeave={(e) => {
+-                    if (!isActive) e.currentTarget.style.background = 'transparent';
+-                  }}
+-                >
++                <button key={tab.id} role="tab" aria-selected={isActive} className={`desk-tab ${isActive ? 'on' : ''}`} onClick={() => setActiveTab(tab.id)}>
+                   {tab.label}
+                 </button>
+               );
+@@ -594,104 +565,36 @@ export default function AdminDashboard() {
+               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading system statistics...</div>
+             ) : (
+               <>
+-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+-                  <div className="glass-card" style={{ padding: '20px' }}>
+-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Active Clients</div>
+-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--primary-dark)', marginTop: '4px' }}>
+-                      {stats?.clients ?? (stats?.roleCounts?.client || 0)}
+-                    </div>
+-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+-                      Young adults aged 20–25
+-                    </div>
+-                  </div>
+-
+-                  <div className="glass-card" style={{ padding: '20px' }}>
+-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Approved Clinicians</div>
+-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#2b5f7d', marginTop: '4px' }}>
+-                      {stats?.approvedTherapists ?? (stats?.therapistMetrics?.approved_therapists || 0)}
+-                    </div>
+-                    <div style={{ fontSize: '0.75rem', color: '#2b5f7d', marginTop: '4px' }}>
+-                      ● {stats?.activeTherapists ?? (stats?.therapistMetrics?.available_therapists || 0)} currently available
+-                    </div>
+-                  </div>
+-
+-                  <div className="glass-card" style={{ padding: '20px' }}>
+-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Pending Verifications</div>
+-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#b07d3b', marginTop: '4px' }}>
+-                      {stats?.pendingVerifications ?? (stats?.therapistMetrics?.pending_therapists || 0)}
+-                    </div>
+-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+-                      Dossiers awaiting review
+-                    </div>
+-                  </div>
+-
+-                  <div className="glass-card" style={{ padding: '20px' }}>
+-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Requests Awaiting Assignment</div>
+-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#b91c1c', marginTop: '4px' }}>
+-                      {stats?.requestsAwaitingAssignment ?? (stats?.bookingCounts?.requested || 0)}
+-                    </div>
+-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+-                      In session routing pipeline
+-                    </div>
+-                  </div>
+-
+-                  <div className="glass-card" style={{ padding: '20px' }}>
+-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Sessions This Week</div>
+-                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#6366f1', marginTop: '4px' }}>
+-                      {stats?.sessionsThisWeek || 0}
+-                    </div>
+-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+-                      Scheduled consultations
+-                    </div>
+-                  </div>
+-                </div>
+-
+-                {/* Score Band Aggregates */}
+-                <div className="glass-card" style={{ padding: '24px', marginBottom: '32px' }}>
+-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '6px', color: 'var(--text-primary)' }}>
+-                    Client Questionnaire Score-Band Distribution
+-                  </h3>
+-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
+-                    Total Questionnaires Completed: <strong>{stats?.questionnairesCompleted || 0}</strong> • Anonymized across 3 friendly score bands.
+-                  </p>
+-
+-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+-                    <div style={{ padding: '18px', borderRadius: '14px', background: 'rgba(82, 183, 136, 0.12)', border: '1px solid rgba(82, 183, 136, 0.3)' }}>
+-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-dark)', textTransform: 'uppercase' }}>
+-                        Steady Rhythm (Scores 0–7)
+-                      </div>
+-                      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--primary-dark)', marginTop: '6px' }}>
+-                        {stats?.scoreBandDistribution?.low?.count ?? (stats?.assessmentBands?.low?.count || 0)}
+-                      </div>
+-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+-                        Steady baseline resilience
+-                      </div>
+-                    </div>
+-
+-                    <div style={{ padding: '18px', borderRadius: '14px', background: 'rgba(246, 189, 96, 0.15)', border: '1px solid rgba(246, 189, 96, 0.35)' }}>
+-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#b07d3b', textTransform: 'uppercase' }}>
+-                        Rest & Reset (Scores 8–15)
+-                      </div>
+-                      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#b07d3b', marginTop: '6px' }}>
+-                        {stats?.scoreBandDistribution?.moderate?.count ?? (stats?.assessmentBands?.moderate?.count || 0)}
+-                      </div>
+-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+-                        Accumulated tension / fatigue
+-                      </div>
+-                    </div>
+-
+-                    <div style={{ padding: '18px', borderRadius: '14px', background: 'rgba(220, 53, 69, 0.1)', border: '1px solid rgba(220, 53, 69, 0.3)' }}>
+-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase' }}>
+-                        Care & Comfort (Scores 16–24)
+-                      </div>
+-                      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#b91c1c', marginTop: '6px' }}>
+-                        {stats?.scoreBandDistribution?.high?.count ?? (stats?.assessmentBands?.high?.count || 0)}
+-                      </div>
+-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+-                        Escalated to Aria / clinician connect
+-                      </div>
++                {/* Ledger strip — figures come straight from `stats` (no placeholders) */}
++                <section className="kpis" aria-label="Key figures">
++                  {[
++                    ['Active clients', stats?.clients ?? (stats?.roleCounts?.client || 0), 'Young adults aged 20–25'],
++                    ['Approved clinicians', stats?.approvedTherapists ?? (stats?.therapistMetrics?.approved_therapists || 0), `${stats?.activeTherapists ?? (stats?.therapistMetrics?.available_therapists || 0)} currently available`],
++                    ['Pending verifications', stats?.pendingVerifications ?? (stats?.therapistMetrics?.pending_therapists || 0), 'Dossiers awaiting review'],
++                    ['Awaiting assignment', stats?.requestsAwaitingAssignment ?? (stats?.bookingCounts?.requested || 0), 'In session routing pipeline'],
++                    ['Sessions this week', stats?.sessionsThisWeek || 0, 'Scheduled consultations']
++                  ].map(([label, value, note], k) => (
++                    <div key={label} className="kpi" style={{ '--i': k }}><span className="kl">{label}</span><b className="num">{value}</b><span className="kn">{note}</span></div>
++                  ))}
++                </section>
++
++                <div className="desk-bands">
++                  <section>
++                    <div className="ph"><h2>Questionnaire score bands</h2><span className="muted small">{stats?.questionnairesCompleted || 0} completed · anonymised</span></div>
++                    <Columns3D height={170} items={[
++                      { label: 'Steady', value: stats?.scoreBandDistribution?.low?.count ?? (stats?.assessmentBands?.low?.count || 0) },
++                      { label: 'Rest', value: stats?.scoreBandDistribution?.moderate?.count ?? (stats?.assessmentBands?.moderate?.count || 0) },
++                      { label: 'Care', value: stats?.scoreBandDistribution?.high?.count ?? (stats?.assessmentBands?.high?.count || 0) }
++                    ]} />
++                  </section>
++                  <section>
++                    <div className="ph"><h2>What the bands mean</h2></div>
++                    <div className="band-list">
++                      <div><b>Steady rhythm · 0–7</b><span>Steady baseline resilience</span></div>
++                      <div><b>Rest &amp; reset · 8–15</b><span>Accumulated tension / fatigue</span></div>
++                      <div><b>Care &amp; comfort · 16–24</b><span>Escalated to Aria / clinician connect</span></div>
+                     </div>
+-                  </div>
++                  </section>
+                 </div>
+               </>
+             )}
+diff --git a/frontend/src/pages/Dashboard.jsx b/frontend/src/pages/Dashboard.jsx
+index 86b60ee..c20f4af 100644
+--- a/frontend/src/pages/Dashboard.jsx
++++ b/frontend/src/pages/Dashboard.jsx
+@@ -664,42 +664,20 @@ export default function Dashboard() {
+           <h3 style={{ fontSize: '1.15rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '20px' }}>
+             Sanctuary Hub
+           </h3>
+-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+-            <Link to="/mood" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
+-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
+-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Mood Tracker</h4>
+-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Log feelings and view 3D aura</p>
+-            </Link>
+-
+-            <Link to="/breathing" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
+-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
+-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>3D Breathwork</h4>
+-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>4-7-8 and Box breathing guide</p>
+-            </Link>
+-
+-            <Link to="/journal" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
+-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
+-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Private Journal</h4>
+-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Thought defusion and gratitude</p>
+-            </Link>
+-
+-            <Link to="/routine" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
+-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
+-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Daily Routine</h4>
+-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Build gentle restorative habits</p>
+-            </Link>
+-
+-            <Link to="/progress" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
+-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
+-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Progress & Stats</h4>
+-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Weekly chart and achievements</p>
+-            </Link>
+-
+-            <Link to="/crisis" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)', borderLeft: '4px solid #dc2626' }}>
+-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
+-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px', color: '#b91c1c' }}>Crisis Support</h4>
+-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>24/7 helplines & safety plan</p>
+-            </Link>
++          <div className="rd-rows">
++            {[
++              ['/mood', 'Mood Tracker', 'Log feelings and view 3D aura'],
++              ['/breathing', '3D Breathwork', '4-7-8 and Box breathing guide'],
++              ['/journal', 'Private Journal', 'Thought defusion and gratitude'],
++              ['/routine', 'Daily Routine', 'Build gentle restorative habits'],
++              ['/progress', 'Progress & Stats', 'Weekly chart and achievements'],
++              ['/crisis', 'Crisis Support', '24/7 helplines & safety plan']
++            ].map(([to, title, sub]) => (
++              <Link key={to} to={to} className="rd-row">
++                <span><b style={to === '/crisis' ? { color: 'var(--color-error-text, #b91c1c)' } : undefined}>{title}</b><span className="sub">{sub}</span></span>
++                <span aria-hidden="true">→</span>
++              </Link>
++            ))}
+           </div>
+         </div>
+         {/* Onboarding & Clinical Questionnaire Popup */}
+diff --git a/frontend/src/pages/Games.jsx b/frontend/src/pages/Games.jsx
+index 59cac8c..4a4a476 100644
+--- a/frontend/src/pages/Games.jsx
++++ b/frontend/src/pages/Games.jsx
+@@ -5,6 +5,7 @@
+ // Clean, grounded UI (no 3D slope, zero tacky emojis).
+ // ============================================
+ 
++import BubbleGame from '../components/common/BubbleGame';
+ import React, { useState, useEffect, useRef } from 'react';
+ import { soundEngine } from '../services/audio';
+ import AmbientCanvas from '../components/three/AmbientCanvas';
+@@ -378,7 +379,8 @@ export default function Games() {
+             { id: 'defusion', label: '1. Thought Cloud Defusion (ACT)' },
+             { id: 'pond', label: '2. Zen Water Ripple Pond' },
+             { id: 'garden', label: '3. Gratitude Bloom Garden' },
+-            { id: 'bubbles', label: '4. StressBurst Kinetic Canvas' }
++            { id: 'bubbles', label: '4. StressBurst Kinetic Canvas' },
++            { id: 'drift', label: '5. Bubble Drift' }
+           ].map(g => (
+             <button
+               key={g.id}
+@@ -719,6 +721,19 @@ export default function Games() {
+         {/* ========================================================= */}
+         {/* GAME 4: STRESSBURST KINETIC BUBBLES */}
+         {/* ========================================================= */}
++        {activeGame === 'drift' && (
++          <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
++            <div style={{ padding: '28px 32px 8px' }}>
++              <div className="eyebrow">Slow game · no score, no timer</div>
++              <h3 style={{ fontSize: '1.8rem', margin: '8px 0 6px' }}>Bubble Drift</h3>
++              <p style={{ color: 'var(--text-secondary)' }}>Move over a bubble to pop it. Nothing to win — just something to do with your hands.</p>
++            </div>
++            <div style={{ position: 'relative', height: 'clamp(280px, 42vh, 420px)' }}>
++              <BubbleGame />
++            </div>
++          </div>
++        )}
++
+         {activeGame === 'bubbles' && (
+           <div className="glass-card" style={{ padding: '32px', borderRadius: '24px', backgroundColor: '#ffffff', boxShadow: '0 6px 24px rgba(0,0,0,0.04)', marginBottom: '32px' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+diff --git a/frontend/src/pages/Landing.jsx b/frontend/src/pages/Landing.jsx
+index 23ead13..9739523 100644
+--- a/frontend/src/pages/Landing.jsx
++++ b/frontend/src/pages/Landing.jsx
+@@ -1,674 +1,68 @@
+ // ============================================
+-// MindCare Sanctuary — Redesigned Light-Theme Landing Page
+-// Featuring:
+-// 1. Calm 3D Brain Hero (Dual hemispheres, cerebellum, stem, domain-warped gyri, thought pulses)
+-// 2. 9s Autonomic Breathing Cycle with synchronized pacing caption
+-// 3. Responsive Hero Layout:
+-//    - Desktop (1440px): Headline & CTAs on left, 3D Brain on right
+-//    - Mobile (390px): 3D Brain positioned above headline, sized gracefully without clipping
+-// 4. Interactive Story: How It Works, 4 Sanctuary Pillars in 3D-tilt cards, Verified Clinicians, Zero-Trust Architecture
+-// 5. High-contrast typography (Inter & Outfit), WCAG AA compliance, pure SVG icons (Zero emoji icons)
++// MindCare — Landing (redesign)
++// Scroll-driven 3D brain story (busy → calm) + editorial sections.
++// ALL copy is read from config/strings.js; nothing is hard-coded here.
+ // ============================================
+-
+-import React, { useState, useEffect, useRef, Suspense } from 'react';
++import React from 'react';
+ import { Link } from 'react-router-dom';
+ import { useAuth } from '../context/AuthContext';
+-import TiltCard from '../components/common/TiltCard';
+-import { theme } from '../styles/theme';
+-import { UI_STRINGS } from '../config/strings';
++import { UI_STRINGS as S } from '../config/strings';
++import StoryStage from '../components/landing/StoryStage';
++import { useReveal } from '../lib/useReveal';
++import '../styles/landing.css';
+ 
+-// Lazy-load the Three.js Calm Brain Hero
+-const CalmBrainHero = React.lazy(() => import('../components/three/CalmBrainHero'));
++function Row({ n, title, children, to, cta }) {
++  const ref = useReveal();
++  return (
++    <div ref={ref} className={`row reveal ${n ? '' : 'nonum'}`}>
++      {n && <div className="n">{n}</div>}
++      <h3>{title}</h3>
++      <div><p>{children}</p>{to && <Link className="arrow-link" to={to}>{cta}</Link>}</div>
++    </div>
++  );
++}
++const strip = (t = '') => t.replace(/\s*[→↗]\s*$/, '');
+ 
+ export default function Landing() {
+   const { user } = useAuth();
+-
+-  // Scroll reveal observer
+-  const [revealedSections, setRevealedSections] = useState({
+-    steps: false,
+-    features: false,
+-    sessionFlow: false,
+-    privacy: false
+-  });
+-
+-  const stepsRef = useRef(null);
+-  const featuresRef = useRef(null);
+-  const sessionFlowRef = useRef(null);
+-  const privacyRef = useRef(null);
+-
+-  useEffect(() => {
+-    // Scroll reveal observer for story sections
+-    const observer = new IntersectionObserver((entries) => {
+-      entries.forEach(entry => {
+-        if (entry.isIntersecting) {
+-          const sectionKey = entry.target.getAttribute('data-section');
+-          if (sectionKey) {
+-            setRevealedSections(prev => ({ ...prev, [sectionKey]: true }));
+-          }
+-        }
+-      });
+-    }, { threshold: 0.15 });
+-
+-    if (stepsRef.current) observer.observe(stepsRef.current);
+-    if (featuresRef.current) observer.observe(featuresRef.current);
+-    if (sessionFlowRef.current) observer.observe(sessionFlowRef.current);
+-    if (privacyRef.current) observer.observe(privacyRef.current);
+-
+-    return () => {
+-      observer.disconnect();
+-    };
+-  }, []);
+-
++  const f = S.sessionFlow, L = S.landing;
+   return (
+-    <div className="landing-page" style={{ position: 'relative', overflowX: 'hidden', backgroundColor: 'var(--bg-primary)' }}>
+-      {/* ── 1. HERO SECTION (CALM 3D BRAIN + CONFIDENT TYPOGRAPHY) ── */}
+-      <section className="hero-section" style={{
+-        minHeight: '88vh',
+-        display: 'flex',
+-        alignItems: 'center',
+-        justifyContent: 'center',
+-        padding: '54px 24px 36px',
+-        position: 'relative',
+-        background: 'radial-gradient(ellipse at 70% 30%, rgba(116, 198, 157, 0.18) 0%, rgba(157, 132, 183, 0.14) 35%, rgba(250, 249, 245, 0.96) 75%)'
+-      }}>
+-        <div className="hero-grid-container">
+-          {/* Hero Left / Bottom on mobile: Big confident typography & CTAs */}
+-          <div className="hero-text-col">
+-            <div style={{
+-              display: 'inline-flex',
+-              alignItems: 'center',
+-              gap: '8px',
+-              padding: '7px 18px',
+-              background: 'var(--accent-sage-soft)',
+-              border: '1px solid rgba(82, 183, 136, 0.3)',
+-              borderRadius: 'var(--radius-full)',
+-              fontSize: '0.84rem',
+-              fontWeight: 600,
+-              color: 'var(--accent-forest)',
+-              marginBottom: '24px'
+-            }}>
+-              <svg width="1.1em" height="1.1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-0.15em', flexShrink: 0, color: 'var(--accent-leaf)' }}>
+-                <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+-              </svg>
+-              <span>{UI_STRINGS.hero?.badge || 'Confidential Mental Wellness Sanctuary'}</span>
+-            </div>
+-
+-            <h1 style={{
+-              fontSize: 'clamp(2.6rem, 5.2vw, 4.2rem)',
+-              fontWeight: 800,
+-              lineHeight: 1.15,
+-              marginBottom: '22px',
+-              letterSpacing: '-0.025em',
+-              color: 'var(--text-primary)'
+-            }}>
+-              {UI_STRINGS.hero?.titleLine1 || 'Heal slowly.'}<br />
+-              <span style={{
+-                background: 'linear-gradient(135deg, var(--accent-forest) 10%, var(--accent-leaf) 55%, var(--accent-mint) 90%)',
+-                WebkitBackgroundClip: 'text',
+-                WebkitTextFillColor: 'transparent'
+-              }}>
+-                {UI_STRINGS.hero?.titleLine2 || 'Rise stronger.'}
+-              </span>
+-            </h1>
+-
+-            <p style={{
+-              fontSize: '1.12rem',
+-              color: 'var(--text-secondary)',
+-              lineHeight: 1.75,
+-              marginBottom: '34px',
+-              maxWidth: '520px'
+-            }}>
+-              {UI_STRINGS.hero?.subtext || 'An unhurried space for mindful breathwork, emotional rhythm tracking, and gentle cognitive reflection. Free of judgment, ads, and surveillance.'}
+-            </p>
+-
+-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+-              <Link
+-                to={user ? "/dashboard" : "/register"}
+-                className="btn-primary"
+-                style={{ padding: '15px 34px', fontSize: '1rem' }}
+-              >
+-                {user ? (UI_STRINGS.hero?.ctaDashboard || 'Open Your Dashboard →') : (UI_STRINGS.hero?.ctaRegister || 'Begin Sanctuary Journey →')}
+-              </Link>
+-              <Link
+-                to="/breathing"
+-                className="btn-ghost"
+-                style={{ padding: '14px 28px', fontSize: '0.98rem' }}
+-              >
+-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+-                  <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
+-                </svg>
+-                <span>{UI_STRINGS.hero?.ctaBreathing || '3D Breathwork'}</span>
+-              </Link>
+-            </div>
+-
+-            {/* Privacy Guarantee Note */}
+-            <div style={{ marginTop: '34px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-forest)', flexShrink: 0 }}>
+-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+-              </svg>
+-              <span>{UI_STRINGS.hero?.privacyNote || 'Zero ad tracking • AES-256 Encrypted Journals • DPDP Compliant'}</span>
+-            </div>
+-          </div>
+-
+-          {/* Hero Right / Top on mobile: Calm 3D Brain Hero */}
+-          <div className="hero-brain-col">
+-            <Suspense fallback={
+-              <div style={{ width: '100%', height: '480px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+-                <div className="loader-spinner" />
+-              </div>
+-            }>
+-              <CalmBrainHero />
+-            </Suspense>
+-          </div>
++    <div className="landing-page">
++      <StoryStage user={user} />
++
++      <section className="block" id="how"><div className="wrap">
++        <div className="eyebrow">{f.heading}</div>
++        <h2 className="section-title">{f.subheading}</h2>
++        <div className="rows">
++          <Row n="01" title={f.step1Title} to="/register" cta={strip(S.hero.ctaRegister)}>{f.step1Desc}</Row>
++          <Row n="02" title={f.step2Title}>{f.step2Desc}</Row>
++          <Row n="03" title={f.step3Title}>{f.step3Desc}</Row>
++          <Row n="04" title={f.step4Title}>{f.step4Desc}</Row>
+         </div>
+-      </section>
+-
+-      {/* ── 2. SCROLL STORY: HOW IT WORKS (ANIMATED CONNECTORS) ── */}
+-      <section
+-        ref={stepsRef}
+-        data-section="steps"
+-        style={{
+-          maxWidth: '1280px',
+-          margin: '0 auto',
+-          padding: '70px 24px 60px',
+-          opacity: revealedSections.steps ? 1 : 0.2,
+-          transform: revealedSections.steps ? 'translateY(0)' : 'translateY(32px)',
+-          transition: 'all 0.8s cubic-bezier(0.2, 0, 0.2, 1)'
+-        }}
+-      >
+-        <div style={{ textAlign: 'center', marginBottom: '52px' }}>
+-          <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--accent-forest)', fontWeight: 700 }}>
+-            {UI_STRINGS.landing?.flowBadge || 'Mindful Flow'}
+-          </span>
+-          <h2 style={{ fontSize: 'clamp(2rem, 3.8vw, 2.8rem)', marginTop: '8px', color: 'var(--text-primary)', fontWeight: 800 }}>
+-            {UI_STRINGS.landing?.flowTitle || 'How MindCare Works'}
+-          </h2>
+-          <p style={{ color: 'var(--text-secondary)', maxWidth: '580px', margin: '12px auto 0', fontSize: '1.02rem', lineHeight: 1.6 }}>
+-            {UI_STRINGS.landing?.flowSubtitle || 'A calm, 3-step rhythm designed to meet young adults wherever they are today.'}
+-          </p>
++      </div></section>
++
++      <section className="block" style={{ paddingTop: 0 }}><div className="wrap">
++        <div className="eyebrow">{L.coreTitle}</div>
++        <div className="rows">
++          <Row title={L.pillar1Title} to="/breathing" cta={strip(L.pillar1Cta)}>{L.pillar1Desc}</Row>
++          <Row title={L.pillar2Title}>{L.pillar2Desc}</Row>
++          <Row title={L.pillar3Title} to="/journal" cta={strip(L.pillar3Cta)}>{L.pillar3Desc}</Row>
++          <Row title={L.pillar4Title} to="/crisis" cta={strip(L.pillar4Cta)}>{L.pillar4Desc}</Row>
+         </div>
++      </div></section>
+ 
+-        {/* 3 Step Cards with Animated Connector Lines */}
+-        <div style={{
+-          display: 'grid',
+-          gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
+-          gap: '30px',
+-          position: 'relative'
+-        }}>
+-          {/* Step 1 */}
+-          <TiltCard style={{ height: '100%' }}>
+-            <div className="glass-card" style={{
+-              height: '100%',
+-              padding: '36px 30px',
+-              display: 'flex',
+-              flexDirection: 'column',
+-              justifyContent: 'space-between',
+-              borderRadius: 'var(--radius-lg)'
+-            }}>
+-              <div>
+-                <div style={{
+-                  width: '46px',
+-                  height: '46px',
+-                  borderRadius: '12px',
+-                  background: 'var(--accent-sage-soft)',
+-                  color: 'var(--accent-forest)',
+-                  fontSize: '1.25rem',
+-                  fontWeight: 800,
+-                  display: 'flex',
+-                  alignItems: 'center',
+-                  justifyContent: 'center',
+-                  marginBottom: '20px'
+-                }}>
+-                  01
+-                </div>
+-                <h3 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', marginBottom: '10px' }}>
+-                  {UI_STRINGS.landing?.step1Title || '2-Minute Self-Reflection'}
+-                </h3>
+-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                  {UI_STRINGS.landing?.step1Desc || 'Answer a fixed, non-clinical 8-question pulse. MindCare tunes your recommended breathing patterns, focus games, and soothing soundscapes without diagnostic labels.'}
+-                </p>
+-              </div>
+-              <div style={{ marginTop: '24px', fontSize: '0.84rem', fontWeight: 600, color: 'var(--accent-forest)' }}>
+-                {UI_STRINGS.landing?.step1Footer || 'Step 1 of Sanctuary Flow →'}
+-              </div>
+-            </div>
+-          </TiltCard>
+-
+-          {/* Step 2 */}
+-          <TiltCard style={{ height: '100%' }}>
+-            <div className="glass-card" style={{
+-              height: '100%',
+-              padding: '36px 30px',
+-              display: 'flex',
+-              flexDirection: 'column',
+-              justifyContent: 'space-between',
+-              borderRadius: 'var(--radius-lg)',
+-              borderTop: '3px solid var(--accent-lavender)'
+-            }}>
+-              <div>
+-                <div style={{
+-                  width: '46px',
+-                  height: '46px',
+-                  borderRadius: '12px',
+-                  background: 'var(--accent-lavender-soft)',
+-                  color: 'var(--accent-lavender-dark)',
+-                  fontSize: '1.25rem',
+-                  fontWeight: 800,
+-                  display: 'flex',
+-                  alignItems: 'center',
+-                  justifyContent: 'center',
+-                  marginBottom: '20px'
+-                }}>
+-                  02
+-                </div>
+-                <h3 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', marginBottom: '10px' }}>
+-                  {UI_STRINGS.landing?.step2Title || 'Tailored Daily Rhythms'}
+-                </h3>
+-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                  {UI_STRINGS.landing?.step2Desc || 'Engage in 3D pacing breathwork, tactile Zen gardening, and encrypted reflective journaling. Your digital twin gently responds to every mindful pause.'}
+-                </p>
+-              </div>
+-              <div style={{ marginTop: '24px', fontSize: '0.84rem', fontWeight: 600, color: 'var(--accent-lavender-dark)' }}>
+-                {UI_STRINGS.landing?.step2Footer || 'Step 2 of Sanctuary Flow →'}
+-              </div>
+-            </div>
+-          </TiltCard>
+-
+-          {/* Step 3 */}
+-          <TiltCard style={{ height: '100%' }}>
+-            <div className="glass-card" style={{
+-              height: '100%',
+-              padding: '36px 30px',
+-              display: 'flex',
+-              flexDirection: 'column',
+-              justifyContent: 'space-between',
+-              borderRadius: 'var(--radius-lg)',
+-              borderTop: '3px solid var(--accent-peach)'
+-            }}>
+-              <div>
+-                <div style={{
+-                  width: '46px',
+-                  height: '46px',
+-                  borderRadius: '12px',
+-                  background: 'var(--accent-peach-soft)',
+-                  color: 'var(--accent-peach-dark)',
+-                  fontSize: '1.25rem',
+-                  fontWeight: 800,
+-                  display: 'flex',
+-                  alignItems: 'center',
+-                  justifyContent: 'center',
+-                  marginBottom: '20px'
+-                }}>
+-                  03
+-                </div>
+-                <h3 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', marginBottom: '10px' }}>
+-                  {UI_STRINGS.landing?.step3Title || 'Companion & Clinical Care'}
+-                </h3>
+-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                  {UI_STRINGS.landing?.step3Desc || 'Talk with Aria, our non-judgmental AI companion, or request a 1-on-1 consultation with verified psychologists and psychiatrists whenever deeper human support is needed.'}
+-                </p>
+-              </div>
+-              <div style={{ marginTop: '24px', fontSize: '0.84rem', fontWeight: 600, color: 'var(--accent-peach-dark)' }}>
+-                {UI_STRINGS.landing?.step3Footer || 'Step 3 of Sanctuary Flow →'}
+-              </div>
+-            </div>
+-          </TiltCard>
++      <section className="block alt"><div className="wrap two">
++        <div><div className="eyebrow">{L.privacyBadge}</div><h2 className="section-title">{L.privacyTitle}</h2><p className="lede" style={{ fontSize: '1rem' }}>{L.privacySubtitle}</p></div>
++        <div className="facts">
++          {[1, 2, 3].map((i) => <div className="fact" key={i}><b>{L[`privacyItem${i}Title`]}</b>{L[`privacyItem${i}Desc`]}</div>)}
+         </div>
+-      </section>
++      </div></section>
+ 
+-      {/* ── 3. SANCTUARY CORE PILLARS (3D TILT CARDS) ── */}
+-      <section
+-        ref={featuresRef}
+-        data-section="features"
+-        style={{
+-          maxWidth: '1280px',
+-          margin: '0 auto',
+-          padding: '60px 24px',
+-          opacity: revealedSections.features ? 1 : 0.2,
+-          transform: revealedSections.features ? 'translateY(0)' : 'translateY(32px)',
+-          transition: 'all 0.8s cubic-bezier(0.2, 0, 0.2, 1)'
+-        }}
+-      >
+-        <div style={{ textAlign: 'center', marginBottom: '52px' }}>
+-          <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--accent-forest)', fontWeight: 700 }}>
+-            {UI_STRINGS.landing?.coreBadge || 'Sanctuary Core'}
+-          </span>
+-          <h2 style={{ fontSize: 'clamp(2rem, 3.8vw, 2.8rem)', marginTop: '8px', color: 'var(--text-primary)', fontWeight: 800 }}>
+-            {UI_STRINGS.landing?.coreTitle || 'Gentle Tools for Daily Renewal'}
+-          </h2>
+-          <p style={{ color: 'var(--text-secondary)', maxWidth: '580px', margin: '12px auto 0', fontSize: '1.02rem', lineHeight: 1.6 }}>
+-            {UI_STRINGS.landing?.coreSubtitle || 'Designed around physiological nervous system down-regulation, compassionate reflection, and clinical autonomy.'}
+-          </p>
+-        </div>
+-
+-        <div style={{
+-          display: 'grid',
+-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+-          gap: '26px'
+-        }}>
+-          {/* Pillar 1 */}
+-          <TiltCard>
+-            <div className="glass-card feature-hover-card" style={{ height: '100%' }}>
+-              <div className="feature-icon-badge">
+-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+-                  <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
+-                </svg>
+-              </div>
+-              <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontWeight: 700 }}>
+-                {UI_STRINGS.landing?.pillar1Title || '3D Guided Breathwork'}
+-              </h3>
+-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                {UI_STRINGS.landing?.pillar1Desc || 'A calming procedural brain and responsive rhythm orb that expands and contracts with your natural respiratory cycles.'}
+-              </p>
+-              <Link to="/breathing" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '18px', color: 'var(--accent-forest)', fontWeight: 600, fontSize: '0.88rem' }}>
+-                <span>{UI_STRINGS.landing?.pillar1Cta || 'Begin Breathwork →'}</span>
+-              </Link>
+-            </div>
+-          </TiltCard>
+-
+-          {/* Pillar 2 */}
+-          <TiltCard>
+-            <div className="glass-card feature-hover-card" style={{ height: '100%' }}>
+-              <div className="feature-icon-badge" style={{ background: 'var(--accent-lavender-soft)', color: 'var(--accent-lavender-dark)' }}>
+-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+-                </svg>
+-              </div>
+-              <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontWeight: 700 }}>
+-                {UI_STRINGS.landing?.pillar2Title || 'Aria Care Companion'}
+-              </h3>
+-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                {UI_STRINGS.landing?.pillar2Desc || 'A warm, grounded wellness friend governed by strict safe-language rules. Aria never diagnoses, never echoes negative triggers, and offers calm guidance.'}
+-              </p>
+-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '18px', color: 'var(--accent-lavender-dark)', fontWeight: 600, fontSize: '0.88rem' }}>
+-                <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+-                  <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+-                </svg>
+-                <span>{UI_STRINGS.landing?.pillar2Badge || 'Always Available in Corner'}</span>
+-              </span>
+-            </div>
+-          </TiltCard>
+-
+-          {/* Pillar 3 */}
+-          <TiltCard>
+-            <div className="glass-card feature-hover-card" style={{ height: '100%' }}>
+-              <div className="feature-icon-badge" style={{ background: 'var(--accent-peach-soft)', color: 'var(--accent-peach-dark)' }}>
+-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+-                  <path d="M12 20h9" />
+-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+-                </svg>
+-              </div>
+-              <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontWeight: 700 }}>
+-                {UI_STRINGS.landing?.pillar3Title || 'Encrypted Journal'}
+-              </h3>
+-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                {UI_STRINGS.landing?.pillar3Desc || 'A private shelter for unfiltered reflection. Thought logs are defended with authenticated AES-256-GCM encryption before storage.'}
+-              </p>
+-              <Link to="/journal" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '18px', color: 'var(--accent-peach-dark)', fontWeight: 600, fontSize: '0.88rem' }}>
+-                <span>{UI_STRINGS.landing?.pillar3Cta || 'Open Private Journal →'}</span>
+-              </Link>
+-            </div>
+-          </TiltCard>
+-
+-          {/* Pillar 4 */}
+-          <TiltCard>
+-            <div className="glass-card feature-hover-card" style={{ height: '100%' }}>
+-              <div className="feature-icon-badge crisis-badge">
+-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+-                </svg>
+-              </div>
+-              <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontWeight: 700 }}>
+-                {UI_STRINGS.landing?.pillar4Title || 'Crisis Lifeline & Safety Plan'}
+-              </h3>
+-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                Zero-barrier emergency helplines (<a href="tel:14416" style={{ color: '#b91c1c', fontWeight: 700, textDecoration: 'underline' }}>Tele-MANAS: 14416</a>, <a href="tel:988" style={{ color: '#b91c1c', fontWeight: 700, textDecoration: 'underline' }}>Lifeline: 988</a>) and an interactive 5-step digital safety plan that functions independently of all other systems.
+-              </p>
+-              <Link to="/crisis" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '18px', color: 'var(--color-error-text)', fontWeight: 700, fontSize: '0.88rem' }}>
+-                <span>{UI_STRINGS.landing?.pillar4Cta || 'Immediate Lifeline →'}</span>
+-              </Link>
+-            </div>
+-          </TiltCard>
+-        </div>
+-      </section>
+-
+-      {/* ── 4. HOW A SESSION HAPPENS (HONEST, DATA-FREE SESSION LIFECYCLE) ── */}
+-      <section
+-        id="session-flow-section"
+-        ref={sessionFlowRef}
+-        data-section="sessionFlow"
+-        style={{
+-          maxWidth: '1280px',
+-          margin: '0 auto',
+-          padding: '60px 24px',
+-          opacity: revealedSections.sessionFlow ? 1 : 0.2,
+-          transform: revealedSections.sessionFlow ? 'translateY(0)' : 'translateY(32px)',
+-          transition: 'all 0.8s cubic-bezier(0.2, 0, 0.2, 1)'
+-        }}
+-      >
+-        <div style={{
+-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(246, 248, 244, 0.92))',
+-          borderRadius: 'var(--radius-xl)',
+-          padding: '54px 40px',
+-          border: '1px solid var(--border-subtle)',
+-          boxShadow: 'var(--shadow-sm)'
+-        }}>
+-          {/* Section Header */}
+-          <div style={{ maxWidth: '680px', marginBottom: '46px' }}>
+-            <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '2.5px', color: 'var(--accent-forest)', fontWeight: 700 }}>
+-              {UI_STRINGS.sessionFlow?.heading || 'How a session happens'}
+-            </span>
+-            <h2 style={{ fontSize: 'clamp(1.9rem, 3.4vw, 2.6rem)', marginTop: '8px', color: 'var(--text-primary)', fontWeight: 800 }}>
+-              {UI_STRINGS.sessionFlow?.heading || 'How a session happens'}
+-            </h2>
+-            <p style={{ color: 'var(--text-secondary)', fontSize: '1.02rem', marginTop: '10px', lineHeight: 1.65 }}>
+-              {UI_STRINGS.sessionFlow?.subheading || 'A transparent, steady process designed around your schedule and comfort.'}
+-            </p>
+-          </div>
+-
+-          {/* 4 Steps in an open, calm editorial layout */}
+-          <div style={{
+-            display: 'grid',
+-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+-            gap: '32px',
+-            marginBottom: '48px'
+-          }}>
+-            {/* Step 1 */}
+-            <div style={{ padding: '8px 4px' }}>
+-              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--accent-leaf)', letterSpacing: '1px', marginBottom: '12px' }}>
+-                01
+-              </div>
+-              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '8px', lineHeight: 1.3 }}>
+-                {UI_STRINGS.sessionFlow?.step1Title}
+-              </h3>
+-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                {UI_STRINGS.sessionFlow?.step1Desc}
+-              </p>
+-            </div>
+-
+-            {/* Step 2 */}
+-            <div style={{ padding: '8px 4px' }}>
+-              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--accent-lavender-dark)', letterSpacing: '1px', marginBottom: '12px' }}>
+-                02
+-              </div>
+-              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '8px', lineHeight: 1.3 }}>
+-                {UI_STRINGS.sessionFlow?.step2Title}
+-              </h3>
+-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                {UI_STRINGS.sessionFlow?.step2Desc}
+-              </p>
+-            </div>
+-
+-            {/* Step 3 */}
+-            <div style={{ padding: '8px 4px' }}>
+-              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--accent-peach-dark)', letterSpacing: '1px', marginBottom: '12px' }}>
+-                03
+-              </div>
+-              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '8px', lineHeight: 1.3 }}>
+-                {UI_STRINGS.sessionFlow?.step3Title}
+-              </h3>
+-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                {UI_STRINGS.sessionFlow?.step3Desc}
+-              </p>
+-            </div>
+-
+-            {/* Step 4 */}
+-            <div style={{ padding: '8px 4px' }}>
+-              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--accent-sky-dark)', letterSpacing: '1px', marginBottom: '12px' }}>
+-                04
+-              </div>
+-              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '8px', lineHeight: 1.3 }}>
+-                {UI_STRINGS.sessionFlow?.step4Title}
+-              </h3>
+-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
+-                {UI_STRINGS.sessionFlow?.step4Desc}
+-              </p>
+-            </div>
+-          </div>
+-
+-          {/* Quiet line for professionals */}
+-          <div style={{
+-            paddingTop: '28px',
+-            borderTop: '1px solid var(--border-subtle)',
+-            display: 'flex',
+-            alignItems: 'center',
+-            justifyContent: 'space-between',
+-            flexWrap: 'wrap',
+-            gap: '14px',
+-            fontSize: '0.92rem',
+-            color: 'var(--text-secondary)'
+-          }}>
+-            <div>
+-              <span>{UI_STRINGS.sessionFlow?.professionalNoticePrompt}{' '}</span>
+-              <Link
+-                to="/register?role=therapist"
+-                style={{
+-                  color: 'var(--accent-forest)',
+-                  fontWeight: 600,
+-                  textDecoration: 'underline',
+-                  textUnderlineOffset: '3px'
+-                }}
+-              >
+-                {UI_STRINGS.sessionFlow?.professionalNoticeLink}
+-              </Link>
+-            </div>
+-            <div style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
+-              {UI_STRINGS.sessionFlow?.professionalNoticeGuarantee}
+-            </div>
+-          </div>
+-        </div>
+-      </section>
+-
+-      {/* ── 5. DATA SOVEREIGNTY & PRIVACY ETHICS ── */}
+-      <section
+-        ref={privacyRef}
+-        data-section="privacy"
+-        style={{
+-          maxWidth: '1280px',
+-          margin: '0 auto',
+-          padding: '40px 24px 80px',
+-          opacity: revealedSections.privacy ? 1 : 0.2,
+-          transform: revealedSections.privacy ? 'translateY(0)' : 'translateY(32px)',
+-          transition: 'all 0.8s cubic-bezier(0.2, 0, 0.2, 1)'
+-        }}
+-      >
+-        <div style={{
+-          background: 'var(--bg-surface-elevated)',
+-          border: '1px solid var(--border-subtle)',
+-          borderRadius: 'var(--radius-xl)',
+-          padding: '44px 36px',
+-          boxShadow: 'var(--shadow-sm)'
+-        }}>
+-          <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+-            <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--accent-forest)', fontWeight: 700 }}>
+-              {UI_STRINGS.landing?.privacyBadge || 'Zero-Trust Architecture'}
+-            </span>
+-            <h2 style={{ fontSize: 'clamp(1.8rem, 3.2vw, 2.4rem)', marginTop: '8px', color: 'var(--text-primary)', fontWeight: 800 }}>
+-              {UI_STRINGS.landing?.privacyTitle || 'Your Mind, Your Sovereignty'}
+-            </h2>
+-            <p style={{ color: 'var(--text-secondary)', maxWidth: '620px', margin: '10px auto 0', fontSize: '0.98rem', lineHeight: 1.6 }}>
+-              {UI_STRINGS.landing?.privacySubtitle || 'MindCare was engineered from ground zero to uphold India’s Digital Personal Data Protection (DPDP) Act and international medical privacy standards.'}
+-            </p>
+-          </div>
+-
+-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
+-            <div style={{ padding: '22px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+-              <div style={{
+-                width: '40px',
+-                height: '40px',
+-                borderRadius: '10px',
+-                background: 'var(--accent-sage-soft)',
+-                display: 'flex',
+-                alignItems: 'center',
+-                justifyContent: 'center',
+-                marginBottom: '14px',
+-                color: 'var(--accent-forest)'
+-              }}>
+-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+-                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+-                </svg>
+-              </div>
+-              <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '6px', fontWeight: 700 }}>
+-                {UI_STRINGS.landing?.privacyItem1Title || 'Client-Side Encryption'}
+-              </h4>
+-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+-                {UI_STRINGS.landing?.privacyItem1Desc || 'Journals and sensitive thoughts are scrambled on your device before transmission. No staff member can read your private reflections.'}
+-              </p>
+-            </div>
+-
+-            <div style={{ padding: '22px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+-              <div style={{
+-                width: '40px',
+-                height: '40px',
+-                borderRadius: '10px',
+-                background: 'var(--accent-lavender-soft)',
+-                display: 'flex',
+-                alignItems: 'center',
+-                justifyContent: 'center',
+-                marginBottom: '14px',
+-                color: 'var(--accent-lavender-dark)'
+-              }}>
+-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+-                  <circle cx="12" cy="12" r="10" />
+-                  <path d="m4.9 4.9 14.2 14.2" />
+-                </svg>
+-              </div>
+-              <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '6px', fontWeight: 700 }}>
+-                {UI_STRINGS.landing?.privacyItem2Title || 'Zero Ad Monetization'}
+-              </h4>
+-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+-                {UI_STRINGS.landing?.privacyItem2Desc || 'No tracking pixels, third-party brokers, or behavioral analytics cookies. Your emotional rhythm is never an advertising target.'}
+-              </p>
+-            </div>
+-
+-            <div style={{ padding: '22px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+-              <div style={{
+-                width: '40px',
+-                height: '40px',
+-                borderRadius: '10px',
+-                background: 'var(--accent-peach-soft)',
+-                display: 'flex',
+-                alignItems: 'center',
+-                justifyContent: 'center',
+-                marginBottom: '14px',
+-                color: 'var(--accent-peach-dark)'
+-              }}>
+-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+-                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
+-                </svg>
+-              </div>
+-              <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '6px', fontWeight: 700 }}>
+-                {UI_STRINGS.landing?.privacyItem3Title || 'One-Click Data Purge'}
+-              </h4>
+-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+-                {UI_STRINGS.landing?.privacyItem3Desc || 'Under Settings & Privacy, you can export your complete history in JSON format or trigger an instant, irreversible data erasure anytime.'}
+-              </p>
+-            </div>
+-          </div>
+-        </div>
+-      </section>
++      <section className="block pros"><div className="wrap">
++        <p className="big2">{f.professionalNoticePrompt}</p>
++        <p className="lede" style={{ maxWidth: '34em' }}>{f.professionalNoticeGuarantee}</p>
++        <div className="cta"><Link className="btn-primary" to="/register?role=therapist">{f.professionalNoticeLink}</Link></div>
++      </div></section>
+     </div>
+   );
+ }
+diff --git a/frontend/src/pages/TherapistDashboard.jsx b/frontend/src/pages/TherapistDashboard.jsx
+index 0cc97a5..3837e41 100644
+--- a/frontend/src/pages/TherapistDashboard.jsx
++++ b/frontend/src/pages/TherapistDashboard.jsx
+@@ -4,6 +4,7 @@
+ //         Multi-Stage Verification State Machine, and Clinical Consultation Workspace
+ // ============================================
+ 
++import '../styles/admin-desk.css';
+ import React, { useState, useEffect } from 'react';
+ import { ClinicalConsentService } from '../services/clinicalConsent';
+ import { Storage } from '../services/storage';
+@@ -612,72 +613,28 @@ export default function TherapistDashboard() {
+         </div>
+ 
+         {/* ── TAB NAVIGATION ── */}
+-        <div style={{ display: 'flex', gap: '8px', background: 'rgba(0,0,0,0.04)', padding: '4px', borderRadius: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
++        <div className="desk-tabs" role="tablist">
+           <button
+             type="button"
+-            onClick={() => setActiveTab('overview')}
+-            style={{
+-              padding: '8px 18px',
+-              borderRadius: '8px',
+-              border: 'none',
+-              background: activeTab === 'overview' ? '#ffffff' : 'transparent',
+-              fontWeight: activeTab === 'overview' ? 700 : 500,
+-              color: activeTab === 'overview' ? 'var(--primary-dark)' : 'var(--text-secondary)',
+-              cursor: 'pointer',
+-              fontSize: '0.85rem',
+-              boxShadow: activeTab === 'overview' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+-            }}
++            role="tab" aria-selected={activeTab === 'overview'} className={`desk-tab ${activeTab === 'overview' ? 'on' : ''}`} onClick={() => setActiveTab('overview')}
+           >
+             Workspace
+           </button>
+           <button
+             type="button"
+-            onClick={() => setActiveTab('documents')}
+-            style={{
+-              padding: '8px 18px',
+-              borderRadius: '8px',
+-              border: 'none',
+-              background: activeTab === 'documents' ? '#ffffff' : 'transparent',
+-              fontWeight: activeTab === 'documents' ? 700 : 500,
+-              color: activeTab === 'documents' ? 'var(--primary-dark)' : 'var(--text-secondary)',
+-              cursor: 'pointer',
+-              fontSize: '0.85rem',
+-              boxShadow: activeTab === 'documents' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+-            }}
++            role="tab" aria-selected={activeTab === 'documents'} className={`desk-tab ${activeTab === 'documents' ? 'on' : ''}`} onClick={() => setActiveTab('documents')}
+           >
+             Document Vault ({documents.length})
+           </button>
+           <button
+             type="button"
+-            onClick={() => setActiveTab('profile')}
+-            style={{
+-              padding: '8px 18px',
+-              borderRadius: '8px',
+-              border: 'none',
+-              background: activeTab === 'profile' ? '#ffffff' : 'transparent',
+-              fontWeight: activeTab === 'profile' ? 700 : 500,
+-              color: activeTab === 'profile' ? 'var(--primary-dark)' : 'var(--text-secondary)',
+-              cursor: 'pointer',
+-              fontSize: '0.85rem',
+-              boxShadow: activeTab === 'profile' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+-            }}
++            role="tab" aria-selected={activeTab === 'profile'} className={`desk-tab ${activeTab === 'profile' ? 'on' : ''}`} onClick={() => setActiveTab('profile')}
+           >
+             Profile & Practice
+           </button>
+           <button
+             type="button"
+-            onClick={() => setActiveTab('schedule')}
+-            style={{
+-              padding: '8px 18px',
+-              borderRadius: '8px',
+-              border: 'none',
+-              background: activeTab === 'schedule' ? '#ffffff' : 'transparent',
+-              fontWeight: activeTab === 'schedule' ? 700 : 500,
+-              color: activeTab === 'schedule' ? 'var(--primary-dark)' : 'var(--text-secondary)',
+-              cursor: 'pointer',
+-              fontSize: '0.85rem',
+-              boxShadow: activeTab === 'schedule' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+-            }}
++            role="tab" aria-selected={activeTab === 'schedule'} className={`desk-tab ${activeTab === 'schedule' ? 'on' : ''}`} onClick={() => setActiveTab('schedule')}
+           >
+             Schedule & Availability
+           </button>
+diff --git a/frontend/src/styles/admin-desk.css b/frontend/src/styles/admin-desk.css
+new file mode 100644
+index 0000000..bd91c1f
+--- /dev/null
++++ b/frontend/src/styles/admin-desk.css
+@@ -0,0 +1,38 @@
++:root{--desk-ink:#17201C;--desk-line:rgba(23,32,28,.16);--desk-accent:#3B5B7A;--desk-stamp:#A5472F}
++.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-top:26px;border-top:2px solid var(--desk-ink);border-bottom:1px solid var(--desk-line)}
++.kpi{padding:20px 22px 18px 0;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--desk-line);padding-left:22px;animation:sheet .7s var(--ease) both;animation-delay:calc(var(--i)*80ms)}
++.kpi:first-child{padding-left:0}.kpi:last-child{border-right:0}
++.kl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#52605A;font-weight:600}
++.kpi b{font-family:var(--display);font-weight:420;font-size:clamp(2.4rem,4vw,3.6rem);line-height:1.05;letter-spacing:-.03em}
++.kn{font-size:13px;color:#52605A}
++@keyframes sheet{from{opacity:0;transform:translateY(16px)}}
++.ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--desk-line);padding-bottom:10px;margin-bottom:22px}
++.ph h2{font-size:1.45rem;font-weight:450}
++.small{font-size:14px}
++/* 3D columns */
++.c3d{height:360px;position:relative;margin:0}
++.c3d-scene{position:absolute;inset:0;perspective:1400px;perspective-origin:50% 20%;display:flex;align-items:center;justify-content:center}
++.c3d-floor{position:relative;width:calc(var(--n,7) * 64px);height:64px;transform-style:preserve-3d;transform:rotateX(58deg) rotateZ(-38deg) translateZ(-40px);display:flex;gap:30px;margin-left:-60px}
++.c3d-floor::before{content:"";position:absolute;left:-60px;right:-60px;top:-60px;bottom:-60px;background:repeating-linear-gradient(0deg,rgba(23,32,28,.07) 0 1px,transparent 1px 32px),repeating-linear-gradient(90deg,rgba(23,32,28,.07) 0 1px,transparent 1px 32px);border:1px solid var(--desk-line);background-color:rgba(255,255,255,.4)}
++.c3d-col{position:relative;width:44px;height:44px;transform-style:preserve-3d;margin-top:10px;outline:none;cursor:default;animation:grow .9s var(--ease) both;animation-delay:calc(var(--i)*70ms)}
++@keyframes grow{from{transform:scaleZ(.01) translateZ(0)}}
++.c3d-col .f{position:absolute;display:block;transition:filter .3s,background .3s}
++.c3d-col .top{left:0;top:0;width:44px;height:44px;background:#D6E2EC;transform:translateZ(var(--h))}
++.c3d-col .front{left:0;top:44px;width:44px;height:var(--h);transform-origin:top;transform:rotateX(90deg);background:linear-gradient(180deg,#8FA9C0,#6F8DA8)}
++.c3d-col .side{left:44px;top:0;width:var(--h);height:44px;transform-origin:left;transform:rotateY(-90deg);background:linear-gradient(90deg,#5E7C97,#46657F)}
++.c3d-col.hot .top{background:#F2C9B8}.c3d-col.hot .front{background:linear-gradient(180deg,#D98F73,#C77658)}.c3d-col.hot .side{background:linear-gradient(90deg,#B3604A,#964A38)}
++.bill{position:absolute;left:22px;top:22px;transform-style:preserve-3d;transform:translateZ(var(--h)) rotateZ(38deg) rotateX(-58deg) translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;white-space:nowrap;pointer-events:none;padding-bottom:8px}
++.bill b{font-family:var(--display);font-weight:500;font-size:20px;opacity:.0;transition:opacity .25s}
++.c3d-col.hot .bill b{opacity:1}
++.bill i{font-style:normal;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#52605A}
++
++/* ledger tabs for the admin console */
++.desk-tabs{display:flex;gap:2px;margin-bottom:26px;border-bottom:1px solid var(--desk-line);overflow-x:auto}
++.desk-tab{background:none;border:0;padding:11px 16px;font-size:.88rem;font-weight:500;color:#33403A;cursor:pointer;white-space:nowrap;position:relative;transition:color .2s}
++.desk-tab::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:var(--desk-ink);transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease)}
++.desk-tab:hover::after,.desk-tab.on::after{transform:scaleX(1)}
++.desk-tab.on{color:var(--desk-ink);font-weight:650}
++.desk-bands{display:grid;grid-template-columns:1.1fr 1fr;gap:clamp(24px,3vw,48px);align-items:start;margin-top:40px}
++@media (max-width:900px){.desk-bands{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.kpi,.kpi:first-child{padding:16px 12px 14px 0;border-right:0;border-bottom:1px solid var(--desk-line)}}
++.band-list{border-top:1px solid var(--desk-line)}.band-list div{display:grid;grid-template-columns:1fr auto;gap:4px 14px;padding:14px 0;border-bottom:1px solid var(--desk-line)}
++.band-list b{font-family:var(--font-display);font-weight:450;font-size:1.15rem}.band-list span{color:#52605A;font-size:.9rem}.band-list .v{grid-row:1/3;grid-column:2;font-family:var(--font-display);font-size:2rem;align-self:center}
+diff --git a/frontend/src/styles/landing.css b/frontend/src/styles/landing.css
+new file mode 100644
+index 0000000..21babf7
+--- /dev/null
++++ b/frontend/src/styles/landing.css
+@@ -0,0 +1,62 @@
++#story.story{position:relative;height:430vh}
++.stage{position:sticky;top:66px;height:calc(100vh - 66px);min-height:520px;overflow:hidden;background:
++ radial-gradient(60% 60% at 78% 42%,rgba(217,207,243,.55),transparent 70%),
++ radial-gradient(50% 50% at 12% 88%,rgba(191,230,209,.45),transparent 70%),
++ radial-gradient(40% 40% at 95% 100%,rgba(243,198,165,.35),transparent 70%),var(--bg)}
++canvas.fill{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
++.copy{position:absolute;left:var(--pad);top:0;bottom:0;width:min(46%,600px);display:flex;align-items:center}
++.panel{position:absolute;left:0;right:0;opacity:0;pointer-events:none}
++h1,h2.big{font-size:clamp(2.35rem,5.4vw,5rem);letter-spacing:-.025em;line-height:1.03;font-variation-settings:"opsz" 144}
++.eyebrow + h1,.eyebrow + h2{margin-top:22px}
++.crisis-link{color:var(--color-error-text,#B4432F)}
++.section-title{font-size:clamp(1.9rem,3.6vw,3.2rem);margin:14px 0 0;max-width:16em}
++.wrap{max-width:1680px;margin:0 auto;padding:0 var(--pad)}
++.landing-page{--pad:clamp(20px,5vw,72px);overflow-x:hidden}
++.lede{margin-top:24px;font-size:clamp(1.02rem,1.35vw,1.2rem);color:var(--ink-2);max-width:34em}
++.cta{margin-top:34px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
++.meter{position:absolute;left:var(--pad);bottom:34px;display:flex;align-items:center;gap:18px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
++.meter span{transition:color .4s}.meter span.on{color:var(--ink)}
++.meter .bar{width:120px;height:1px;background:var(--line);position:relative}
++.meter .bar i{position:absolute;left:0;top:-1px;height:3px;background:var(--forest);width:0;border-radius:2px}
++.cue{position:absolute;right:calc(var(--pad) + 4%);bottom:34px;font-family:var(--display);font-style:italic;font-size:1.15rem;color:var(--ink-2);opacity:0;transition:opacity .4s}
++
++.block{padding:clamp(64px,9vw,128px) 0}
++.block.alt{background:var(--bg-2)}
++.rows{margin-top:56px;border-top:1px solid var(--line)}
++.eyebrow + .rows{margin-top:24px}
++.row{display:grid;grid-template-columns:90px 1fr 1.25fr;gap:28px;padding:38px 0;border-bottom:1px solid var(--line);align-items:start}
++.row.nonum{grid-template-columns:1fr 1.25fr}
++.row .n{font-family:var(--display);font-size:1.05rem;color:var(--muted);padding-top:.5em}
++.row h3{font-weight:450;font-size:clamp(1.5rem,2.4vw,2.1rem);line-height:1.12}
++.row p{color:var(--ink-2);max-width:34em}
++.row p + .arrow-link{margin-top:16px}
++.reveal{opacity:0;transform:translateY(24px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
++.reveal.in{opacity:1;transform:none}
++.two{display:grid;grid-template-columns:1fr 1.25fr;gap:60px;align-items:start}
++.facts{border-top:1px solid var(--line)}
++.fact{padding:22px 0;border-bottom:1px solid var(--line);color:var(--ink-2)}
++.fact b{display:block;color:var(--ink);font-family:var(--display);font-weight:450;font-size:1.3rem;margin-bottom:4px;letter-spacing:-.01em}
++.pros{background:var(--bg-2)}
++.pros .big2{margin-top:18px;font-family:var(--display);font-weight:420;letter-spacing:-.025em;line-height:1.05;font-size:clamp(2rem,4.4vw,3.8rem);max-width:15em}
++
++/* no-WebGL / reduced motion: stacked static story */
++#story.story.plain{height:auto}
++.plain .stage{position:relative;height:auto;padding:130px 0 60px;overflow:visible}
++.plain .copy{position:relative;left:auto;width:auto;display:block;padding:0 var(--pad)}
++.plain .panel{position:relative;opacity:1;pointer-events:auto;margin-bottom:60px}
++.plain canvas,.plain .meter,.plain .cue{display:none}
++@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
++
++@media (max-width:900px){
++  .hide-m{display:none}.pnav-r{gap:14px;font-size:14px}.long{display:none}.short{display:inline;font-weight:600}
++  .pnav .btn{padding:9px 16px;font-size:14px}
++  canvas.brain{height:50%;bottom:auto}
++  .copy{left:var(--pad);right:var(--pad);width:auto;top:46%;bottom:80px;align-items:flex-start}
++  h1,h2.big{font-size:clamp(2rem,9vw,2.9rem)}
++  .lede{margin-top:14px;font-size:1rem;line-height:1.5}.cta{margin-top:20px;gap:10px}
++  .btn{padding:12px 20px;font-size:15px}.eyebrow + h1,.eyebrow + h2{margin-top:12px}
++  .meter{bottom:22px}.cue{right:var(--pad);bottom:auto;top:calc(50% - 40px)}
++  .row,.row.nonum{grid-template-columns:44px 1fr;gap:10px 14px}.row.nonum{grid-template-columns:1fr}
++  .row p{grid-column:2}.row.nonum p{grid-column:1}
++  .two,.help{grid-template-columns:1fr;gap:28px}
++}
+diff --git a/frontend/src/styles/redesign.css b/frontend/src/styles/redesign.css
+new file mode 100644
+index 0000000..1686dd9
+--- /dev/null
++++ b/frontend/src/styles/redesign.css
+@@ -0,0 +1,85 @@
++/* ===================================================================
++   MindCare — Redesign layer (light only). Loaded AFTER index.css, so it
++   re-skins every existing page through tokens + shared classes.
++   Logic, routes and data are untouched.
++   =================================================================== */
++:root{
++  --bg-primary:#FBF8F3; --bg-surface:#F4EFE7; --bg-surface-elevated:#FFFFFF;
++  --bg-glass:rgba(255,255,255,.78); --bg-glass-strong:rgba(255,255,255,.94); --bg-glass-card:#fff;
++  --text-primary:#1F2D27; --text-secondary:#44534C; --text-muted:#5E6E66; --text-subtle:#7A8A82;
++  --primary:#2F5D50; --primary-dark:#244A40; --primary-light:#EAF3EE;
++  --accent-forest:#2F5D50; --accent-leaf:#3B6E5F; --accent-mint:#4F8A76; --accent-sprout:#8FCBB0;
++  --accent-sage-soft:#EAF3EE;
++  --accent-lavender:#B3A2DB; --accent-lavender-soft:#F1EDFA; --accent-peach:#EDAE86; --accent-peach-soft:#FCF0E6;
++  --accent-sky:#8CBFE3; --accent-sky-soft:#EAF4FB;
++  --border-subtle:rgba(31,45,39,.12); --border-hover:rgba(31,45,39,.24);
++  --shadow-sm:0 1px 0 rgba(31,45,39,.04); --shadow-md:0 1px 0 rgba(31,45,39,.04),0 14px 30px -20px rgba(31,45,39,.4);
++  --shadow-lg:0 2px 0 rgba(31,45,39,.04),0 30px 60px -30px rgba(31,45,39,.45);
++  --radius-md:12px; --radius-lg:16px; --radius-xl:22px;
++  --font-display:"Fraunces Variable","Fraunces",Georgia,serif;
++  --font-sans:"Inter Variable","Inter",system-ui,sans-serif;
++  --ease:cubic-bezier(.22,.8,.3,1);
++}
++html,body{font-family:var(--font-sans);font-size:16.5px}
++h1,h2,h3,.nav-logo,.logo-text{font-family:var(--font-display)!important;font-weight:420;letter-spacing:-.02em;font-variation-settings:"opsz" 96}
++h1{line-height:1.05} h2{line-height:1.1}
++h4,h5,h6,button,input,select,textarea,label{font-family:var(--font-sans)}
++em{font-style:italic}
++
++/* cards: paper, hairline, no frosted-glass, no hover "lift" gimmick */
++.glass-card{background:#fff;border:1px solid var(--border-subtle);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);backdrop-filter:none}
++.glass-card:hover{border-color:var(--border-hover);box-shadow:var(--shadow-lg)}
++
++/* buttons */
++.btn-primary{background:var(--accent-forest)!important;box-shadow:0 10px 26px -12px rgba(47,93,80,.7)!important;font-weight:550;position:relative;overflow:hidden;letter-spacing:0}
++.btn-primary::before{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.28) 50%,transparent 70%);transform:translateX(-120%);transition:transform .9s ease;pointer-events:none}
++.btn-primary:hover::before{transform:translateX(120%)}
++.btn-primary:hover{background:var(--primary-dark)!important}
++.btn-ghost{background:rgba(255,255,255,.6);font-weight:550}
++.btn-ghost:hover{background:#fff}
++.input-field{border-radius:12px;box-shadow:none;border:1px solid var(--border-subtle)}
++.input-field:focus{border-color:var(--accent-forest);box-shadow:0 0 0 4px rgba(47,93,80,.12)}
++.sanctuary-chip{border-radius:999px}
++.sanctuary-modal-card{border-radius:20px}
++.sanctuary-modal-overlay{background:rgba(31,45,39,.28)}
++
++/* navbar: text tabs with a sliding underline (no pill buttons) */
++.sanctuary-nav{background:rgba(251,248,243,.88);height:66px}
++.nav-logo{font-size:1.4rem;font-weight:600}.logo-sparkle{display:none}
++.nav-link{border-radius:0;padding:8px 12px;font-weight:500;font-size:.9rem;color:var(--text-secondary);background:none!important;border:0!important;position:relative}
++.nav-link::after{content:"";position:absolute;left:12px;right:12px;bottom:3px;height:1.5px;background:var(--accent-forest);transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease)}
++.nav-link:hover::after,.nav-link.active::after{transform:scaleX(1)}
++.nav-link.active{color:var(--text-primary);font-weight:600}
++.footer-logo{font-family:var(--font-display)}
++.sanctuary-footer{background:var(--bg-surface)}
++
++/* editorial section helper used by redesigned pages */
++.eyebrow{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-forest);font-weight:600}
++.arrow-link{font-weight:550;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:2px;display:inline-flex;gap:8px;transition:gap .3s var(--ease);color:var(--text-primary)}
++.arrow-link:hover{gap:14px}
++.rd-rows{border-top:1px solid var(--border-subtle)}
++.rd-row{display:grid;grid-template-columns:1fr auto auto;gap:18px;align-items:center;padding:22px 4px;border-bottom:1px solid var(--border-subtle);text-decoration:none;color:inherit;transition:padding .35s var(--ease),background .35s}
++.rd-row:hover{padding-left:16px;background:linear-gradient(90deg,rgba(191,230,209,.35),transparent)}
++.rd-row b{font-family:var(--font-display);font-weight:450;font-size:1.3rem;letter-spacing:-.01em;display:block;color:var(--text-primary)}
++.rd-row span.sub{color:var(--text-muted);font-size:.95rem}
++
++/* ============ ADMIN — "desk": cooler stationery palette, ledger rules ============ */
++body[data-portal="admin"]{--bg-primary:#F2F4F3;--bg-surface:#E9EEEC;--accent-forest:#3B5B7A;--primary:#3B5B7A;--primary-dark:#2D4862;--accent-leaf:#47698A;--accent-mint:#47698A;--accent-sage-soft:#E3EBF2;--text-primary:#17201C;--border-subtle:rgba(23,32,28,.16)}
++body[data-portal="admin"],body[data-portal="admin"] #root{background:
++  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .1  0 0 0 0 .15  0 0 0 0 .13  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),linear-gradient(180deg,#F5F7F6,#F2F4F3)}
++body[data-portal="admin"] .glass-card,body[data-portal="admin"] .admin-kpi-card{border-radius:4px;box-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 18px 30px -24px rgba(23,32,28,.5);background:#FBFCFB}
++body[data-portal="admin"] .btn-primary{border-radius:6px;background:#17201C!important;box-shadow:none!important}
++body[data-portal="admin"] .btn-ghost{border-radius:6px;background:#fff}
++body[data-portal="admin"] .input-field{border-radius:6px}
++
++/* ============ THERAPIST — calm sage workspace ============ */
++body[data-portal="therapist"]{--bg-primary:#F6F7F2}
++body[data-portal="therapist"] #root{background:radial-gradient(60% 40% at 100% 0%,rgba(191,230,209,.45),transparent 70%),#F6F7F2}
++
++@media (prefers-reduced-motion:reduce){.btn-primary::before{display:none}.rd-row,.arrow-link{transition:none}}
++.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
++.num{font-variant-numeric:tabular-nums}.muted{color:var(--text-muted)}.small{font-size:.9rem}
++.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
++.num{font-variant-numeric:tabular-nums}.muted{color:var(--text-muted)}.small{font-size:.9rem}
++.ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--border-subtle);padding-bottom:10px;margin-bottom:22px}.ph h2{font-size:1.45rem;font-weight:450}
++.bubbles{position:absolute;inset:0;width:100%;height:100%;touch-action:none}

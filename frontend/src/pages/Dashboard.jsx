@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import CalmBrainHero from '../components/three/CalmBrainHero';
+import TiltCard from '../components/common/TiltCard';
+import { Api } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getQuoteOfDay } from '../services/quotes';
@@ -19,6 +22,33 @@ export default function Dashboard() {
   const { user } = useAuth();
   const quote = getQuoteOfDay();
 
+    const [selectedMood, setSelectedMood] = useState(null);
+  const [moodSavedNotice, setMoodSavedNotice] = useState('');
+
+  const MOOD_BLOBS = [
+    { id: 'steady', label: 'Steady', score: 5, className: 'mood-blob-1' },
+    { id: 'calm', label: 'Calm', score: 4, className: 'mood-blob-2' },
+    { id: 'reflective', label: 'Reflective', score: 3, className: 'mood-blob-3' },
+    { id: 'fatigued', label: 'Fatigued', score: 2, className: 'mood-blob-4' },
+    { id: 'overloaded', label: 'Overloaded', score: 1, className: 'mood-blob-5' }
+  ];
+
+  const handleSelectMood = async (item) => {
+    setSelectedMood(item.id);
+    try {
+      await Api.logMood({
+        mood_score: item.score,
+        tags: [item.label],
+        note: `Dashboard check-in: ${item.label}`
+      });
+      setMoodSavedNotice(`Emotional rhythm noted: ${item.label}`);
+      setTimeout(() => setMoodSavedNotice(''), 3500);
+    } catch (_) {
+      setMoodSavedNotice(`Emotional rhythm noted: ${item.label}`);
+      setTimeout(() => setMoodSavedNotice(''), 3500);
+    }
+  };
+
   const [dailyPlan, setDailyPlan] = useState([]);
   const [insights, setInsights] = useState([]);
   const [routines, setRoutines] = useState([]);
@@ -30,6 +60,7 @@ export default function Dashboard() {
   const [activeLiveSession, setActiveLiveSession] = useState(null);
   const [assessment, setAssessment] = useState(() => Storage.get('mindcare_assessment_result', null));
   const latestBand = assessment ? getBandForScore(assessment.totalScore) : null;
+  const nextUpcomingSession = mySessions.find(s => ['confirmed', 'assigned', 'requested'].includes(s.status)) || null;
   const therapistRec = assessment?.ai_analysis?.recommendedTherapy ? {
     category: assessment.ai_analysis.recommendedSpecialist || latestBand?.recommendedTherapist?.category,
     subtitle: assessment.ai_analysis.recommendedTherapy,

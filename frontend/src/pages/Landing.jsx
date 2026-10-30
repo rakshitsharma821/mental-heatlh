@@ -1,20 +1,31 @@
 // ============================================
 // MindCare Sanctuary — Redesigned Light-Theme Landing Page
 // Featuring:
-// 1. Calm 3D Brain Hero (Dual hemispheres, cerebellum, stem, domain-warped gyri, thought pulses)
-// 2. 9s Autonomic Breathing Cycle with synchronized pacing caption
-// 3. Responsive Hero Layout:
-//    - Desktop (1440px): Headline & CTAs on left, 3D Brain on right
-//    - Mobile (390px): 3D Brain positioned above headline, sized gracefully without clipping
-// 4. Interactive Story: How It Works, 4 Sanctuary Pillars in 3D-tilt cards, Verified Clinicians, Zero-Trust Architecture
-// 5. High-contrast typography (Inter & Outfit), WCAG AA compliance, pure SVG icons (Zero emoji icons)
+// 1. Interactive 3D Brain Hero (three.js) with ScrollTrigger scrubbed transition:
+//    Starts "busy" (noisy warm peach glow) -> settles to "calm" (gentle sage/sky breathing)
+// 2. Faint topographic contour lines drifting slowly in background
+// 3. Unhurried scroll story:
+//    - Hero (headline + 2 CTAs left, 3D brain right)
+//    - Beat 1: The Problem ("A busy mind")
+//    - Beat 2: The Sanctuary Approach ("One slow breath")
+//    - Beat 3: Four Sanctuary Feature Cards (in scratch-built 3D TiltCards)
+//    - Beat 4: Crisis-Support Strip (emergency helplines with clickable tel links)
+//    - Beat 5: Final Call to Action
+// 4. Strict light theme, WCAG AA compliance, zero emoji/pyramid ornaments
 // ============================================
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Link } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 import { useAuth } from '../context/AuthContext';
 import TiltCard from '../components/common/TiltCard';
-import { theme } from '../styles/theme';
+import MagneticButton from '../components/common/MagneticButton';
+import TopographicContourBackground from '../components/common/TopographicContourBackground';
 import { UI_STRINGS } from '../config/strings';
 
 // Lazy-load the Three.js Calm Brain Hero
@@ -22,119 +33,162 @@ const CalmBrainHero = React.lazy(() => import('../components/three/CalmBrainHero
 
 export default function Landing() {
   const { user } = useAuth();
+  const [calmProgress, setCalmProgress] = useState(0.0);
 
-  // Scroll reveal observer
-  const [revealedSections, setRevealedSections] = useState({
-    steps: false,
+  // Section references for scroll reveal
+  const storyRef = useRef(null);
+  const problemRef = useRef(null);
+  const breathRef = useRef(null);
+  const featuresRef = useRef(null);
+  const crisisRef = useRef(null);
+  const finalCtaRef = useRef(null);
+
+  const [revealed, setRevealed] = useState({
+    problem: false,
+    breath: false,
     features: false,
-    sessionFlow: false,
-    privacy: false
+    crisis: false,
+    finalCta: false
   });
 
-  const stepsRef = useRef(null);
-  const featuresRef = useRef(null);
-  const sessionFlowRef = useRef(null);
-  const privacyRef = useRef(null);
-
+  // GSAP ScrollTrigger to scrub 3D brain from busy (0.0) to calm (1.0)
   useEffect(() => {
-    // Scroll reveal observer for story sections
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const sectionKey = entry.target.getAttribute('data-section');
-          if (sectionKey) {
-            setRevealedSections(prev => ({ ...prev, [sectionKey]: true }));
-          }
+    let trigger = null;
+    try {
+      trigger = ScrollTrigger.create({
+        trigger: '.landing-page',
+        start: 'top top',
+        end: '75% bottom',
+        scrub: 0.6,
+        onUpdate: (self) => {
+          // As user begins scrolling, smoothly transition from busy (0.0) to calm (1.0)
+          const p = Math.min(1.0, Math.max(0.0, self.progress * 2.2));
+          setCalmProgress(Number(p.toFixed(3)));
         }
       });
-    }, { threshold: 0.15 });
-
-    if (stepsRef.current) observer.observe(stepsRef.current);
-    if (featuresRef.current) observer.observe(featuresRef.current);
-    if (sessionFlowRef.current) observer.observe(sessionFlowRef.current);
-    if (privacyRef.current) observer.observe(privacyRef.current);
+    } catch (_) {
+      // Fallback: window scroll listener
+      const handleScroll = () => {
+        const scrolled = window.scrollY;
+        const maxScroll = 600;
+        const p = Math.min(1.0, scrolled / maxScroll);
+        setCalmProgress(Number(p.toFixed(3)));
+      };
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
 
     return () => {
-      observer.disconnect();
+      if (trigger) trigger.kill();
     };
   }, []);
 
+  // IntersectionObserver for calm scroll story reveals (400-800ms unhurried easing)
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const key = entry.target.getAttribute('data-reveal');
+          if (key) {
+            setRevealed(prev => ({ ...prev, [key]: true }));
+          }
+        }
+      });
+    }, { threshold: 0.18 });
+
+    const refs = [problemRef, breathRef, featuresRef, crisisRef, finalCtaRef];
+    refs.forEach(r => {
+      if (r.current) observer.observe(r.current);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="landing-page" style={{ position: 'relative', overflowX: 'hidden', backgroundColor: 'var(--bg-primary)' }}>
-      {/* ── 1. HERO SECTION (CALM 3D BRAIN + CONFIDENT TYPOGRAPHY) ── */}
+    <div className="landing-page" style={{ position: 'relative', overflowX: 'hidden', backgroundColor: 'var(--bg-primary, #faf9f5)' }}>
+      {/* Faint ambient topographic contour lines drifting in background */}
+      <TopographicContourBackground />
+
+      {/* ── 1. HERO SECTION (HEADLINE & 2 CTAs LEFT, 3D BRAIN RIGHT) ── */}
       <section className="hero-section" style={{
-        minHeight: '88vh',
+        minHeight: '90vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '54px 24px 36px',
+        padding: '56px 24px 40px',
         position: 'relative',
-        background: 'radial-gradient(ellipse at 70% 30%, rgba(116, 198, 157, 0.18) 0%, rgba(157, 132, 183, 0.14) 35%, rgba(250, 249, 245, 0.96) 75%)'
+        zIndex: 1
       }}>
-        <div className="hero-grid-container">
-          {/* Hero Left / Bottom on mobile: Big confident typography & CTAs */}
-          <div className="hero-text-col">
+        <div className="hero-grid-container" style={{
+          maxWidth: '1360px',
+          width: '100%',
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: '1.08fr 0.92fr',
+          gap: '40px',
+          alignItems: 'center'
+        }}>
+          {/* Hero Left: Large airy typography & CTAs */}
+          <div className="hero-text-col" style={{ zIndex: 2 }}>
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '7px 18px',
-              background: 'var(--accent-sage-soft)',
-              border: '1px solid rgba(82, 183, 136, 0.3)',
+              padding: '8px 20px',
+              background: 'var(--accent-sage-soft, #eaf4ee)',
+              border: '1px solid rgba(82, 183, 136, 0.28)',
               borderRadius: 'var(--radius-full)',
-              fontSize: '0.84rem',
+              fontSize: '0.86rem',
               fontWeight: 600,
-              color: 'var(--accent-forest)',
-              marginBottom: '24px'
+              color: 'var(--accent-forest, #245741)',
+              marginBottom: '26px'
             }}>
-              <svg width="1.1em" height="1.1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-0.15em', flexShrink: 0, color: 'var(--accent-leaf)' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-leaf)' }}>
                 <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
               </svg>
               <span>{UI_STRINGS.hero?.badge || 'Confidential Mental Wellness Sanctuary'}</span>
             </div>
 
             <h1 style={{
-              fontSize: 'clamp(2.6rem, 5.2vw, 4.2rem)',
+              fontSize: 'clamp(2.7rem, 5.2vw, 4.3rem)',
+              fontFamily: "'Outfit', sans-serif",
               fontWeight: 800,
-              lineHeight: 1.15,
-              marginBottom: '22px',
+              lineHeight: 1.14,
+              marginBottom: '24px',
               letterSpacing: '-0.025em',
-              color: 'var(--text-primary)'
+              color: 'var(--text-primary, #1a2e22)'
             }}>
               {UI_STRINGS.hero?.titleLine1 || 'Heal slowly.'}<br />
-              <span style={{
-                background: 'linear-gradient(135deg, var(--accent-forest) 10%, var(--accent-leaf) 55%, var(--accent-mint) 90%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}>
+              <span style={{ color: 'var(--accent-leaf, #357255)' }}>
                 {UI_STRINGS.hero?.titleLine2 || 'Rise stronger.'}
               </span>
             </h1>
 
             <p style={{
-              fontSize: '1.12rem',
-              color: 'var(--text-secondary)',
+              fontSize: '1.14rem',
+              color: 'var(--text-secondary, #2d4a3e)',
               lineHeight: 1.75,
-              marginBottom: '34px',
-              maxWidth: '520px'
+              marginBottom: '36px',
+              maxWidth: '540px'
             }}>
               {UI_STRINGS.hero?.subtext || 'An unhurried space for mindful breathwork, emotional rhythm tracking, and gentle cognitive reflection. Free of judgment, ads, and surveillance.'}
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-              <Link
-                to={user ? "/dashboard" : "/register"}
-                className="btn-primary"
-                style={{ padding: '15px 34px', fontSize: '1rem' }}
-              >
-                {user ? (UI_STRINGS.hero?.ctaDashboard || 'Open Your Dashboard →') : (UI_STRINGS.hero?.ctaRegister || 'Begin Sanctuary Journey →')}
+              <Link to={user ? "/dashboard" : "/register"} style={{ textDecoration: 'none' }}>
+                <MagneticButton
+                  className="btn-primary"
+                  style={{ padding: '16px 36px', fontSize: '1rem', minHeight: '48px' }}
+                >
+                  <span>{user ? (UI_STRINGS.hero?.ctaDashboard || 'Open Your Dashboard →') : (UI_STRINGS.hero?.ctaRegister || 'Begin Sanctuary Journey →')}</span>
+                </MagneticButton>
               </Link>
               <Link
                 to="/breathing"
                 className="btn-ghost"
-                style={{ padding: '14px 28px', fontSize: '0.98rem' }}
+                style={{ padding: '15px 28px', fontSize: '0.96rem', minHeight: '48px' }}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
                   <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
                 </svg>
                 <span>{UI_STRINGS.hero?.ctaBreathing || '3D Breathwork'}</span>
@@ -142,8 +196,8 @@ export default function Landing() {
             </div>
 
             {/* Privacy Guarantee Note */}
-            <div style={{ marginTop: '34px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-forest)', flexShrink: 0 }}>
+            <div style={{ marginTop: '36px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-forest)', flexShrink: 0 }}>
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
@@ -151,190 +205,109 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Hero Right / Top on mobile: Calm 3D Brain Hero */}
-          <div className="hero-brain-col">
+          {/* Hero Right: Interactive 3D Brain Hero (Three.js) */}
+          <div className="hero-brain-col" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
             <Suspense fallback={
               <div style={{ width: '100%', height: '480px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div className="loader-spinner" />
+                <div className="sanctuary-loader-rings" style={{ width: '60px', height: '60px' }}>
+                  <div className="loader-ring ring-1" />
+                </div>
               </div>
             }>
-              <CalmBrainHero />
+              <CalmBrainHero calmProgress={calmProgress} />
             </Suspense>
           </div>
         </div>
       </section>
 
-      {/* ── 2. SCROLL STORY: HOW IT WORKS (ANIMATED CONNECTORS) ── */}
+      {/* ── 2. SCROLL STORY: BEAT 1 — THE PROBLEM ("A BUSY MIND") ── */}
       <section
-        ref={stepsRef}
-        data-section="steps"
+        ref={problemRef}
+        data-reveal="problem"
         style={{
-          maxWidth: '1280px',
+          maxWidth: '1240px',
           margin: '0 auto',
-          padding: '70px 24px 60px',
-          opacity: revealedSections.steps ? 1 : 0.2,
-          transform: revealedSections.steps ? 'translateY(0)' : 'translateY(32px)',
-          transition: 'all 0.8s cubic-bezier(0.2, 0, 0.2, 1)'
+          padding: '80px 24px 60px',
+          opacity: revealed.problem ? 1 : 0.25,
+          transform: revealed.problem ? 'translateY(0)' : 'translateY(28px)',
+          transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
+          position: 'relative',
+          zIndex: 1
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '52px' }}>
-          <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--accent-forest)', fontWeight: 700 }}>
-            {UI_STRINGS.landing?.flowBadge || 'Mindful Flow'}
-          </span>
-          <h2 style={{ fontSize: 'clamp(2rem, 3.8vw, 2.8rem)', marginTop: '8px', color: 'var(--text-primary)', fontWeight: 800 }}>
-            {UI_STRINGS.landing?.flowTitle || 'How MindCare Works'}
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '580px', margin: '12px auto 0', fontSize: '1.02rem', lineHeight: 1.6 }}>
-            {UI_STRINGS.landing?.flowSubtitle || 'A calm, 3-step rhythm designed to meet young adults wherever they are today.'}
-          </p>
-        </div>
-
-        {/* 3 Step Cards with Animated Connector Lines */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
-          gap: '30px',
-          position: 'relative'
+        <div className="sanctuary-card-elevated" style={{
+          padding: '52px 44px',
+          borderLeft: '4px solid var(--accent-peach, #e99a80)',
+          background: '#ffffff'
         }}>
-          {/* Step 1 */}
-          <TiltCard style={{ height: '100%' }}>
-            <div className="glass-card" style={{
-              height: '100%',
-              padding: '36px 30px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              borderRadius: 'var(--radius-lg)'
-            }}>
-              <div>
-                <div style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '12px',
-                  background: 'var(--accent-sage-soft)',
-                  color: 'var(--accent-forest)',
-                  fontSize: '1.25rem',
-                  fontWeight: 800,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '20px'
-                }}>
-                  01
-                </div>
-                <h3 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', marginBottom: '10px' }}>
-                  {UI_STRINGS.landing?.step1Title || '2-Minute Self-Reflection'}
-                </h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                  {UI_STRINGS.landing?.step1Desc || 'Answer a fixed, non-clinical 8-question pulse. MindCare tunes your recommended breathing patterns, focus games, and soothing soundscapes without diagnostic labels.'}
-                </p>
-              </div>
-              <div style={{ marginTop: '24px', fontSize: '0.84rem', fontWeight: 600, color: 'var(--accent-forest)' }}>
-                {UI_STRINGS.landing?.step1Footer || 'Step 1 of Sanctuary Flow →'}
-              </div>
-            </div>
-          </TiltCard>
-
-          {/* Step 2 */}
-          <TiltCard style={{ height: '100%' }}>
-            <div className="glass-card" style={{
-              height: '100%',
-              padding: '36px 30px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              borderRadius: 'var(--radius-lg)',
-              borderTop: '3px solid var(--accent-lavender)'
-            }}>
-              <div>
-                <div style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '12px',
-                  background: 'var(--accent-lavender-soft)',
-                  color: 'var(--accent-lavender-dark)',
-                  fontSize: '1.25rem',
-                  fontWeight: 800,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '20px'
-                }}>
-                  02
-                </div>
-                <h3 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', marginBottom: '10px' }}>
-                  {UI_STRINGS.landing?.step2Title || 'Tailored Daily Rhythms'}
-                </h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                  {UI_STRINGS.landing?.step2Desc || 'Engage in 3D pacing breathwork, tactile Zen gardening, and encrypted reflective journaling. Your digital twin gently responds to every mindful pause.'}
-                </p>
-              </div>
-              <div style={{ marginTop: '24px', fontSize: '0.84rem', fontWeight: 600, color: 'var(--accent-lavender-dark)' }}>
-                {UI_STRINGS.landing?.step2Footer || 'Step 2 of Sanctuary Flow →'}
-              </div>
-            </div>
-          </TiltCard>
-
-          {/* Step 3 */}
-          <TiltCard style={{ height: '100%' }}>
-            <div className="glass-card" style={{
-              height: '100%',
-              padding: '36px 30px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              borderRadius: 'var(--radius-lg)',
-              borderTop: '3px solid var(--accent-peach)'
-            }}>
-              <div>
-                <div style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '12px',
-                  background: 'var(--accent-peach-soft)',
-                  color: 'var(--accent-peach-dark)',
-                  fontSize: '1.25rem',
-                  fontWeight: 800,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '20px'
-                }}>
-                  03
-                </div>
-                <h3 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', marginBottom: '10px' }}>
-                  {UI_STRINGS.landing?.step3Title || 'Companion & Clinical Care'}
-                </h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                  {UI_STRINGS.landing?.step3Desc || 'Talk with Aria, our non-judgmental AI companion, or request a 1-on-1 consultation with verified psychologists and psychiatrists whenever deeper human support is needed.'}
-                </p>
-              </div>
-              <div style={{ marginTop: '24px', fontSize: '0.84rem', fontWeight: 600, color: 'var(--accent-peach-dark)' }}>
-                {UI_STRINGS.landing?.step3Footer || 'Step 3 of Sanctuary Flow →'}
-              </div>
-            </div>
-          </TiltCard>
+          <div style={{ maxWidth: '780px' }}>
+            <span style={{ fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '2.5px', color: 'var(--accent-peach-dark, #c26d52)', fontWeight: 700 }}>
+              The Problem We Face
+            </span>
+            <h2 style={{ fontSize: 'clamp(2rem, 3.6vw, 2.7rem)', marginTop: '10px', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 700 }}>
+              A busy mind.
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.08rem', lineHeight: 1.8, marginTop: '16px' }}>
+              Relentless notification streams, academic and career benchmarks, and constant ambient noise leave our nervous systems trapped in perpetual low-grade emergency. We try to think our way out of mental friction, but the brain needs space—not more input.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* ── 3. SANCTUARY CORE PILLARS (3D TILT CARDS) ── */}
+      {/* ── 3. SCROLL STORY: BEAT 2 — THE SANCTUARY APPROACH ("ONE SLOW BREATH") ── */}
+      <section
+        ref={breathRef}
+        data-reveal="breath"
+        style={{
+          maxWidth: '1240px',
+          margin: '0 auto',
+          padding: '30px 24px 70px',
+          opacity: revealed.breath ? 1 : 0.25,
+          transform: revealed.breath ? 'translateY(0)' : 'translateY(28px)',
+          transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
+          position: 'relative',
+          zIndex: 1
+        }}
+      >
+        <div className="sanctuary-card-elevated" style={{
+          padding: '52px 44px',
+          borderLeft: '4px solid var(--accent-leaf, #357255)',
+          background: '#ffffff'
+        }}>
+          <div style={{ maxWidth: '780px' }}>
+            <span style={{ fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '2.5px', color: 'var(--accent-forest, #245741)', fontWeight: 700 }}>
+              The Sanctuary Approach
+            </span>
+            <h2 style={{ fontSize: 'clamp(2rem, 3.6vw, 2.7rem)', marginTop: '10px', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 700 }}>
+              One slow breath.
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.08rem', lineHeight: 1.8, marginTop: '16px' }}>
+              MindCare is an unhurried, pressure-free sanctuary. No streaks to lose, no public leaderboards, and zero unsolicited advice. Just tactile grounding tools, private journaling defended with AES-256 encryption, and compassionate human support when you choose to seek it.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 4. SCROLL STORY: BEAT 3 — FOUR SANCTUARY FEATURE CARDS ── */}
       <section
         ref={featuresRef}
-        data-section="features"
+        data-reveal="features"
         style={{
           maxWidth: '1280px',
           margin: '0 auto',
-          padding: '60px 24px',
-          opacity: revealedSections.features ? 1 : 0.2,
-          transform: revealedSections.features ? 'translateY(0)' : 'translateY(32px)',
-          transition: 'all 0.8s cubic-bezier(0.2, 0, 0.2, 1)'
+          padding: '30px 24px 80px',
+          opacity: revealed.features ? 1 : 0.25,
+          transform: revealed.features ? 'translateY(0)' : 'translateY(28px)',
+          transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
+          position: 'relative',
+          zIndex: 1
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '52px' }}>
-          <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--accent-forest)', fontWeight: 700 }}>
+        <div style={{ textAlign: 'center', marginBottom: '46px' }}>
+          <span style={{ fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--accent-forest)', fontWeight: 700 }}>
             {UI_STRINGS.landing?.coreBadge || 'Sanctuary Core'}
           </span>
-          <h2 style={{ fontSize: 'clamp(2rem, 3.8vw, 2.8rem)', marginTop: '8px', color: 'var(--text-primary)', fontWeight: 800 }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 3.6vw, 2.8rem)', marginTop: '8px', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 800 }}>
             {UI_STRINGS.landing?.coreTitle || 'Gentle Tools for Daily Renewal'}
           </h2>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '580px', margin: '12px auto 0', fontSize: '1.02rem', lineHeight: 1.6 }}>
@@ -347,41 +320,65 @@ export default function Landing() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           gap: '26px'
         }}>
-          {/* Pillar 1 */}
+          {/* Card 1: 3D Guided Breathwork */}
           <TiltCard>
-            <div className="glass-card feature-hover-card" style={{ height: '100%' }}>
-              <div className="feature-icon-badge">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
-                </svg>
+            <div className="sanctuary-card-elevated" style={{ height: '100%', padding: '34px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '14px',
+                  background: 'var(--accent-sage-soft)',
+                  color: 'var(--accent-forest)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '20px'
+                }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
+                  </svg>
+                </div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 700 }}>
+                  {UI_STRINGS.landing?.pillar1Title || '3D Guided Breathwork'}
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.94rem', lineHeight: 1.68 }}>
+                  {UI_STRINGS.landing?.pillar1Desc || 'A calming procedural brain and responsive rhythm orb that expands and contracts with your natural respiratory cycles.'}
+                </p>
               </div>
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontWeight: 700 }}>
-                {UI_STRINGS.landing?.pillar1Title || '3D Guided Breathwork'}
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                {UI_STRINGS.landing?.pillar1Desc || 'A calming procedural brain and responsive rhythm orb that expands and contracts with your natural respiratory cycles.'}
-              </p>
-              <Link to="/breathing" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '18px', color: 'var(--accent-forest)', fontWeight: 600, fontSize: '0.88rem' }}>
+              <Link to="/breathing" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '22px', color: 'var(--accent-forest)', fontWeight: 600, fontSize: '0.9rem' }}>
                 <span>{UI_STRINGS.landing?.pillar1Cta || 'Begin Breathwork →'}</span>
               </Link>
             </div>
           </TiltCard>
 
-          {/* Pillar 2 */}
+          {/* Card 2: Aria Care Companion */}
           <TiltCard>
-            <div className="glass-card feature-hover-card" style={{ height: '100%' }}>
-              <div className="feature-icon-badge" style={{ background: 'var(--accent-lavender-soft)', color: 'var(--accent-lavender-dark)' }}>
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
+            <div className="sanctuary-card-elevated" style={{ height: '100%', padding: '34px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '14px',
+                  background: 'var(--accent-lavender-soft)',
+                  color: 'var(--accent-lavender-dark)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '20px'
+                }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 700 }}>
+                  {UI_STRINGS.landing?.pillar2Title || 'Aria Care Companion'}
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.94rem', lineHeight: 1.68 }}>
+                  {UI_STRINGS.landing?.pillar2Desc || 'A warm, grounded wellness friend governed by strict safe-language rules. Aria never diagnoses, never echoes negative triggers, and offers calm guidance.'}
+                </p>
               </div>
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontWeight: 700 }}>
-                {UI_STRINGS.landing?.pillar2Title || 'Aria Care Companion'}
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                {UI_STRINGS.landing?.pillar2Desc || 'A warm, grounded wellness friend governed by strict safe-language rules. Aria never diagnoses, never echoes negative triggers, and offers calm guidance.'}
-              </p>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '18px', color: 'var(--accent-lavender-dark)', fontWeight: 600, fontSize: '0.88rem' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '22px', color: 'var(--accent-lavender-dark)', fontWeight: 600, fontSize: '0.9rem' }}>
                 <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
                 </svg>
@@ -390,282 +387,192 @@ export default function Landing() {
             </div>
           </TiltCard>
 
-          {/* Pillar 3 */}
+          {/* Card 3: Encrypted Journal */}
           <TiltCard>
-            <div className="glass-card feature-hover-card" style={{ height: '100%' }}>
-              <div className="feature-icon-badge" style={{ background: 'var(--accent-peach-soft)', color: 'var(--accent-peach-dark)' }}>
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
+            <div className="sanctuary-card-elevated" style={{ height: '100%', padding: '34px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '14px',
+                  background: 'var(--accent-peach-soft)',
+                  color: 'var(--accent-peach-dark)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '20px'
+                }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                </div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 700 }}>
+                  {UI_STRINGS.landing?.pillar3Title || 'Encrypted Journal'}
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.94rem', lineHeight: 1.68 }}>
+                  {UI_STRINGS.landing?.pillar3Desc || 'A private shelter for unfiltered reflection. Thought logs are defended with authenticated AES-256-GCM encryption before storage.'}
+                </p>
               </div>
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontWeight: 700 }}>
-                {UI_STRINGS.landing?.pillar3Title || 'Encrypted Journal'}
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                {UI_STRINGS.landing?.pillar3Desc || 'A private shelter for unfiltered reflection. Thought logs are defended with authenticated AES-256-GCM encryption before storage.'}
-              </p>
-              <Link to="/journal" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '18px', color: 'var(--accent-peach-dark)', fontWeight: 600, fontSize: '0.88rem' }}>
+              <Link to="/journal" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '22px', color: 'var(--accent-peach-dark)', fontWeight: 600, fontSize: '0.9rem' }}>
                 <span>{UI_STRINGS.landing?.pillar3Cta || 'Open Private Journal →'}</span>
               </Link>
             </div>
           </TiltCard>
 
-          {/* Pillar 4 */}
+          {/* Card 4: Licensed Clinicians */}
           <TiltCard>
-            <div className="glass-card feature-hover-card" style={{ height: '100%' }}>
-              <div className="feature-icon-badge crisis-badge">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
+            <div className="sanctuary-card-elevated" style={{ height: '100%', padding: '34px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '14px',
+                  background: 'var(--accent-sky-soft)',
+                  color: 'var(--accent-sky-dark)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '20px'
+                }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 700 }}>
+                  Verified Clinicians
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.94rem', lineHeight: 1.68 }}>
+                  When self-reflection calls for professional human guidance, schedule confidential video consultations with verified psychologists and psychiatrists.
+                </p>
               </div>
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', color: 'var(--text-primary)', fontWeight: 700 }}>
-                {UI_STRINGS.landing?.pillar4Title || 'Crisis Lifeline & Safety Plan'}
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                Zero-barrier emergency helplines (<a href="tel:14416" style={{ color: '#b91c1c', fontWeight: 700, textDecoration: 'underline' }}>Tele-MANAS: 14416</a>, <a href="tel:988" style={{ color: '#b91c1c', fontWeight: 700, textDecoration: 'underline' }}>Lifeline: 988</a>) and an interactive 5-step digital safety plan that functions independently of all other systems.
-              </p>
-              <Link to="/crisis" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '18px', color: 'var(--color-error-text)', fontWeight: 700, fontSize: '0.88rem' }}>
-                <span>{UI_STRINGS.landing?.pillar4Cta || 'Immediate Lifeline →'}</span>
+              <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '22px', color: 'var(--accent-sky-dark)', fontWeight: 600, fontSize: '0.9rem' }}>
+                <span>Explore Consultations →</span>
               </Link>
             </div>
           </TiltCard>
         </div>
       </section>
 
-      {/* ── 4. HOW A SESSION HAPPENS (HONEST, DATA-FREE SESSION LIFECYCLE) ── */}
+      {/* ── 5. SCROLL STORY: BEAT 4 — CRISIS-SUPPORT STRIP ── */}
       <section
-        id="session-flow-section"
-        ref={sessionFlowRef}
-        data-section="sessionFlow"
+        ref={crisisRef}
+        data-reveal="crisis"
         style={{
-          maxWidth: '1280px',
+          maxWidth: '1240px',
           margin: '0 auto',
-          padding: '60px 24px',
-          opacity: revealedSections.sessionFlow ? 1 : 0.2,
-          transform: revealedSections.sessionFlow ? 'translateY(0)' : 'translateY(32px)',
-          transition: 'all 0.8s cubic-bezier(0.2, 0, 0.2, 1)'
+          padding: '20px 24px 60px',
+          opacity: revealed.crisis ? 1 : 0.25,
+          transform: revealed.crisis ? 'translateY(0)' : 'translateY(28px)',
+          transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
+          position: 'relative',
+          zIndex: 1
         }}
       >
         <div style={{
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(246, 248, 244, 0.92))',
-          borderRadius: 'var(--radius-xl)',
-          padding: '54px 40px',
-          border: '1px solid var(--border-subtle)',
-          boxShadow: 'var(--shadow-sm)'
+          background: 'var(--color-error-soft, #fdebee)',
+          border: '1px solid rgba(239, 68, 68, 0.28)',
+          borderRadius: '24px',
+          padding: '32px 36px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '24px'
         }}>
-          {/* Section Header */}
-          <div style={{ maxWidth: '680px', marginBottom: '46px' }}>
-            <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '2.5px', color: 'var(--accent-forest)', fontWeight: 700 }}>
-              {UI_STRINGS.sessionFlow?.heading || 'How a session happens'}
-            </span>
-            <h2 style={{ fontSize: 'clamp(1.9rem, 3.4vw, 2.6rem)', marginTop: '8px', color: 'var(--text-primary)', fontWeight: 800 }}>
-              {UI_STRINGS.sessionFlow?.heading || 'How a session happens'}
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '1.02rem', marginTop: '10px', lineHeight: 1.65 }}>
-              {UI_STRINGS.sessionFlow?.subheading || 'A transparent, steady process designed around your schedule and comfort.'}
+          <div style={{ maxWidth: '640px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', fontWeight: 700, color: '#b91c1c', marginBottom: '8px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span>24/7 Immediate Crisis Assistance</span>
+            </div>
+            <h3 style={{ fontSize: '1.3rem', color: '#7f1d1d', fontFamily: "'Outfit', sans-serif", fontWeight: 700, margin: '4px 0 10px' }}>
+              You never have to carry deep distress alone.
+            </h3>
+            <p style={{ color: '#991b1b', fontSize: '0.94rem', lineHeight: 1.65 }}>
+              Free, confidential national mental health hotlines are standing by right now. Reach out anytime:
+              {' '}
+              <a href="tel:14416" style={{ color: '#7f1d1d', fontWeight: 700, textDecoration: 'underline' }}>Tele-MANAS: 14416</a>
+              {' • '}
+              <a href="tel:988" style={{ color: '#7f1d1d', fontWeight: 700, textDecoration: 'underline' }}>Lifeline: 988</a>
             </p>
           </div>
-
-          {/* 4 Steps in an open, calm editorial layout */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '32px',
-            marginBottom: '48px'
-          }}>
-            {/* Step 1 */}
-            <div style={{ padding: '8px 4px' }}>
-              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--accent-leaf)', letterSpacing: '1px', marginBottom: '12px' }}>
-                01
-              </div>
-              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '8px', lineHeight: 1.3 }}>
-                {UI_STRINGS.sessionFlow?.step1Title}
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                {UI_STRINGS.sessionFlow?.step1Desc}
-              </p>
-            </div>
-
-            {/* Step 2 */}
-            <div style={{ padding: '8px 4px' }}>
-              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--accent-lavender-dark)', letterSpacing: '1px', marginBottom: '12px' }}>
-                02
-              </div>
-              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '8px', lineHeight: 1.3 }}>
-                {UI_STRINGS.sessionFlow?.step2Title}
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                {UI_STRINGS.sessionFlow?.step2Desc}
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div style={{ padding: '8px 4px' }}>
-              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--accent-peach-dark)', letterSpacing: '1px', marginBottom: '12px' }}>
-                03
-              </div>
-              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '8px', lineHeight: 1.3 }}>
-                {UI_STRINGS.sessionFlow?.step3Title}
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                {UI_STRINGS.sessionFlow?.step3Desc}
-              </p>
-            </div>
-
-            {/* Step 4 */}
-            <div style={{ padding: '8px 4px' }}>
-              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--accent-sky-dark)', letterSpacing: '1px', marginBottom: '12px' }}>
-                04
-              </div>
-              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '8px', lineHeight: 1.3 }}>
-                {UI_STRINGS.sessionFlow?.step4Title}
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                {UI_STRINGS.sessionFlow?.step4Desc}
-              </p>
-            </div>
-          </div>
-
-          {/* Quiet line for professionals */}
-          <div style={{
-            paddingTop: '28px',
-            borderTop: '1px solid var(--border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '14px',
-            fontSize: '0.92rem',
-            color: 'var(--text-secondary)'
-          }}>
-            <div>
-              <span>{UI_STRINGS.sessionFlow?.professionalNoticePrompt}{' '}</span>
-              <Link
-                to="/register?role=therapist"
-                style={{
-                  color: 'var(--accent-forest)',
-                  fontWeight: 600,
-                  textDecoration: 'underline',
-                  textUnderlineOffset: '3px'
-                }}
-              >
-                {UI_STRINGS.sessionFlow?.professionalNoticeLink}
-              </Link>
-            </div>
-            <div style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
-              {UI_STRINGS.sessionFlow?.professionalNoticeGuarantee}
-            </div>
-          </div>
+          <Link
+            to="/crisis"
+            className="btn-primary"
+            style={{
+              background: '#b91c1c',
+              borderColor: '#991b1b',
+              padding: '12px 28px',
+              fontSize: '0.92rem',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <span>Open Safety Planner →</span>
+          </Link>
         </div>
       </section>
 
-      {/* ── 5. DATA SOVEREIGNTY & PRIVACY ETHICS ── */}
+      {/* ── 6. SCROLL STORY: BEAT 5 — FINAL CALL TO ACTION ── */}
       <section
-        ref={privacyRef}
-        data-section="privacy"
+        ref={finalCtaRef}
+        data-reveal="finalCta"
         style={{
-          maxWidth: '1280px',
+          maxWidth: '1240px',
           margin: '0 auto',
-          padding: '40px 24px 80px',
-          opacity: revealedSections.privacy ? 1 : 0.2,
-          transform: revealedSections.privacy ? 'translateY(0)' : 'translateY(32px)',
-          transition: 'all 0.8s cubic-bezier(0.2, 0, 0.2, 1)'
+          padding: '20px 24px 100px',
+          opacity: revealed.finalCta ? 1 : 0.25,
+          transform: revealed.finalCta ? 'translateY(0)' : 'translateY(28px)',
+          transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
+          position: 'relative',
+          zIndex: 1
         }}
       >
-        <div style={{
-          background: 'var(--bg-surface-elevated)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-xl)',
-          padding: '44px 36px',
-          boxShadow: 'var(--shadow-sm)'
+        <div className="sanctuary-card-elevated" style={{
+          padding: '64px 44px',
+          textAlign: 'center',
+          background: 'linear-gradient(180deg, #ffffff 0%, #f7faf7 100%)',
+          borderRadius: '28px'
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-            <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--accent-forest)', fontWeight: 700 }}>
-              {UI_STRINGS.landing?.privacyBadge || 'Zero-Trust Architecture'}
-            </span>
-            <h2 style={{ fontSize: 'clamp(1.8rem, 3.2vw, 2.4rem)', marginTop: '8px', color: 'var(--text-primary)', fontWeight: 800 }}>
-              {UI_STRINGS.landing?.privacyTitle || 'Your Mind, Your Sovereignty'}
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', maxWidth: '620px', margin: '10px auto 0', fontSize: '0.98rem', lineHeight: 1.6 }}>
-              {UI_STRINGS.landing?.privacySubtitle || 'MindCare was engineered from ground zero to uphold India’s Digital Personal Data Protection (DPDP) Act and international medical privacy standards.'}
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
-            <div style={{ padding: '22px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'var(--accent-sage-soft)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '14px',
-                color: 'var(--accent-forest)'
-              }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
-              </div>
-              <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '6px', fontWeight: 700 }}>
-                {UI_STRINGS.landing?.privacyItem1Title || 'Client-Side Encryption'}
-              </h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {UI_STRINGS.landing?.privacyItem1Desc || 'Journals and sensitive thoughts are scrambled on your device before transmission. No staff member can read your private reflections.'}
-              </p>
-            </div>
-
-            <div style={{ padding: '22px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'var(--accent-lavender-soft)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '14px',
-                color: 'var(--accent-lavender-dark)'
-              }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="m4.9 4.9 14.2 14.2" />
-                </svg>
-              </div>
-              <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '6px', fontWeight: 700 }}>
-                {UI_STRINGS.landing?.privacyItem2Title || 'Zero Ad Monetization'}
-              </h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {UI_STRINGS.landing?.privacyItem2Desc || 'No tracking pixels, third-party brokers, or behavioral analytics cookies. Your emotional rhythm is never an advertising target.'}
-              </p>
-            </div>
-
-            <div style={{ padding: '22px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'var(--accent-peach-soft)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '14px',
-                color: 'var(--accent-peach-dark)'
-              }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
-                </svg>
-              </div>
-              <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '6px', fontWeight: 700 }}>
-                {UI_STRINGS.landing?.privacyItem3Title || 'One-Click Data Purge'}
-              </h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {UI_STRINGS.landing?.privacyItem3Desc || 'Under Settings & Privacy, you can export your complete history in JSON format or trigger an instant, irreversible data erasure anytime.'}
-              </p>
-            </div>
+          <h2 style={{
+            fontSize: 'clamp(2.2rem, 4vw, 3.2rem)',
+            fontFamily: "'Outfit', sans-serif",
+            fontWeight: 800,
+            color: 'var(--text-primary)',
+            letterSpacing: '-0.02em',
+            marginBottom: '16px'
+          }}>
+            Step inside your sanctuary today.
+          </h2>
+          <p style={{
+            fontSize: '1.1rem',
+            color: 'var(--text-secondary)',
+            maxWidth: '560px',
+            margin: '0 auto 34px',
+            lineHeight: 1.7
+          }}>
+            Zero cost, zero tracking. Create your private space and give your mind permission to breathe.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <Link to={user ? "/dashboard" : "/register"} style={{ textDecoration: 'none' }}>
+              <MagneticButton
+                className="btn-primary"
+                style={{ padding: '16px 38px', fontSize: '1rem', minHeight: '48px' }}
+              >
+                <span>{user ? 'Return to Dashboard →' : 'Begin Sanctuary Journey →'}</span>
+              </MagneticButton>
+            </Link>
+            <Link
+              to="/terms"
+              className="btn-ghost"
+              style={{ padding: '15px 28px', fontSize: '0.96rem', minHeight: '48px' }}
+            >
+              <span>Read Privacy Ethics</span>
+            </Link>
           </div>
         </div>
       </section>

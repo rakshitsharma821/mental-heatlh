@@ -748,36 +748,46 @@ export default function TherapistDashboard() {
                   </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {assignedSessions.map(session => {
-                        const isAssigned = session.status === 'assigned';
-                        const isConfirmed = session.status === 'confirmed';
-                        const isAccepted = session.status === 'therapist_accepted';
-                        const isDeclined = session.status === 'therapist_declined';
+                      {/* Vertical Timeline of the day (One card per session, next session pulses with slow soft glow) */}
+                    <div className="therapist-timeline">
+                      {assignedSessions
+                        .slice()
+                        .sort((a, b) => new Date(a.preferred_slot || 0) - new Date(b.preferred_slot || 0))
+                        .map((session, idx) => {
+                          const isAssigned = session.status === 'assigned';
+                          const isConfirmed = session.status === 'confirmed';
+                          const isAccepted = session.status === 'therapist_accepted';
+                          const isDeclined = session.status === 'therapist_declined';
 
-                        const statusColors = {
-                          assigned: { bg: 'rgba(246, 189, 96, 0.18)', color: '#b07d3b', label: 'Assigned (Action Required)' },
-                          therapist_accepted: { bg: 'rgba(59, 130, 246, 0.18)', color: '#2563eb', label: 'Accepted (Awaiting Confirmation)' },
-                          confirmed: { bg: 'rgba(82, 183, 136, 0.2)', color: 'var(--primary-dark)', label: 'Confirmed (Ready for Room)' },
-                          therapist_declined: { bg: 'rgba(239, 68, 68, 0.15)', color: '#dc2626', label: 'Declined' },
-                          completed: { bg: 'rgba(107, 114, 128, 0.15)', color: '#4b5563', label: 'Completed' }
-                        };
-                        const badge = statusColors[session.status] || { bg: 'var(--bg-glass)', color: 'var(--text-secondary)', label: session.status };
+                          // Next upcoming session check (first active session in queue)
+                          const isNextUpcoming = idx === 0 && (isConfirmed || isAssigned || isAccepted);
 
-                        return (
-                          <div
-                            key={session.id}
-                            style={{
-                              background: 'var(--bg-surface-elevated)',
-                              border: '1px solid var(--border-subtle)',
-                              borderRadius: '16px',
-                              padding: '18px',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              flexWrap: 'wrap',
-                              gap: '12px'
-                            }}
-                          >
+                          const statusColors = {
+                            assigned: { bg: 'rgba(246, 189, 96, 0.18)', color: '#b07d3b', label: 'Assigned (Action Required)' },
+                            therapist_accepted: { bg: 'rgba(59, 130, 246, 0.18)', color: '#2563eb', label: 'Accepted (Awaiting Confirmation)' },
+                            confirmed: { bg: 'rgba(82, 183, 136, 0.2)', color: 'var(--primary-dark)', label: 'Confirmed (Ready for Room)' },
+                            therapist_declined: { bg: 'rgba(239, 68, 68, 0.15)', color: '#dc2626', label: 'Declined' },
+                            completed: { bg: 'rgba(107, 114, 128, 0.15)', color: '#4b5563', label: 'Completed' }
+                          };
+                          const badge = statusColors[session.status] || { bg: 'var(--bg-glass)', color: 'var(--text-secondary)', label: session.status };
+
+                          return (
+                            <div key={session.id} className={`timeline-session-node ${isNextUpcoming ? 'upcoming' : ''}`}>
+                              <div
+                                className={`timeline-session-card ${isNextUpcoming ? 'upcoming-pulse' : ''}`}
+                                style={{
+                                  background: '#ffffff',
+                                  border: '1px solid var(--border-subtle)',
+                                  borderRadius: '20px',
+                                  padding: '22px 24px',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  flexWrap: 'wrap',
+                                  gap: '16px',
+                                  boxShadow: isNextUpcoming ? '0 0 28px rgba(82, 183, 136, 0.25)' : 'var(--shadow-sm)'
+                                }}
+                              >
                             <div style={{ flex: 1, minWidth: '260px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                                 <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -884,9 +894,11 @@ export default function TherapistDashboard() {
                               )}
                             </div>
                           </div>
+                        </div>
                         );
                       })}
                     </div>
+                  </div>
                   )}
                 </div>
           </>

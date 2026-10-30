@@ -1354,3 +1354,355 @@ body.focus-mode-active footer,
 body.focus-mode-active nav {
   display: none !important;
 }
+
+/* ===================================================
+   REDESIGN SYSTEM TOKENS & UTILITIES
+   =================================================== */
+
+/* Shimmer on Primary Button */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -70%;
+  width: 45%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(25deg);
+  transition: transform 0.8s ease;
+  pointer-events: none;
+}
+.btn-primary:hover::after {
+  transform: translateX(380%) rotate(25deg);
+}
+
+/* Elevated White Cards (20-28px radius, soft diffuse shadow) */
+.sanctuary-card-elevated {
+  background: #ffffff;
+  border: 1px solid rgba(45, 106, 79, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(33, 64, 47, 0.05), 0 2px 6px rgba(33, 64, 47, 0.02);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+}
+.sanctuary-card-elevated:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 42px rgba(33, 64, 47, 0.08), 0 4px 12px rgba(33, 64, 47, 0.03);
+}
+
+/* Ticket-Style Next Session Card */
+.ticket-card {
+  position: relative;
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid rgba(45, 106, 79, 0.12);
+  box-shadow: 0 12px 36px rgba(33, 64, 47, 0.06), 0 2px 8px rgba(33, 64, 47, 0.02);
+  padding: 24px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.ticket-perforation {
+  border-top: 2px dashed rgba(45, 106, 79, 0.18);
+  margin: 18px -24px;
+  position: relative;
+}
+.ticket-perforation::before,
+.ticket-perforation::after {
+  content: '';
+  position: absolute;
+  top: -12px;
+  width: 24px;
+  height: 24px;
+  background: var(--bg-primary, #faf9f5);
+  border-radius: 50%;
+  border: 1px solid rgba(45, 106, 79, 0.12);
+}
+.ticket-perforation::before {
+  left: -12px;
+  box-shadow: inset -2px 0 4px rgba(45, 106, 79, 0.06);
+}
+.ticket-perforation::after {
+  right: -12px;
+  box-shadow: inset 2px 0 4px rgba(45, 106, 79, 0.06);
+}
+
+/* Mood Check-in: Soft Blob Shapes (No emoji/icons) */
+.mood-blobs-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+}
+.mood-blob-btn {
+  width: 58px;
+  height: 58px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.84rem;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease, filter 0.3s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  position: relative;
+}
+.mood-blob-btn:hover {
+  transform: scale(1.14);
+}
+.mood-blob-btn:focus-visible {
+  outline: 2px solid var(--accent-forest);
+  outline-offset: 4px;
+}
+.mood-blob-btn.selected {
+  transform: scale(1.24);
+  box-shadow: 0 0 24px rgba(53, 114, 85, 0.38), 0 8px 20px rgba(0, 0, 0, 0.08);
+  animation: gentleBlobBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mood-blob-1 {
+  background: linear-gradient(135deg, #74c69d, #52b788);
+  color: #ffffff;
+  border-radius: 62% 38% 70% 30% / 45% 65% 35% 55%;
+}
+.mood-blob-2 {
+  background: linear-gradient(135deg, #99c6e2, #6ba3c7);
+  color: #ffffff;
+  border-radius: 40% 60% 30% 70% / 60% 30% 70% 40%;
+}
+.mood-blob-3 {
+  background: linear-gradient(135deg, #c2b0d6, #9d84b7);
+  color: #ffffff;
+  border-radius: 55% 45% 65% 35% / 35% 60% 40% 65%;
+}
+.mood-blob-4 {
+  background: linear-gradient(135deg, #f6bd60, #e99a80);
+  color: #ffffff;
+  border-radius: 38% 62% 45% 55% / 65% 40% 60% 35%;
+}
+.mood-blob-5 {
+  background: linear-gradient(135deg, #f4a261, #e76f51);
+  color: #ffffff;
+  border-radius: 65% 35% 55% 45% / 40% 65% 35% 60%;
+}
+
+@keyframes gentleBlobBounce {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.32); }
+  100% { transform: scale(1.24); }
+}
+
+/* Therapist Portal Timeline & Pulse */
+.therapist-timeline {
+  position: relative;
+  padding-left: 28px;
+}
+.therapist-timeline::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 10px;
+  width: 2px;
+  background: rgba(45, 106, 79, 0.16);
+  border-radius: 2px;
+}
+.timeline-session-node {
+  position: relative;
+  margin-bottom: 24px;
+}
+.timeline-session-node::before {
+  content: '';
+  position: absolute;
+  top: 24px;
+  left: -24px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--accent-leaf, #357255);
+  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.2);
+}
+.timeline-session-node.upcoming::before {
+  background: var(--accent-leaf, #357255);
+  box-shadow: 0 0 12px rgba(82, 183, 136, 0.8);
+}
+.timeline-session-card.upcoming-pulse {
+  border: 1.5px solid rgba(82, 183, 136, 0.45) !important;
+  box-shadow: 0 0 28px rgba(82, 183, 136, 0.22), 0 8px 24px rgba(33, 64, 47, 0.05);
+  animation: slowSoftGlow 3.6s ease-in-out infinite;
+}
+@keyframes slowSoftGlow {
+  0%, 100% {
+    box-shadow: 0 0 18px rgba(82, 183, 136, 0.18), 0 8px 24px rgba(33, 64, 47, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(82, 183, 136, 0.35), 0 12px 32px rgba(33, 64, 47, 0.08);
+  }
+}
+
+/* ===================================================
+   ADMIN PORTAL: COOL STATIONERY PALETTE
+   Ink Blue | Slate Grey | Cream Paper (Zero warm sage)
+   =================================================== */
+.admin-stationery-wrapper {
+  background: #f8fafc;
+  color: #1e293b;
+  min-height: 100vh;
+}
+.admin-stationery-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
+  padding: 24px;
+}
+
+/* Real CSS-3D Columns (No Canvas, No Library) */
+.css-3d-column-stage {
+  perspective: 900px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  height: 220px;
+  padding: 24px 16px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+}
+.css-3d-col-unit {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.css-3d-bar-container {
+  position: relative;
+  width: 36px;
+  transform-style: preserve-3d;
+  transform: rotateX(-14deg) rotateY(16deg);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
+  cursor: pointer;
+}
+.css-3d-col-unit:hover .css-3d-bar-container {
+  transform: rotateX(-14deg) rotateY(16deg) translateZ(16px) scaleY(1.06);
+  filter: brightness(1.1);
+}
+.css-3d-bar-front {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 4px 4px 0 0;
+}
+.css-3d-bar-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 14px;
+  background: #60a5fa;
+  transform-origin: top;
+  transform: rotateX(90deg);
+  border-radius: 4px 4px 0 0;
+}
+.css-3d-bar-side {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 14px;
+  height: 100%;
+  background: #1e40af;
+  transform-origin: right;
+  transform: rotateY(-90deg);
+}
+
+/* 3D Stack of Paper Case Files */
+.paper-dossier-stack {
+  position: relative;
+  perspective: 1000px;
+  min-height: 310px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0;
+}
+.paper-dossier-card {
+  position: absolute;
+  width: 100%;
+  max-width: 580px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 18px;
+  padding: 26px 30px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.03);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center bottom;
+}
+.paper-dossier-card.stack-top {
+  transform: translate3d(0, 0, 0) scale(1);
+  z-index: 5;
+  border-color: #94a3b8;
+}
+.paper-dossier-card.stack-second {
+  transform: translate3d(0, 14px, -30px) scale(0.96);
+  z-index: 4;
+  opacity: 0.88;
+  background: #f8fafc;
+}
+.paper-dossier-card.stack-third {
+  transform: translate3d(0, 26px, -60px) scale(0.92);
+  z-index: 3;
+  opacity: 0.72;
+  background: #f1f5f9;
+}
+
+/* Ledger-Style Table */
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Inter', sans-serif;
+  background: #ffffff;
+}
+.ledger-table th {
+  border-bottom: 2px solid #cbd5e1;
+  font-weight: 700;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #475569;
+  padding: 12px 14px;
+  background: #f8fafc;
+  text-align: left;
+}
+.ledger-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  color: #1e293b;
+}
+.ledger-table tr:nth-child(even) td {
+  background: rgba(248, 250, 252, 0.65);
+}
+.ledger-table tr:hover td {
+  background: #f1f5f9;
+}
+.ledger-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #0f172a;
+}
+

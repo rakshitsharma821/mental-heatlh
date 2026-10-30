@@ -283,15 +283,12 @@ export default function Login() {
       <div className="glass-card" style={{ maxWidth: '520px', width: '100%', padding: '40px 32px', borderRadius: '24px' }}>
         
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>
-            {currentPortalConfig.icon}
-          </div>
-          <h1 style={{ fontSize: '1.75rem', color: 'var(--text-primary)', marginBottom: '6px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <h1 style={{ fontSize: '1.85rem', color: 'var(--text-primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 800, marginBottom: '8px' }}>
             {currentPortalConfig.header}
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-            {currentPortalConfig.subtitle}
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.94rem' }}>
+            A quiet, confidential space for your mental well-being.
           </p>
         </div>
 
