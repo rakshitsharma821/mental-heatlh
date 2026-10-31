@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { UI_STRINGS } from '../../config/strings';
 
 export default function Navbar() {
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef(null);
@@ -320,7 +320,11 @@ export default function Navbar() {
                               className="settings-drop-item"
                               onClick={() => {
                                 setSettingsOpen(false);
-                                navigate('/settings');
+                                if (window.location.pathname === '/settings') {
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                                } else {
+                                  navigate('/settings');
+                                }
                               }}
                             >
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -335,7 +339,11 @@ export default function Navbar() {
                               className="settings-drop-item"
                               onClick={() => {
                                 setSettingsOpen(false);
-                                navigate('/settings');
+                                if (window.location.pathname === '/settings') {
+                                  document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' });
+                                } else {
+                                  navigate('/settings#notifications-section');
+                                }
                               }}
                             >
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

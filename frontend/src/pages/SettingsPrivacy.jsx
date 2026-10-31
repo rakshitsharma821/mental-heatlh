@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function SettingsPrivacy() {
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const [inventory, setInventory] = useState({
@@ -243,16 +243,26 @@ export default function SettingsPrivacy() {
             You own 100% of your wellness data. Inspect, export, or permanently erase your records anytime.
           </p>
 
-          <div style={{ marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', padding: '6px 16px', borderRadius: '100px', fontSize: '0.82rem' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Current Profile Role:</span>
-            <strong style={{ color: 'var(--primary-dark)', textTransform: 'capitalize' }}>{user?.role || 'Client'}</strong>
-            <button
-              onClick={() => switchRole(user?.role === 'therapist' ? 'client' : 'therapist')}
-              className="btn-ghost"
-              style={{ fontSize: '0.74rem', padding: '3px 10px', marginLeft: '6px' }}
-            >
-              Switch to {user?.role === 'therapist' ? 'Client View' : 'Therapist View'} ⇄
-            </button>
+          <div style={{
+            marginTop: '16px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-subtle)',
+            padding: '6px 18px',
+            borderRadius: '100px',
+            fontSize: '0.82rem'
+          }}>
+            <span style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: 'var(--accent-forest, #2d6a4f)'
+            }}></span>
+            <span style={{ color: 'var(--text-secondary)' }}>Sanctuary Profile:</span>
+            <strong style={{ color: 'var(--primary-dark)', fontWeight: 600 }}>Zero-Trust Sovereign Member</strong>
           </div>
         </div>
 
@@ -815,7 +825,7 @@ export default function SettingsPrivacy() {
         </div>
 
         {/* PART 7: MINDFUL NOTIFICATIONS & QUIET HOURS (STRICT OPT-IN) */}
-        <div className="glass-card" style={{ padding: '32px', marginBottom: '32px', borderLeft: '4px solid var(--primary)' }}>
+        <div id="notifications-section" className="glass-card" style={{ padding: '32px', marginBottom: '32px', borderLeft: '4px solid var(--primary)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
