@@ -6,7 +6,7 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { db } from '../models/db.js';
-import { hashPassword, generateSalt } from '../utils/crypto.js';
+import { hashPassword, generateSalt, safeCompare } from '../utils/crypto.js';
 import { otpService } from '../utils/otpService.js';
 import { logAdminAction } from './adminController.js';
 import { ROLES, USER_STATUS, AGE_LIMITS, AUTH_CONFIG, AUTH_MESSAGES } from '../config/constants.js';
@@ -130,9 +130,9 @@ export const authController = {
       await db.query(`
         INSERT INTO users (
           id, public_id, email, password_hash, salt, recovery_key_hash, full_name, role, status,
-          mobile_number, age, gender, address, city, state, streak_count, mindfulness_score
+          mobile_number, age, gender, address, city, state, streak_count, mindfulness_score, email_verified
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'client', 'active', $8, $9, $10, $11, $12, $13, 1, 10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'client', 'active', $8, $9, $10, $11, $12, $13, 1, 10, TRUE)
       `, [
         userId, publicId, cleanEmail, passwordHash, salt, recoveryKeyHash, cleanName,
         cleanMobile, parsedAge, cleanGender, cleanAddress || null, cleanCity || null, cleanState || null
@@ -251,8 +251,8 @@ export const authController = {
       await db.query(`
         INSERT INTO users (
           id, public_id, email, password_hash, salt, recovery_key_hash, full_name, role, status,
-          mobile_number, city, state, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'therapist', 'active', $8, $9, $10, CURRENT_TIMESTAMP)
+          mobile_number, city, state, email_verified, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'therapist', 'active', $8, $9, $10, TRUE, CURRENT_TIMESTAMP)
       `, [
         userId, publicId, cleanEmail, passwordHash, salt, recoveryKeyHash, cleanName,
         mobile_number ? mobile_number.trim() : null, city || null, state || null
@@ -364,8 +364,39 @@ export const authController = {
         }
 
         const calculatedHash = hashPassword(cleanPassword, user.salt);
-        if (calculatedHash !== user.password_hash) {
+        if (!safeCompare(calculatedHash, user.password_hash)) {
           return res.status(401).json({ success: false, message: AUTH_MESSAGES.GENERIC_ERROR });
+        }
+
+        // Require Email OTP for therapist verification (env flag, unverified email, or x-require-otp header)
+        const requiresOtp = process.env.THERAPIST_OTP_REQUIRED === 'true' ||
+                            AUTH_CONFIG.THERAPIST_OTP_REQUIRED ||
+                            !user.email_verified ||
+                            req.headers['x-require-otp'] === 'true';
+
+        if (requiresOtp) {
+          const otpCode = Math.floor(100000 + crypto.randomInt(900000)).toString();
+          const otpHash = hashOTP(otpCode);
+          const challengeId = crypto.randomUUID();
+          const expiresAt = new Date(Date.now() + AUTH_CONFIG.OTP_EXPIRY_MINUTES * 60 * 1000);
+
+          await db.query(`
+            INSERT INTO user_otps (id, identifier, otp_hash, challenge_id, expires_at, attempts, verified)
+            VALUES ($1, $2, $3, $4, $5, 0, FALSE)
+          `, [crypto.randomUUID(), user.email, otpHash, challengeId, expiresAt]);
+
+          await otpService.send(user.email, otpCode, 'login');
+
+          const [local, domain] = user.email.split('@');
+          const masked = `${local.charAt(0)}***@${domain}`;
+
+          return res.json({
+            success: true,
+            requiresOtp: true,
+            challenge_id: challengeId,
+            destination: masked,
+            message: `Verification code sent to ${masked}.`
+          });
         }
 
         await db.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
@@ -441,7 +472,7 @@ export const authController = {
 
         // Verify password
         const calculatedPassHash = hashPassword(cleanPassword, adminUser.salt);
-        if (calculatedPassHash !== adminUser.password_hash) {
+        if (!safeCompare(calculatedPassHash, adminUser.password_hash)) {
           return await failAdmin();
         }
 
@@ -515,11 +546,10 @@ export const authController = {
 
       const isEmail = rawId.includes('@');
       const cleanId = rawId.toLowerCase();
-      const normMobile = normalizeMobile(rawId);
 
       const query = await db.query(
-        "SELECT * FROM users WHERE (email = $1 OR LOWER(public_id) = $1 OR mobile_number = $1 OR ($2::text IS NOT NULL AND mobile_number = $2)) AND role = 'client'",
-        [cleanId, normMobile]
+        "SELECT * FROM users WHERE (email = $1 OR LOWER(public_id) = $1) AND role = 'client'",
+        [cleanId]
       );
 
       if (query.rows.length === 0) {
@@ -532,17 +562,15 @@ export const authController = {
       }
 
       const calculatedHash = hashPassword(cleanPassword, clientUser.salt);
-      if (calculatedHash !== clientUser.password_hash) {
+      if (!safeCompare(calculatedHash, clientUser.password_hash)) {
         return res.status(401).json({ success: false, message: AUTH_MESSAGES.GENERIC_ERROR });
       }
 
-      // If OTP required for clients (via env flag, mobile login, or x-require-otp header)
-      const isMobileNumberInput = /^\+?\d{8,15}$/.test(rawId.replace(/[\s\-()]/g, ''));
-      const isMobileLogin = isMobileNumberInput && Boolean(clientUser.mobile_number);
+      // If OTP required for clients (via env flag, unverified email, or x-require-otp header)
       const requiresOtp = process.env.CLIENT_OTP_REQUIRED === 'true' ||
                           AUTH_CONFIG.CLIENT_OTP_REQUIRED ||
-                          req.headers['x-require-otp'] === 'true' ||
-                          isMobileLogin;
+                          !clientUser.email_verified ||
+                          req.headers['x-require-otp'] === 'true';
 
       if (requiresOtp) {
         const otpCode = Math.floor(100000 + crypto.randomInt(900000)).toString();
@@ -550,18 +578,15 @@ export const authController = {
         const challengeId = crypto.randomUUID();
         const expiresAt = new Date(Date.now() + AUTH_CONFIG.OTP_EXPIRY_MINUTES * 60 * 1000);
 
-        const dispatchTarget = isMobileLogin && clientUser.mobile_number ? clientUser.mobile_number : clientUser.email;
-
         await db.query(`
           INSERT INTO user_otps (id, identifier, otp_hash, challenge_id, expires_at, attempts, verified)
           VALUES ($1, $2, $3, $4, $5, 0, FALSE)
-        `, [crypto.randomUUID(), dispatchTarget, otpHash, challengeId, expiresAt]);
+        `, [crypto.randomUUID(), clientUser.email, otpHash, challengeId, expiresAt]);
 
-        await otpService.send(dispatchTarget, otpCode);
+        await otpService.send(clientUser.email, otpCode, 'login');
 
-        const masked = isMobileLogin
-          ? dispatchTarget.slice(0, 4) + '******' + dispatchTarget.slice(-2)
-          : clientUser.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+        const [local, domain] = clientUser.email.split('@');
+        const masked = `${local.charAt(0)}***@${domain}`;
 
         return res.json({
           success: true,
@@ -818,9 +843,8 @@ export const authController = {
 
       await db.query('UPDATE user_otps SET verified = TRUE WHERE id = $1', [challenge.id]);
 
-      const isEmail = challenge.identifier.includes('@');
       const userRes = await db.query(
-        isEmail ? 'SELECT * FROM users WHERE email = $1' : 'SELECT * FROM users WHERE mobile_number = $1',
+        'SELECT * FROM users WHERE email = $1',
         [challenge.identifier]
       );
 
@@ -833,9 +857,7 @@ export const authController = {
         return res.status(403).json({ success: false, message: `Account is ${user.status}. Access denied.` });
       }
 
-      await db.query('UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
-
-      await db.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+      await db.query('UPDATE users SET email_verified = TRUE, updated_at = CURRENT_TIMESTAMP, last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
       const token = jwt.sign(
         { id: user.id, publicId: user.public_id, email: user.email, name: user.full_name, role: user.role },
@@ -1048,6 +1070,12 @@ export const authController = {
 
       if (!cleanEmail || !cleanEmail.includes('@')) {
         return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+      }
+
+      // Check if email already registered
+      const existing = await db.query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
+      if (existing.rows.length > 0) {
+        return res.status(409).json({ success: false, message: 'This email is already registered. Please sign in instead.' });
       }
 
       // Generate 6 digit numeric OTP

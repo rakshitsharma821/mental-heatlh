@@ -210,11 +210,21 @@ function deformBrainStemGeometry(geom) {
   return geom;
 }
 
-export default function CalmBrainHero({ className = '', style = {} }) {
+export default function CalmBrainHero({
+  className = '',
+  style = {},
+  calmProgress = 0.0,
+  mode = 'hero'
+}) {
   const mountRef = useRef(null);
   const [reducedMotion, setReducedMotion] = useState(getIsReducedMotion);
   const [frameDegraded, setFrameDegraded] = useState(false);
   const [breathingText, setBreathingText] = useState(UI_STRINGS.hero?.breatheIn || 'Breathe in...');
+  const calmProgressRef = useRef(calmProgress);
+
+  useEffect(() => {
+    calmProgressRef.current = Math.max(0, Math.min(1, calmProgress));
+  }, [calmProgress]);
 
   // Motion preference listeners
   useEffect(() => {
@@ -278,6 +288,7 @@ export default function CalmBrainHero({ className = '', style = {} }) {
     // Uses true pastel tokens: soft sage, lavender, peach, sky
     const brainUniforms = {
       uTime: { value: 0 },
+      uCalmProgress: { value: 0.0 },
       uBreathScale: { value: 1.0 },
       uSage: { value: new THREE.Color('#74c69d') },
       uLavender: { value: new THREE.Color('#b8a6d6') },
@@ -527,7 +538,9 @@ export default function CalmBrainHero({ className = '', style = {} }) {
 
     // 8. Animation Loop with 9s Autonomic Breathing Cycle
     const clock = new THREE.Clock();
-    const breathDuration = theme.motion?.durations?.brainBreathSeconds || 9.0;
+    const currentCalm = calmProgressRef.current;
+      brainUniforms.uCalmProgress.value = currentCalm;
+      const breathDuration = THREE.MathUtils.lerp(4.5, (theme.motion?.durations?.brainBreathSeconds || 9.0), currentCalm);
     let lastCaptionState = null;
 
     const animate = () => {
@@ -761,7 +774,7 @@ export default function CalmBrainHero({ className = '', style = {} }) {
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%',
-        minHeight: '520px',
+        minHeight: mode === 'compact' ? '200px' : '520px',
         ...style
       }}
     >
@@ -770,8 +783,8 @@ export default function CalmBrainHero({ className = '', style = {} }) {
         ref={mountRef}
         style={{
           width: '100%',
-          maxWidth: '560px',
-          height: '500px',
+          maxWidth: mode === 'compact' ? '220px' : '560px',
+          height: mode === 'compact' ? '190px' : '500px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -781,6 +794,7 @@ export default function CalmBrainHero({ className = '', style = {} }) {
       />
 
       {/* Floating Glass Pill with Synchronized 9s Breath Pacing Caption */}
+      {mode !== 'compact' && (
       <div
         className="glass-card"
         style={{
@@ -817,6 +831,7 @@ export default function CalmBrainHero({ className = '', style = {} }) {
           {UI_STRINGS.hero?.breatheCycleCaption || '9s Natural Cycle'}
         </span>
       </div>
+      )}
     </div>
   );
 }

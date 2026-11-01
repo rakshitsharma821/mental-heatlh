@@ -4,6 +4,8 @@
 //         Multi-Stage Verification State Machine, and Clinical Consultation Workspace
 // ============================================
 
+import '../styles/admin-desk.css';
+import '../styles/therapist-portal.css';
 import React, { useState, useEffect } from 'react';
 import { ClinicalConsentService } from '../services/clinicalConsent';
 import { Storage } from '../services/storage';
@@ -79,6 +81,7 @@ export default function TherapistDashboard() {
   const [verificationStatus, setVerificationStatus] = useState('documents_pending');
   const [documents, setDocuments] = useState([]);
   const [missingDocs, setMissingDocs] = useState([]);
+  const [missingProfileFields, setMissingProfileFields] = useState([]);
   const [completionPercentage, setCompletionPercentage] = useState(50);
   const [completionPopupOpen, setCompletionPopupOpen] = useState(false);
 
@@ -221,6 +224,7 @@ export default function TherapistDashboard() {
       setVerificationStatus(res.profile.verification_status || 'documents_pending');
       setDocuments(res.documents || []);
       setMissingDocs(res.missingDocuments || []);
+      setMissingProfileFields(res.missingProfileFields || []);
       setCompletionPercentage(res.completionPercentage || 50);
       setProfileBio(res.profile.bio || '');
       setProfileTitle(res.profile.title || 'Licensed Clinical Psychologist');
@@ -538,22 +542,16 @@ export default function TherapistDashboard() {
     }
   };
 
-  const therapist = profileData
-    ? {
-        name: profileData?.full_name || user?.name || 'Licensed Clinician',
-        title: profileData.title || 'Licensed Clinical Psychologist',
-        license: profileData.license_number || 'RCI-CR-28491'
-      }
-    : ClinicalConsentService.getDefaultTherapist();
+  const therapist = ClinicalConsentService.getDefaultTherapist(profileData, user);
 
   const { scopes } = consent;
 
   return (
-    <div className="therapist-portal-page" style={{ position: 'relative', padding: '36px 24px 80px', minHeight: '100vh' }}>
-      <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+    <div className="therapist-portal-page tp-page" style={{ position: 'relative', padding: '36px 24px 80px', minHeight: '100vh' }}>
+      <div className="tp-grid" style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
 
         {/* ── CLINICIAN PRACTICE STATION HEADER ── */}
-        <div style={{
+        <div className="tp-head" style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -612,72 +610,28 @@ export default function TherapistDashboard() {
         </div>
 
         {/* ── TAB NAVIGATION ── */}
-        <div style={{ display: 'flex', gap: '8px', background: 'rgba(0,0,0,0.04)', padding: '4px', borderRadius: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <div className="desk-tabs" role="tablist">
           <button
             type="button"
-            onClick={() => setActiveTab('overview')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'overview' ? '#ffffff' : 'transparent',
-              fontWeight: activeTab === 'overview' ? 700 : 500,
-              color: activeTab === 'overview' ? 'var(--primary-dark)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              boxShadow: activeTab === 'overview' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-            }}
+            role="tab" aria-selected={activeTab === 'overview'} className={`desk-tab ${activeTab === 'overview' ? 'on' : ''}`} onClick={() => setActiveTab('overview')}
           >
             Workspace
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('documents')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'documents' ? '#ffffff' : 'transparent',
-              fontWeight: activeTab === 'documents' ? 700 : 500,
-              color: activeTab === 'documents' ? 'var(--primary-dark)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              boxShadow: activeTab === 'documents' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-            }}
+            role="tab" aria-selected={activeTab === 'documents'} className={`desk-tab ${activeTab === 'documents' ? 'on' : ''}`} onClick={() => setActiveTab('documents')}
           >
             Document Vault ({documents.length})
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('profile')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'profile' ? '#ffffff' : 'transparent',
-              fontWeight: activeTab === 'profile' ? 700 : 500,
-              color: activeTab === 'profile' ? 'var(--primary-dark)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              boxShadow: activeTab === 'profile' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-            }}
+            role="tab" aria-selected={activeTab === 'profile'} className={`desk-tab ${activeTab === 'profile' ? 'on' : ''}`} onClick={() => setActiveTab('profile')}
           >
             Profile & Practice
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('schedule')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'schedule' ? '#ffffff' : 'transparent',
-              fontWeight: activeTab === 'schedule' ? 700 : 500,
-              color: activeTab === 'schedule' ? 'var(--primary-dark)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              boxShadow: activeTab === 'schedule' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-            }}
+            role="tab" aria-selected={activeTab === 'schedule'} className={`desk-tab ${activeTab === 'schedule' ? 'on' : ''}`} onClick={() => setActiveTab('schedule')}
           >
             Schedule & Availability
           </button>
@@ -747,37 +701,47 @@ export default function TherapistDashboard() {
                     </p>
                   </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {assignedSessions.map(session => {
-                        const isAssigned = session.status === 'assigned';
-                        const isConfirmed = session.status === 'confirmed';
-                        const isAccepted = session.status === 'therapist_accepted';
-                        const isDeclined = session.status === 'therapist_declined';
+                    <div className="tp-timeline" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {/* Vertical Timeline of the day */}
+                    <div className="therapist-timeline">
+                      {assignedSessions
+                        .slice()
+                        .sort((a, b) => new Date(a.preferred_slot || 0) - new Date(b.preferred_slot || 0))
+                        .map((session, idx) => {
+                          const isAssigned = session.status === 'assigned';
+                          const isConfirmed = session.status === 'confirmed';
+                          const isAccepted = session.status === 'therapist_accepted';
+                          const isDeclined = session.status === 'therapist_declined';
 
-                        const statusColors = {
-                          assigned: { bg: 'rgba(246, 189, 96, 0.18)', color: '#b07d3b', label: 'Assigned (Action Required)' },
-                          therapist_accepted: { bg: 'rgba(59, 130, 246, 0.18)', color: '#2563eb', label: 'Accepted (Awaiting Confirmation)' },
-                          confirmed: { bg: 'rgba(82, 183, 136, 0.2)', color: 'var(--primary-dark)', label: 'Confirmed (Ready for Room)' },
-                          therapist_declined: { bg: 'rgba(239, 68, 68, 0.15)', color: '#dc2626', label: 'Declined' },
-                          completed: { bg: 'rgba(107, 114, 128, 0.15)', color: '#4b5563', label: 'Completed' }
-                        };
-                        const badge = statusColors[session.status] || { bg: 'var(--bg-glass)', color: 'var(--text-secondary)', label: session.status };
+                          // Next upcoming session check (first active session in queue)
+                          const isNextUpcoming = idx === 0 && (isConfirmed || isAssigned || isAccepted);
 
-                        return (
-                          <div
-                            key={session.id}
-                            style={{
-                              background: 'var(--bg-surface-elevated)',
-                              border: '1px solid var(--border-subtle)',
-                              borderRadius: '16px',
-                              padding: '18px',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              flexWrap: 'wrap',
-                              gap: '12px'
-                            }}
-                          >
+                          const statusColors = {
+                            assigned: { bg: 'rgba(246, 189, 96, 0.18)', color: '#b07d3b', label: 'Assigned (Action Required)' },
+                            therapist_accepted: { bg: 'rgba(59, 130, 246, 0.18)', color: '#2563eb', label: 'Accepted (Awaiting Confirmation)' },
+                            confirmed: { bg: 'rgba(82, 183, 136, 0.2)', color: 'var(--primary-dark)', label: 'Confirmed (Ready for Room)' },
+                            therapist_declined: { bg: 'rgba(239, 68, 68, 0.15)', color: '#dc2626', label: 'Declined' },
+                            completed: { bg: 'rgba(107, 114, 128, 0.15)', color: '#4b5563', label: 'Completed' }
+                          };
+                          const badge = statusColors[session.status] || { bg: 'var(--bg-glass)', color: 'var(--text-secondary)', label: session.status };
+
+                          return (
+                            <div key={session.id} className={`tp-session timeline-session-node ${isNextUpcoming ? 'upcoming' : ''}`} data-status={session.status}>
+                              <div
+                                className={`timeline-session-card ${isNextUpcoming ? 'upcoming-pulse' : ''}`}
+                                style={{
+                                  background: '#ffffff',
+                                  border: '1px solid var(--border-subtle)',
+                                  borderRadius: '20px',
+                                  padding: '22px 24px',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  flexWrap: 'wrap',
+                                  gap: '16px',
+                                  boxShadow: isNextUpcoming ? '0 0 28px rgba(82, 183, 136, 0.25)' : 'var(--shadow-sm)'
+                                }}
+                              >
                             <div style={{ flex: 1, minWidth: '260px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                                 <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -884,9 +848,11 @@ export default function TherapistDashboard() {
                               )}
                             </div>
                           </div>
+                        </div>
                         );
                       })}
                     </div>
+                  </div>
                   )}
                 </div>
           </>
@@ -897,32 +863,106 @@ export default function TherapistDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             {/* Progress & Verification Summary */}
             <div className="glass-card" style={{ padding: '28px', borderRadius: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', flexWrap: 'wrap', gap: '14px' }}>
                 <div>
-                  <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Clinical Credential Vault
-                  </h2>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                      Clinical Credential Vault
+                    </h2>
+                    <span style={{
+                      padding: '3px 10px',
+                      borderRadius: '100px',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      backgroundColor: verificationStatus === 'approved' ? 'rgba(82, 183, 136, 0.15)' :
+                                       verificationStatus === 'under_review' ? 'rgba(245, 158, 11, 0.15)' :
+                                       verificationStatus === 'rejected' ? 'rgba(239, 68, 68, 0.15)' :
+                                       'rgba(43, 95, 125, 0.1)',
+                      color: verificationStatus === 'approved' ? '#2d6a4f' :
+                             verificationStatus === 'under_review' ? '#b45309' :
+                             verificationStatus === 'rejected' ? '#b91c1c' :
+                             '#2b5f7d'
+                    }}>
+                      {verificationStatus === 'approved' ? '✓ Clinically Verified & Approved' :
+                       verificationStatus === 'under_review' ? '⏳ Under Review by Administration' :
+                       verificationStatus === 'rejected' ? '✕ Verification Rejected' :
+                       verificationStatus === 'more_info_required' ? '⚠️ Additional Information Needed' :
+                       '📋 Documentation in Progress'}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '6px', marginBottom: 0 }}>
                     Upload official proof of identity and clinical licences. Stored in encrypted private storage behind DPDP data protection norms.
                   </p>
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
-                    {completionPercentage}%
-                  </span>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Dossier Completeness</div>
+                <div style={{ textAlign: 'right', minWidth: '140px' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '6px' }}>
+                    <span style={{ fontSize: '1.75rem', fontWeight: 800, color: completionPercentage >= 100 ? '#2d6a4f' : '#2b5f7d', lineHeight: 1 }}>
+                      {completionPercentage}%
+                    </span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                      Complete
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Dossier Readiness
+                  </div>
                 </div>
               </div>
 
               {/* Progress Bar */}
-              <div style={{ height: '8px', backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: '100px', overflow: 'hidden', marginBottom: '20px' }}>
+              <div style={{ height: '8px', backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: '100px', overflow: 'hidden', marginBottom: '16px' }}>
                 <div style={{
                   height: '100%',
                   width: `${completionPercentage}%`,
-                  backgroundColor: completionPercentage >= 100 ? '#52b788' : '#d97706',
-                  borderRadius: '100px'
+                  backgroundColor: completionPercentage >= 100 ? '#52b788' : completionPercentage >= 70 ? '#2b5f7d' : '#d97706',
+                  borderRadius: '100px',
+                  transition: 'width 0.4s ease'
                 }} />
+              </div>
+
+              {/* Summary Metrics Row */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '12px',
+                padding: '12px 16px',
+                backgroundColor: 'rgba(0,0,0,0.02)',
+                borderRadius: '12px',
+                marginBottom: '16px'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Required Documents
+                  </div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
+                    {4 - missingDocs.length} of 4 Uploaded
+                    <span style={{ fontSize: '0.76rem', fontWeight: 600, marginLeft: '6px', color: missingDocs.length === 0 ? '#2d6a4f' : '#b45309' }}>
+                      ({missingDocs.length === 0 ? '✓ Complete' : `${missingDocs.length} Pending`})
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    AI Automated Check
+                  </div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2d6a4f', marginTop: '2px' }}>
+                    {documents.filter(d => d.ai_verified).length} of {documents.length || 0} Verified
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Practice Profile Details
+                  </div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
+                    {missingProfileFields.length === 0 ? 'All Completed' : `${missingProfileFields.length} Item(s) Pending`}
+                    <span style={{ fontSize: '0.76rem', fontWeight: 600, marginLeft: '6px', color: missingProfileFields.length === 0 ? '#2d6a4f' : '#2b5f7d' }}>
+                      ({missingProfileFields.length === 0 ? '✓ Ready' : 'In Profile Tab'})
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* Missing Requirements List */}
@@ -938,6 +978,50 @@ export default function TherapistDashboard() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Informative Guidance when Documents are Complete but Profile Details are Pending */}
+              {missingDocs.length === 0 && completionPercentage < 100 && (
+                <div style={{
+                  padding: '12px 18px',
+                  backgroundColor: 'rgba(43, 95, 125, 0.06)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(43, 95, 125, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px'
+                }}>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    <strong style={{ color: '#2b5f7d' }}>✓ All 4 required clinical documents vaulted & verified.</strong>{' '}
+                    {missingProfileFields.length > 0
+                      ? `Complete your practice profile details (${missingProfileFields.join(', ')}) to reach 100% dossier readiness.`
+                      : 'Your dossier is fully prepared for administrative verification.'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('profile')}
+                    className="btn-ghost"
+                    style={{ fontSize: '0.78rem', padding: '5px 12px', borderColor: 'rgba(43,95,125,0.3)', color: '#2b5f7d' }}
+                  >
+                    Edit Profile Details →
+                  </button>
+                </div>
+              )}
+
+              {/* 100% Complete Banner */}
+              {completionPercentage >= 100 && (
+                <div style={{
+                  padding: '12px 18px',
+                  backgroundColor: 'rgba(82, 183, 136, 0.1)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(82, 183, 136, 0.3)',
+                  fontSize: '0.82rem',
+                  color: '#2d6a4f'
+                }}>
+                  <strong>✓ Dossier 100% Complete.</strong> All required credentials and clinical profile details are recorded.
                 </div>
               )}
             </div>
@@ -956,7 +1040,7 @@ export default function TherapistDashboard() {
               </div>
 
               {/* 5 Distinct Document Cards Grid */}
-              <div style={{
+              <div className="tp-doc-grid" style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                 gap: '16px',
@@ -1174,8 +1258,8 @@ export default function TherapistDashboard() {
                   }}
                   title={missingDocs.length > 0 ? 'Upload all required documents to submit' : 'Submit for review'}
                 >
-                  {verificationStatus === 'under_review' ? ' Dossier Under Review' :
-                   verificationStatus === 'approved' ? ' Dossier Approved' :
+                  {verificationStatus === 'under_review' ? '⏳ Dossier Under Review' :
+                   verificationStatus === 'approved' ? '✓ Dossier Approved' :
                    'Submit Dossier for Clinical Review →'}
                 </button>
               </div>
@@ -1198,7 +1282,7 @@ export default function TherapistDashboard() {
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>No documents uploaded yet.</p>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                  <table className="tp-ledger" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', color: 'var(--text-secondary)' }}>
                         <th style={{ padding: '10px' }}>Type</th>
@@ -1242,7 +1326,7 @@ export default function TherapistDashboard() {
                                     System Validated ({doc.ai_confidence || 98}%)
                                   </span>
                                 )}
-                                <span style={{
+                                <span className="tp-stamp" data-state={doc.status} style={{
                                   padding: '2px 8px',
                                   borderRadius: '100px',
                                   fontSize: '0.70rem',
@@ -1269,7 +1353,7 @@ export default function TherapistDashboard() {
                                   type="button"
                                   onClick={() => handleDownloadDoc(doc.id)}
                                   className="btn-ghost"
-                                  style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                                  style={{ padding: '4px 10px', fontSize: '0.75rem', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '6px' }}
                                 >
                                   View ↗
                                 </button>
@@ -1278,9 +1362,16 @@ export default function TherapistDashboard() {
                                     type="button"
                                     onClick={() => handleDeleteDoc(doc.id)}
                                     className="btn-ghost"
-                                    style={{ padding: '4px 10px', fontSize: '0.75rem', color: '#b91c1c' }}
+                                    style={{
+                                      padding: '4px 10px',
+                                      fontSize: '0.75rem',
+                                      color: '#b91c1c',
+                                      border: '1px solid rgba(185, 28, 28, 0.25)',
+                                      borderRadius: '6px'
+                                    }}
+                                    title="Remove document"
                                   >
-                                    
+                                    Remove
                                   </button>
                                 )}
                               </div>
@@ -1496,6 +1587,8 @@ export default function TherapistDashboard() {
                     return (
                       <div
                         key={day}
+                        className="tp-day"
+                        data-on={isAvailable ? 'true' : 'false'}
                         style={{
                           display: 'flex',
                           alignItems: 'center',

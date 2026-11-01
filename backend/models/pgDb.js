@@ -149,6 +149,7 @@ export function initPostgresDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS access_code_hash TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_access_code BOOLEAN DEFAULT FALSE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
       CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users (email);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_users_public_id_unique ON users (public_id) WHERE public_id IS NOT NULL;
       CREATE UNIQUE INDEX IF NOT EXISTS idx_users_mobile_unique ON users (mobile_number) WHERE mobile_number IS NOT NULL;

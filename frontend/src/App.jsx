@@ -1,11 +1,18 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import Lenis from 'lenis';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import CompanionDrawer from './components/companion/CompanionDrawer';
 import SanctuaryCursor from './components/common/SanctuaryCursor';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 // Lazy-loaded page components for optimal code-splitting
 const Landing = lazy(() => import('./pages/Landing'));
@@ -192,10 +199,58 @@ function AppContent() {
       description: 'The page you are looking for is not in the sanctuary. Find calm navigation back to safety and wellness.'
     };
     document.title = meta.title;
+    document.body.dataset.portal = isAdminPortal ? 'admin' : isTherapistPortal ? 'therapist' : 'member';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute('content', meta.description);
     }
+  }, [location.pathname]);
+
+  // Unhurried smooth scroll via Lenis for desktop pointer devices
+  useEffect(() => {
+    const isReduced =
+      (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('mindcare_reduce_motion') === 'true') ||
+      (typeof window !== 'undefined' && window.matchMedia && !window.matchMedia('(pointer: fine)').matches);
+
+    if (isReduced) return;
+
+    let lenis = null;
+    let reqId = null;
+
+    try {
+      lenis = new Lenis({
+        duration: 1.1,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        wheelMultiplier: 0.95,
+        touchMultiplier: 1.5,
+      });
+
+      lenis.on('scroll', ScrollTrigger.update);
+      window.lenis = lenis;
+
+      const raf = (time) => {
+        lenis?.raf(time);
+        reqId = requestAnimationFrame(raf);
+      };
+      reqId = requestAnimationFrame(raf);
+    } catch (_) {
+      // Graceful fallback
+    }
+
+    return () => {
+      if (reqId) cancelAnimationFrame(reqId);
+      if (lenis) { lenis.destroy(); window.lenis = null; }
+    };
+  }, []);
+
+  // Refresh ScrollTrigger and scroll to top on route transitions
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    try {
+      ScrollTrigger.refresh();
+    } catch (_) {}
   }, [location.pathname]);
 
   return (

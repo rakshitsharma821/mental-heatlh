@@ -42,6 +42,7 @@ export const AUTH_CONFIG = {
   OTP_EXPIRY_MINUTES: 5,
   OTP_MAX_ATTEMPTS: 5,
   CLIENT_OTP_REQUIRED: process.env.CLIENT_OTP_REQUIRED === 'true',
+  THERAPIST_OTP_REQUIRED: process.env.THERAPIST_OTP_REQUIRED !== 'false', // Default enabled for therapist security
   ADMIN_OTP_REQUIRED: process.env.ADMIN_OTP_REQUIRED === 'true'
 };
 

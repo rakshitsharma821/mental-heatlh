@@ -58,7 +58,48 @@ export const aiLimiter = rateLimit({
 });
 
 /**
- * 4. Helmet Security Headers Configuration
+ * 4. Document Vault & File Upload Rate Limiter
+ * 20 uploads per 15 minutes per IP
+ */
+export const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: 'TooManyUploads',
+    message: 'Upload rate limit reached. Please wait a few moments before submitting additional documents.'
+  }
+});
+
+/**
+ * 5. HTTPS Enforcement Middleware
+ * Redirects or rejects plaintext HTTP connections in production
+ */
+export function enforceHttps(req, res, next) {
+  const isProduction = (process.env.NODE_ENV || 'development').trim() === 'production';
+  if (!isProduction) {
+    return next();
+  }
+
+  const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  if (!isHttps) {
+    // If GET or HEAD, redirect to HTTPS
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    return res.status(403).json({
+      success: false,
+      error: 'HttpsRequired',
+      message: 'Encrypted HTTPS protocol required for all API interactions.'
+    });
+  }
+  next();
+}
+
+/**
+ * 6. Helmet Security Headers Configuration
  */
 export const securityHeaders = helmet({
   contentSecurityPolicy: {

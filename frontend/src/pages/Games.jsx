@@ -5,9 +5,12 @@
 // Clean, grounded UI (no 3D slope, zero tacky emojis).
 // ============================================
 
+import BubbleGame from '../components/common/BubbleGame';
 import React, { useState, useEffect, useRef } from 'react';
 import { soundEngine } from '../services/audio';
 import AmbientCanvas from '../components/three/AmbientCanvas';
+import PlayableBubbleField from '../components/common/PlayableBubbleField';
+import TiltCard from '../components/common/TiltCard';
 
 const DEFAULT_THOUGHTS = [
   "I feel like I'm falling behind everyone my age.",
@@ -366,7 +369,7 @@ export default function Games() {
           </p>
         </div>
 
-        {/* Game Navigation Selector Tabs */}
+{/* Game Navigation Selector Tabs */}
         <div style={{
           display: 'flex',
           gap: '8px',
@@ -378,7 +381,8 @@ export default function Games() {
             { id: 'defusion', label: '1. Thought Cloud Defusion (ACT)' },
             { id: 'pond', label: '2. Zen Water Ripple Pond' },
             { id: 'garden', label: '3. Gratitude Bloom Garden' },
-            { id: 'bubbles', label: '4. StressBurst Kinetic Canvas' }
+            { id: 'bubbles', label: '4. StressBurst Kinetic Canvas' },
+            { id: 'drift', label: '5. Bubble Drift' }
           ].map(g => (
             <button
               key={g.id}
@@ -719,6 +723,19 @@ export default function Games() {
         {/* ========================================================= */}
         {/* GAME 4: STRESSBURST KINETIC BUBBLES */}
         {/* ========================================================= */}
+        {activeGame === 'drift' && (
+          <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '28px 32px 8px' }}>
+              <div className="eyebrow">Slow game · no score, no timer</div>
+              <h3 style={{ fontSize: '1.8rem', margin: '8px 0 6px' }}>Bubble Drift</h3>
+              <p style={{ color: 'var(--text-secondary)' }}>Move over a bubble to pop it. Nothing to win — just something to do with your hands.</p>
+            </div>
+            <div style={{ position: 'relative', height: 'clamp(280px, 42vh, 420px)' }}>
+              <BubbleGame />
+            </div>
+          </div>
+        )}
+
         {activeGame === 'bubbles' && (
           <div className="glass-card" style={{ padding: '32px', borderRadius: '24px', backgroundColor: '#ffffff', boxShadow: '0 6px 24px rgba(0,0,0,0.04)', marginBottom: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>

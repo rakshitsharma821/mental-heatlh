@@ -39,7 +39,6 @@ export default function Register() {
   const [therapistTitle, setTherapistTitle] = useState('Licensed Clinical Psychologist');
   const [licenseNumber, setLicenseNumber] = useState('');
   const [licensingBoard, setLicensingBoard] = useState(CLINICAL_CONFIG.licensingBodies[0]);
-  const [mobileNumber, setMobileNumber] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState(3);
   const [selectedSpecialties, setSelectedSpecialties] = useState(['Anxiety & Panic', 'Work & Academic Stress']);
   const [selectedSkills, setSelectedSkills] = useState(['Cognitive Behavioral Therapy (CBT)', 'Mindfulness-Based Stress Reduction (MBSR)']);
@@ -225,7 +224,6 @@ export default function Register() {
         state,
         gender,
         therapist_type: therapistType,
-        mobile_number: mobileNumber,
         terms_accepted: termsAccepted
       });
 
@@ -282,6 +280,7 @@ export default function Register() {
         }}>
           <button
             type="button"
+            className={`auth-tab ${activePortal === 'member' ? 'on' : ''}`}
             onClick={() => { setActivePortal('member'); setError(''); }}
             style={{
               padding: '10px 14px',
@@ -299,6 +298,7 @@ export default function Register() {
           </button>
           <button
             type="button"
+            className={`auth-tab ${activePortal === 'therapist' ? 'on' : ''}`}
             onClick={() => { setActivePortal('therapist'); setError(''); }}
             style={{
               padding: '10px 14px',
@@ -327,6 +327,25 @@ export default function Register() {
             marginBottom: '20px'
           }}>
             {error}
+          </div>
+        )}
+
+                {/* ── ADMIN ROLE NOTICE ── */}
+        {activePortal === 'admin' && (
+          <div style={{ textAlign: 'center', padding: '36px 16px' }}>
+            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '12px', fontFamily: "'Outfit', sans-serif" }}>
+              Administrative Governance
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.94rem', lineHeight: 1.6, maxWidth: '420px', margin: '0 auto 24px' }}>
+              Administrator credentials are provisioned exclusively by the platform Super Administrator to ensure clinical safety and data governance.
+            </p>
+            <Link
+              to="/login?portal=admin"
+              className="btn-primary"
+              style={{ padding: '12px 28px', fontSize: '0.9rem', display: 'inline-flex' }}
+            >
+              Sign In to Admin Console →
+            </Link>
           </div>
         )}
 
@@ -734,18 +753,7 @@ export default function Register() {
                 )}
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  Mobile Number (E.164)
-                </label>
-                <input
-                  type="tel"
-                  className="input-field"
-                  placeholder="+91 98XXXXXXXX"
-                  value={mobileNumber}
-                  onChange={(e) => setMobileNumber(e.target.value)}
-                />
-              </div>
+
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>

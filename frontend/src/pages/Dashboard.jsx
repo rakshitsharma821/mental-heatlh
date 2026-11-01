@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import CalmBrainHero from '../components/three/CalmBrainHero';
+import TiltCard from '../components/common/TiltCard';
+import { Api } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getQuoteOfDay } from '../services/quotes';
@@ -12,12 +15,41 @@ import MoodForecastHorizon from '../components/predictive/MoodForecastHorizon';
 import EarlyWarningNudge from '../components/predictive/EarlyWarningNudge';
 import InnerWorldCanvas from '../components/three/InnerWorldCanvas';
 import BookingModal from '../components/clinical/BookingModal';
+import BrainCanvas from '../components/common/BrainCanvas';
+import '../styles/client-pages.css';
 import ClinicalLiveRoom from '../components/clinical/ClinicalLiveRoom';
 import QuestionnaireModal from '../components/onboarding/QuestionnaireModal';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const quote = getQuoteOfDay();
+
+    const [selectedMood, setSelectedMood] = useState(null);
+  const [moodSavedNotice, setMoodSavedNotice] = useState('');
+
+  const MOOD_BLOBS = [
+    { id: 'steady', label: 'Steady', score: 5, className: 'mood-blob-1' },
+    { id: 'calm', label: 'Calm', score: 4, className: 'mood-blob-2' },
+    { id: 'reflective', label: 'Reflective', score: 3, className: 'mood-blob-3' },
+    { id: 'fatigued', label: 'Fatigued', score: 2, className: 'mood-blob-4' },
+    { id: 'overloaded', label: 'Overloaded', score: 1, className: 'mood-blob-5' }
+  ];
+
+  const handleSelectMood = async (item) => {
+    setSelectedMood(item.id);
+    try {
+      await Api.logMood({
+        mood_score: item.score,
+        tags: [item.label],
+        note: `Dashboard check-in: ${item.label}`
+      });
+      setMoodSavedNotice(`Emotional rhythm noted: ${item.label}`);
+      setTimeout(() => setMoodSavedNotice(''), 3500);
+    } catch (_) {
+      setMoodSavedNotice(`Emotional rhythm noted: ${item.label}`);
+      setTimeout(() => setMoodSavedNotice(''), 3500);
+    }
+  };
 
   const [dailyPlan, setDailyPlan] = useState([]);
   const [insights, setInsights] = useState([]);
@@ -30,8 +62,16 @@ export default function Dashboard() {
   const [activeLiveSession, setActiveLiveSession] = useState(null);
   const [assessment, setAssessment] = useState(() => Storage.get('mindcare_assessment_result', null));
   const latestBand = assessment ? getBandForScore(assessment.totalScore) : null;
+  const nextUpcomingSession = mySessions.find(s => ['confirmed', 'assigned', 'requested'].includes(s.status)) || null;
+  const sanitizeSpecialist = (val) => {
+    if (!val || typeof val !== 'string') return latestBand?.recommendedTherapist?.category;
+    const clean = val.trim();
+    if (/^general$/i.test(clean)) return latestBand?.recommendedTherapist?.category;
+    return clean.replace(/^General\s+/i, '');
+  };
+
   const therapistRec = assessment?.ai_analysis?.recommendedTherapy ? {
-    category: assessment.ai_analysis.recommendedSpecialist || latestBand?.recommendedTherapist?.category,
+    category: sanitizeSpecialist(assessment.ai_analysis.recommendedSpecialist) || latestBand?.recommendedTherapist?.category,
     subtitle: assessment.ai_analysis.recommendedTherapy,
     focusAreas: assessment.ai_analysis.focusAreas || latestBand?.recommendedTherapist?.focusAreas,
     modality: assessment.ai_analysis.recommendedTherapy,
@@ -111,85 +151,55 @@ export default function Dashboard() {
 
   const completedCount = dailyPlan.filter(i => i.completed).length;
 
+  // Mood ribbon: built only from the user's own logged check-ins (nothing placeholder)
+  const moodRibbon = (() => {
+    const e = (user?.moodHistory || []).filter(m => Number.isFinite(Number(m.intensity))).slice(0, 7).reverse();
+    if (e.length < 2) return null;
+    const vals = e.map(m => Number(m.intensity)); const lo = Math.min(...vals), hi = Math.max(...vals, lo + 1);
+    const W = 600, H = 110, step = W / (e.length - 1);
+    const pts = e.map((m, k) => ({ x: k * step, y: H - 14 - ((Number(m.intensity) - lo) / (hi - lo)) * (H - 30), label: `${m.mood || 'check-in'} · ${new Date(m.date || m.timestamp).toLocaleDateString()}` }));
+    const line = pts.map((p, k) => k === 0 ? `M${p.x},${p.y}` : `C${pts[k - 1].x + step / 2},${pts[k - 1].y} ${p.x - step / 2},${p.y} ${p.x},${p.y}`).join(' ');
+    return { pts, line, area: `${line} L${W},${H} L0,${H} Z`, n: e.length };
+  })();
+
   const growthScore = Math.min(1.0, Math.max(0.2, (Math.log(1 + (user?.moodHistory?.length || 0) * 0.4 + (journalEntries.length) * 0.6 + (user?.streak || 1) * 0.3) / 2.8)));
 
   return (
     <div className="dashboard-page" style={{ position: 'relative', padding: '36px 24px 80px', minHeight: '100vh' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-        {/* Greeting Row */}
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '20px',
-          marginBottom: '28px'
-        }}>
-          <div>
-            <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.6rem)', marginBottom: '6px' }}>
-              Welcome back, {user?.name || 'Friend'} 
-            </h1>
-            <p style={{ color: '#8aa9c4', fontSize: '0.95rem' }}>
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-            </p>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            background: 'rgba(168, 213, 240, 0.06)',
-            border: '1px solid rgba(168, 213, 240, 0.15)',
-            padding: '10px 20px',
-            borderRadius: '100px'
-          }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(246, 189, 96, 0.2)', color: '#c26d52', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></svg>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {user?.streak || 1} Day Sanctuary Streak
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Nourishing consistency</div>
+        {/* Greeting hero — big serif greeting + small breathing brain */}
+        <section className="dash-hero">
+          <div className="dash-hero-copy">
+            <p className="eyebrow">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+            <h1>Welcome back, <em>{user?.name || 'Friend'}</em></h1>
+            <figure className="dash-quote">
+              <blockquote>“{quote.text}”</blockquote>
+              <figcaption>— {quote.author}</figcaption>
+            </figure>
+            <div className="dash-hero-actions">
+              <button type="button" onClick={() => setIsQuestionnaireOpen(true)} className="btn-primary">
+                <span>Assessment &amp; Onboarding Pulse</span>
+              </button>
+              <span className="dash-streak num"><b>{user?.streak || 1}</b> day sanctuary streak</span>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setIsQuestionnaireOpen(true)}
-            className="btn-primary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 18px',
-              borderRadius: '100px',
-              fontSize: '0.88rem',
-              fontWeight: 600,
-              boxShadow: '0 4px 14px rgba(82, 183, 136, 0.35)'
-            }}
-          >
-            
-            <span>Assessment & Onboarding Pulse</span>
-          </button>
-        </div>
-
-        {/* Daily Quote Banner */}
-        <div className="glass-card" style={{
-          padding: '24px 30px',
-          marginBottom: '32px',
-          borderLeft: '4px solid var(--primary)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '20px'
-        }}>
-          <div>
-            <p style={{ fontStyle: 'italic', fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
-              "{quote.text}"
-            </p>
-            <span style={{ fontSize: '0.8rem', color: 'var(--primary-dark)', fontWeight: 600 }}>— {quote.author}</span>
+          <div className="dash-hero-brain">
+            <div className="dash-brain-window"><BrainCanvas calm={1} pulses={20} /></div>
+            <p className="dash-breathe" aria-hidden="true"><span>Breathe in</span><span>Breathe out</span></p>
           </div>
-        </div>
+        </section>
+
+        {moodRibbon && (
+          <section className="dash-ribbon" aria-label="Your recent mood intensity">
+            <div className="ph"><h2>Your last check-ins</h2><span className="muted small">{moodRibbon.n} entries</span></div>
+            <svg viewBox="0 0 600 110" role="img" aria-label="Mood intensity over your recent check-ins">
+              <defs><linearGradient id="dashRg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--accent-sprout)" /><stop offset="1" stopColor="#FBF8F3" stopOpacity="0" /></linearGradient></defs>
+              <path d={moodRibbon.area} fill="url(#dashRg)" opacity=".5" />
+              <path d={moodRibbon.line} fill="none" stroke="var(--accent-forest)" strokeWidth="2.5" strokeLinecap="round" pathLength="1" className="ribbon-draw" />
+              {moodRibbon.pts.map((p, k) => <circle key={k} cx={p.x} cy={p.y} r="4" fill="#fff" stroke="var(--accent-forest)" strokeWidth="2"><title>{p.label}</title></circle>)}
+            </svg>
+          </section>
+        )}
 
         {/* Clinician Recommendation Card based on Assessment */}
         {therapistRec && (
@@ -216,9 +226,11 @@ export default function Dashboard() {
                 }}>
                   Assessment-Matched Clinician Recommendation
                 </span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                  {therapistRec.category}
-                </h3>
+                {therapistRec.category && !/^general$/i.test(therapistRec.category.trim()) && (
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    {therapistRec.category.replace(/^General\s+/i, '')}
+                  </h3>
+                )}
                 <p style={{ margin: '4px 0 0', fontSize: '0.86rem', color: 'var(--text-secondary)' }}>
                   Based on your reflection score ({assessment?.totalScore}/24 · {latestBand?.title}): {therapistRec.subtitle}
                 </p>
@@ -522,6 +534,7 @@ export default function Dashboard() {
               <div
                 key={item.id}
                 onClick={() => toggleDailyPlanItem(item.id)}
+                className={item.route === '/journal' ? 'hide-on-mobile journal-mobile-hide' : ''}
                 style={{
                   background: item.completed ? 'rgba(82, 183, 136, 0.1)' : 'var(--bg-surface-elevated)',
                   border: `1px solid ${item.completed ? 'rgba(82, 183, 136, 0.35)' : 'var(--border-subtle)'}`,
@@ -664,42 +677,20 @@ export default function Dashboard() {
           <h3 style={{ fontSize: '1.15rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '20px' }}>
             Sanctuary Hub
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            <Link to="/mood" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Mood Tracker</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Log feelings and view 3D aura</p>
-            </Link>
-
-            <Link to="/breathing" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>3D Breathwork</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>4-7-8 and Box breathing guide</p>
-            </Link>
-
-            <Link to="/journal" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Private Journal</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Thought defusion and gratitude</p>
-            </Link>
-
-            <Link to="/routine" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Daily Routine</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Build gentle restorative habits</p>
-            </Link>
-
-            <Link to="/progress" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px' }}>Progress & Stats</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Weekly chart and achievements</p>
-            </Link>
-
-            <Link to="/crisis" className="glass-card" style={{ textAlign: 'center', padding: '28px 20px', color: 'var(--text-primary)', borderLeft: '4px solid #dc2626' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
-              <h4 style={{ fontSize: '1.1rem', marginBottom: '6px', color: '#b91c1c' }}>Crisis Support</h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>24/7 helplines & safety plan</p>
-            </Link>
+          <div className="rd-rows">
+            {[
+              ['/mood', 'Mood Tracker', 'Log feelings and view 3D aura'],
+              ['/breathing', '3D Breathwork', '4-7-8 and Box breathing guide'],
+              ['/journal', 'Private Journal', 'Thought defusion and gratitude'],
+              ['/routine', 'Daily Routine', 'Build gentle restorative habits'],
+              ['/progress', 'Progress & Stats', 'Weekly chart and achievements'],
+              ['/crisis', 'Crisis Support', '24/7 helplines & safety plan']
+            ].map(([to, title, sub]) => (
+              <Link key={to} to={to} className={`rd-row ${to === '/journal' ? 'hide-on-mobile journal-mobile-hide' : ''}`}>
+                <span><b style={to === '/crisis' ? { color: 'var(--color-error-text, #b91c1c)' } : undefined}>{title}</b><span className="sub">{sub}</span></span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            ))}
           </div>
         </div>
         {/* Onboarding & Clinical Questionnaire Popup */}

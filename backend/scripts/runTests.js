@@ -20,12 +20,12 @@ const backendDir = path.resolve(__dirname, '..');
 
 function freePort(port) {
   try {
-    const out = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, { encoding: 'utf8' });
+    const out = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf8' });
     const lines = out.trim().split('\n');
     for (const line of lines) {
       const parts = line.trim().split(/\s+/);
       const pid = parts[parts.length - 1];
-      if (pid && pid !== '0' && pid !== String(process.pid)) {
+      if (pid && pid !== '0' && pid !== String(process.pid) && !isNaN(Number(pid))) {
         try { execSync(`taskkill /F /PID ${pid}`); } catch (_) {}
       }
     }
@@ -49,6 +49,7 @@ async function main() {
   process.env.NODE_ENV = 'test';
   process.env.TEST_DB_NAME = testDbName;
   process.env.PORT = process.env.PORT || '5000';
+  freePort(process.env.PORT);
 
   // 1. Initialize and migrate the test database
   console.log(`📦 Initializing test database [${testDbName}]...`);
@@ -61,6 +62,7 @@ async function main() {
   // 2. Start backend server bound to test database
   const port = process.env.PORT || '5000';
   freePort(port);
+  await new Promise(r => setTimeout(r, 600));
   console.log(`🚀 Launching MindCare Backend server on port ${port} bound to [${testDbName}]...`);
   const serverProcess = spawn('node', ['server.js'], {
     cwd: backendDir,
@@ -91,7 +93,7 @@ async function main() {
   const args = process.argv.slice(2);
   const testTargets = args.length > 0
     ? args
-    : ['tests/step0_verification.test.js', 'tests/part3_therapist_verification.test.js'];
+    : ['tests/step0_verification.test.js', 'tests/part3_therapist_verification.test.js', 'tests/security_comprehensive.test.js'];
 
   console.log(`\n📋 Running test files: ${testTargets.join(', ')}...\n`);
 

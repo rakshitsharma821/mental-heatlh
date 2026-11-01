@@ -15,8 +15,9 @@ import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
 import { db } from './models/db.js';
 import { encryptField } from './utils/crypto.js';
-import { securityHeaders, globalLimiter, authLimiter, aiLimiter } from './middleware/security.js';
+import { securityHeaders, enforceHttps, globalLimiter, authLimiter, aiLimiter, uploadLimiter } from './middleware/security.js';
 import { sanitizeInput } from './middleware/sanitize.js';
+import { csrfProtection } from './middleware/csrf.js';
 
 // Load environment variables from .env
 const __filename = fileURLToPath(import.meta.url);
@@ -44,22 +45,36 @@ const allowedOrigins = [
   'http://127.0.0.1:5173'
 ];
 
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  if (process.env.NODE_ENV !== 'production') {
+    if (origin.endsWith('.devtunnels.ms') || origin.endsWith('.loca.lt') || origin.includes('ngrok')) {
+      return true;
+    }
+    if (/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Security Hardening Middlewares
 app.disable('x-powered-by');
+app.use(enforceHttps);
 app.use(securityHeaders);
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow non-browser requests (e.g. mobile apps, curl, internal tests) without origin header
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
+    if (!origin || isOriginAllowed(origin)) {
       return callback(null, true);
     }
     return callback(new Error('CORS Policy: Origin not permitted by MindCare Sanctuary security firewall.'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Webhook-Signature', 'X-Webhook-Timestamp']
 }));
 
 // Body Parsing with strict size limits to prevent Denial-of-Service attacks
@@ -68,6 +83,9 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Anti-XSS & Prototype Pollution Input Sanitizer
 app.use(sanitizeInput);
+
+// CSRF Defense on state-changing requests
+app.use(csrfProtection(allowedOrigins));
 
 // Global Rate Limiting across all API routes
 app.use('/api', globalLimiter);
@@ -84,11 +102,13 @@ import communityRoutes from './routes/communityRoutes.js';
 import assessmentRoutes from './routes/assessmentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 
 // Route-level Rate Limiters
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/companion/chat', aiLimiter);
 app.use('/api/assessment/analyze', aiLimiter);
+app.use('/api/clinical/documents/upload', uploadLimiter);
 
 app.use('/api/mood', moodRoutes);
 app.use('/api/journal', journalRoutes);
@@ -100,6 +120,7 @@ app.use('/api/community', communityRoutes);
 app.use('/api/assessment', assessmentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
@@ -534,7 +555,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🌿 MindCare Sanctuary Backend running on port ${PORT}`);
   console.log(`📡 Accepting client connections from: ${CLIENT_ORIGIN}`);
   console.log(`📹 WebRTC Signaling enabled via Socket.io on port ${PORT}`);

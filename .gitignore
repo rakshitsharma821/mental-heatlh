@@ -21,6 +21,9 @@
 # Clinical Uploads & Vaults (DPDP / HIPAA compliance)
 uploads/
 backend/uploads/
+backups/
+backend/backups/
+*.json.gz
 backend/data/*.db*
 *.sqlite
 *.sqlite3

@@ -16,16 +16,38 @@ const KEYS = {
 };
 
 const DEFAULT_THERAPIST = {
-  id: 'usr_demo_therapist_01',
-  name: 'Dr. Evelyn Vance, PsyD',
-  title: 'Licensed Clinical Psychologist',
-  license: 'Lic #PSY-28491',
-  specialties: ['CBT & Anxiety Management', 'Burnout Prevention', 'Somatic Regulation'],
-  bio: 'Specializing in integrative mindfulness-based cognitive therapy, nervous system down-regulation, and compassionate burnout recovery.'
+  id: '',
+  name: 'Assigned Clinician',
+  title: 'Licensed Clinical Practitioner',
+  license: 'Verification Pending',
+  specialties: [],
+  bio: ''
 };
 
 export const ClinicalConsentService = {
-  getDefaultTherapist: () => DEFAULT_THERAPIST,
+  getDefaultTherapist: (profile, user) => {
+    if (profile) {
+      return {
+        id: profile.therapist_id || profile.id || user?.id || '',
+        name: profile.full_name || user?.name || 'Assigned Clinician',
+        title: profile.title || 'Licensed Clinical Practitioner',
+        license: profile.license_number || 'Verification Pending',
+        specialties: profile.specialties || [],
+        bio: profile.bio || ''
+      };
+    }
+    if (user) {
+      return {
+        id: user.id || '',
+        name: user.name || 'Assigned Clinician',
+        title: user.title || 'Licensed Clinical Practitioner',
+        license: user.license || 'Verification Pending',
+        specialties: [],
+        bio: ''
+      };
+    }
+    return DEFAULT_THERAPIST;
+  },
 
   // -------------------------------------------------------------
   // PHASE 3: CLINICAL THERAPIST CONSENT (Strict Zero-Trust)
@@ -72,14 +94,14 @@ export const ClinicalConsentService = {
     return consent;
   },
 
-  grantAccess: (daysValid = 30) => {
+  grantAccess: (daysValid = 30, clinicianName) => {
     const consent = ClinicalConsentService.getConsent();
     const now = new Date();
     const expires = new Date(now.getTime() + daysValid * 24 * 60 * 60 * 1000);
     consent.accessGranted = true;
     consent.grantedAt = now.toISOString();
     consent.expiresAt = expires.toISOString();
-    ClinicalConsentService.appendAudit('Client', 'ACCESS_GRANTED', `Clinical access authorized for Dr. Evelyn Vance (expires in ${daysValid} days)`);
+    ClinicalConsentService.appendAudit('Client', 'ACCESS_GRANTED', `Clinical access authorized for ${clinicianName || consent.therapistName || 'Assigned Clinician'} (expires in ${daysValid} days)`);
     ClinicalConsentService.saveConsent(consent);
     return consent;
   },
@@ -98,7 +120,7 @@ export const ClinicalConsentService = {
     return consent;
   },
 
-  recordAuditAccess: (viewerName = 'Dr. Evelyn Vance, PsyD') => {
+  recordAuditAccess: (viewerName = 'Assigned Clinician') => {
     const consent = ClinicalConsentService.getConsent();
     const now = new Date().toISOString();
     consent.lastAccessedAt = now;

@@ -1,0 +1,93 @@
+/* ===================================================================
+   MindCare — Redesign layer (light only). Loaded AFTER index.css, so it
+   re-skins every existing page through tokens + shared classes.
+   Logic, routes and data are untouched.
+   =================================================================== */
+:root{
+  --bg-primary:#FBF8F3; --bg-surface:#F4EFE7; --bg-surface-elevated:#FFFFFF;
+  --bg-glass:rgba(255,255,255,.78); --bg-glass-strong:rgba(255,255,255,.94); --bg-glass-card:#fff;
+  --text-primary:#1F2D27; --text-secondary:#44534C; --text-muted:#5E6E66; --text-subtle:#7A8A82;
+  --primary:#2F5D50; --primary-dark:#244A40; --primary-light:#EAF3EE;
+  --accent-forest:#2F5D50; --accent-leaf:#3B6E5F; --accent-mint:#4F8A76; --accent-sprout:#8FCBB0;
+  --accent-sage-soft:#EAF3EE;
+  --accent-lavender:#B3A2DB; --accent-lavender-soft:#F1EDFA; --accent-peach:#EDAE86; --accent-peach-soft:#FCF0E6;
+  --accent-sky:#8CBFE3; --accent-sky-soft:#EAF4FB;
+  --border-subtle:rgba(31,45,39,.12); --border-hover:rgba(31,45,39,.24);
+  --shadow-sm:0 1px 0 rgba(31,45,39,.04); --shadow-md:0 1px 0 rgba(31,45,39,.04),0 14px 30px -20px rgba(31,45,39,.4);
+  --shadow-lg:0 2px 0 rgba(31,45,39,.04),0 30px 60px -30px rgba(31,45,39,.45);
+  --radius-md:12px; --radius-lg:16px; --radius-xl:22px;
+  --font-display:"Fraunces Variable","Fraunces",Georgia,serif;
+  --font-sans:"Inter Variable","Inter",system-ui,sans-serif;
+  --ease:cubic-bezier(.22,.8,.3,1);
+}
+html,body{font-family:var(--font-sans);font-size:16.5px}
+h1,h2,h3,.nav-logo,.logo-text{font-family:var(--font-display)!important;font-weight:420;letter-spacing:-.02em;font-variation-settings:"opsz" 96}
+h1{line-height:1.05} h2{line-height:1.1}
+h4,h5,h6,button,input,select,textarea,label{font-family:var(--font-sans)}
+em{font-style:italic}
+
+/* cards: paper, hairline, no frosted-glass, no hover "lift" gimmick */
+.glass-card{background:#fff;border:1px solid var(--border-subtle);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);backdrop-filter:none}
+.glass-card:hover{border-color:var(--border-hover);box-shadow:var(--shadow-lg)}
+
+/* buttons */
+.btn-primary{background:var(--accent-forest)!important;box-shadow:0 10px 26px -12px rgba(47,93,80,.7)!important;font-weight:550;position:relative;overflow:hidden;letter-spacing:0}
+.btn-primary::before{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.28) 50%,transparent 70%);transform:translateX(-120%);transition:transform .9s ease;pointer-events:none}
+.btn-primary:hover::before{transform:translateX(120%)}
+.btn-primary:hover{background:var(--primary-dark)!important}
+.btn-ghost{background:rgba(255,255,255,.6);font-weight:550}
+.btn-ghost:hover{background:#fff}
+.input-field{border-radius:12px;box-shadow:none;border:1px solid var(--border-subtle)}
+.input-field:focus{border-color:var(--accent-forest);box-shadow:0 0 0 4px rgba(47,93,80,.12)}
+.sanctuary-chip{border-radius:999px}
+.sanctuary-modal-card{border-radius:20px}
+.sanctuary-modal-overlay{background:rgba(31,45,39,.28)}
+
+/* navbar: text tabs with a sliding underline (no pill buttons) */
+.sanctuary-nav{background:rgba(251,248,243,.88);height:66px}
+.nav-logo{font-size:1.4rem;font-weight:600}.logo-sparkle{display:none}
+.nav-link{border-radius:0;padding:8px 12px;font-weight:500;font-size:.9rem;color:var(--text-secondary);background:none!important;border:0!important;position:relative}
+.nav-link::after{content:"";position:absolute;left:12px;right:12px;bottom:3px;height:1.5px;background:var(--accent-forest);transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease)}
+.nav-link:hover::after,.nav-link.active::after{transform:scaleX(1)}
+.nav-link.active{color:var(--text-primary);font-weight:600}
+.footer-logo{font-family:var(--font-display)}
+.sanctuary-footer{background:var(--bg-surface)}
+
+/* editorial section helper used by redesigned pages */
+.eyebrow{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-forest);font-weight:600}
+.arrow-link{font-weight:550;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:2px;display:inline-flex;gap:8px;transition:gap .3s var(--ease);color:var(--text-primary)}
+.arrow-link:hover{gap:14px}
+.rd-rows{border-top:1px solid var(--border-subtle)}
+.rd-row{display:grid;grid-template-columns:1fr auto auto;gap:18px;align-items:center;padding:22px 4px;border-bottom:1px solid var(--border-subtle);text-decoration:none;color:inherit;transition:padding .35s var(--ease),background .35s}
+.rd-row:hover{padding-left:16px;background:linear-gradient(90deg,rgba(191,230,209,.35),transparent)}
+.rd-row b{font-family:var(--font-display);font-weight:450;font-size:1.3rem;letter-spacing:-.01em;display:block;color:var(--text-primary)}
+.rd-row span.sub{color:var(--text-muted);font-size:.95rem}
+
+/* ============ ADMIN — "desk": cooler stationery palette, ledger rules ============ */
+body[data-portal="admin"]{--bg-primary:#F2F4F3;--bg-surface:#E9EEEC;--accent-forest:#3B5B7A;--primary:#3B5B7A;--primary-dark:#2D4862;--accent-leaf:#47698A;--accent-mint:#47698A;--accent-sage-soft:#E3EBF2;--text-primary:#17201C;--border-subtle:rgba(23,32,28,.16)}
+body[data-portal="admin"],body[data-portal="admin"] #root{background:
+  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .1  0 0 0 0 .15  0 0 0 0 .13  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),linear-gradient(180deg,#F5F7F6,#F2F4F3)}
+body[data-portal="admin"] .glass-card,body[data-portal="admin"] .admin-kpi-card{border-radius:4px;box-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 18px 30px -24px rgba(23,32,28,.5);background:#FBFCFB}
+body[data-portal="admin"] .btn-primary{border-radius:6px;background:#17201C!important;box-shadow:none!important}
+body[data-portal="admin"] .btn-ghost{border-radius:6px;background:#fff}
+body[data-portal="admin"] .input-field{border-radius:6px}
+
+/* ============ THERAPIST — calm sage workspace ============ */
+body[data-portal="therapist"]{--bg-primary:#F6F7F2}
+body[data-portal="therapist"] #root{background:radial-gradient(60% 40% at 100% 0%,rgba(191,230,209,.45),transparent 70%),#F6F7F2}
+
+@media (prefers-reduced-motion:reduce){.btn-primary::before{display:none}.rd-row,.arrow-link{transition:none}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}.muted{color:var(--text-muted)}.small{font-size:.9rem}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}.muted{color:var(--text-muted)}.small{font-size:.9rem}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--border-subtle);padding-bottom:10px;margin-bottom:22px}.ph h2{font-size:1.45rem;font-weight:450}
+.bubbles{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+
+/* mood: soft shapes instead of emoji */
+.mood-blob{display:inline-block;width:38px;height:38px;border-radius:46% 54% 58% 42% / 55% 45% 55% 45%;opacity:.85;box-shadow:inset 0 -6px 10px rgba(31,45,39,.08),0 10px 16px -12px rgba(31,45,39,.5);animation:blobw 7s ease-in-out infinite}
+.mood-blob.sm{width:22px;height:22px}
+@keyframes blobw{50%{transform:translateY(-2px) rotate(4deg) scale(1.04)}}
+
+body[data-portal="member"] .kpis{--desk-ink:#1F2D27;--desk-line:rgba(31,45,39,.14)}
+

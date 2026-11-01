@@ -1,3 +1,4 @@
+import '../styles/admin-desk.css';
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Storage } from '../services/storage';
@@ -53,25 +54,11 @@ export default function Progress() {
         </div>
 
         {/* Overview Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '36px' }}>
-          <div className="glass-card" style={{ textAlign: 'center', padding: '26px' }}>
-            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}></div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{streak} Days</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Current Streak</div>
-          </div>
-
-          <div className="glass-card" style={{ textAlign: 'center', padding: '26px' }}>
-            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}></div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary-dark)' }}>{moods.length}</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Check-ins</div>
-          </div>
-
-          <div className="glass-card" style={{ textAlign: 'center', padding: '26px' }}>
-            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}></div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary)' }}>{journalEntries.length}</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Journal Entries</div>
-          </div>
-        </div>
+        <section className="kpis" style={{ marginBottom: '40px' }} aria-label="Overview">
+          {[['Current streak', `${streak} days`], ['Total check-ins', moods.length], ['Journal entries', journalEntries.length]].map(([label, value], k) => (
+            <div key={label} className="kpi" style={{ '--i': k }}><span className="kl">{label}</span><b className="num">{value}</b></div>
+          ))}
+        </section>
 
         {/* 7-Day Mood Activity Bar Chart */}
         <div className="glass-card" style={{ padding: '32px', marginBottom: '36px' }}>
