@@ -6,6 +6,12 @@
 
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config();
 
 let cachedTransporter = null;
@@ -18,7 +24,7 @@ export function getTransporter() {
 
   const service = process.env.EMAIL_SERVICE; // e.g. 'gmail'
   const user = (process.env.EMAIL_USER || '').trim();
-  const pass = (process.env.EMAIL_PASS || '').trim();
+  const pass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '').trim();
 
   // If credentials are empty or default placeholders, return null (fallback to console logging)
   if (!user || !pass || user === 'your-email@gmail.com' || pass === 'your-google-app-password') {
