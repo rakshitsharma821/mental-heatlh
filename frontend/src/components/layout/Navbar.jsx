@@ -253,7 +253,7 @@ export default function Navbar() {
                       <NavLink
                         key={link.to}
                         to={link.to}
-                        className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                        className={({ isActive }) => `nav-link ${isActive ? 'active' : ''} ${link.to === '/journal' ? 'hide-on-mobile journal-mobile-hide' : ''}`}
                         onClick={() => setMenuOpen(false)}
                       >
                         {link.label}

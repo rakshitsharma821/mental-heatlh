@@ -1,0 +1,35 @@
+/* ===== Client pages — editorial layer (Dashboard, Mood, Breathing, Journal, Routine, Progress, Community) =====
+   Markup/logic untouched; sections become ruled "paper" rows instead of stacked boxes. Light only. */
+.dash-hero{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;margin-bottom:48px}
+.dash-hero h1{font-size:clamp(2.4rem,5vw,4.2rem);letter-spacing:-.025em;margin:12px 0 18px}
+.dash-quote{margin:0 0 26px;max-width:32em;border-left:2px solid var(--accent-forest);padding-left:18px}
+.dash-quote blockquote{font-family:var(--font-display);font-style:italic;font-size:1.25rem;line-height:1.4;color:var(--text-primary)}
+.dash-quote figcaption{margin-top:6px;color:var(--text-muted);font-size:.9rem}
+.dash-hero-actions{display:flex;flex-wrap:wrap;gap:18px;align-items:center}
+.dash-streak{color:var(--text-secondary);font-size:.95rem}.dash-streak b{font-family:var(--font-display);font-size:1.6rem;font-weight:450;color:var(--text-primary);margin-right:4px}
+.dash-hero-brain{position:relative}
+.dash-brain-window{aspect-ratio:1/1;max-height:440px;margin-left:auto;border-radius:48% 52% 46% 54%/52% 46% 54% 48%;background:radial-gradient(70% 70% at 50% 40%,rgba(255,255,255,.9),rgba(217,207,243,.45) 70%,transparent 72%);overflow:hidden}
+.dash-brain-window canvas{width:100%;height:100%;display:block}
+.dash-breathe{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);font-family:var(--font-display);font-style:italic;color:var(--text-secondary);height:1.6em;overflow:hidden;text-align:center;width:10em}
+.dash-breathe span{display:block;animation:dashBh 9s infinite}
+@keyframes dashBh{0%,43%{transform:translateY(0)}50%,93%{transform:translateY(-100%)}100%{transform:translateY(0)}}
+.dash-ribbon{margin-bottom:40px}.dash-ribbon svg{width:100%;height:auto;overflow:visible}
+.ribbon-draw{stroke-dasharray:1;stroke-dashoffset:1;animation:ribDraw 2s var(--ease) .3s forwards}@keyframes ribDraw{to{stroke-dashoffset:0}}
+
+/* boxes -> ruled editorial sections (inline styles need !important) */
+.dashboard-page .glass-card,.mood-page .glass-card,.journal-page .glass-card,.routine-page .glass-card,.progress-page .glass-card,.community-page .glass-card{
+  background:transparent!important;box-shadow:none!important;border:0!important;border-top:1px solid var(--border-subtle)!important;border-radius:0!important;padding-left:0!important;padding-right:0!important;backdrop-filter:none!important}
+.dashboard-page .glass-card:hover,.mood-page .glass-card:hover,.journal-page .glass-card:hover,.routine-page .glass-card:hover,.progress-page .glass-card:hover,.community-page .glass-card:hover{border-color:var(--border-subtle)!important}
+/* nested tiles inside those sections: hairline cells instead of rounded boxes */
+.dashboard-page .glass-card [style*="border-radius: 14px"],.dashboard-page .glass-card [style*="border-radius: 16px"],.dashboard-page .glass-card [style*="border-radius: 12px"]{border-radius:6px!important;box-shadow:none!important}
+.dashboard-page h3,.mood-page h3,.journal-page h3,.routine-page h3,.progress-page h3,.community-page h3{font-weight:450}
+.dashboard-page h1,.mood-page h1,.journal-page h1,.routine-page h1,.progress-page h1,.community-page h1,.breathing-page h1{letter-spacing:-.025em}
+.mood-page,.journal-page,.routine-page,.progress-page,.community-page,.breathing-page{background:radial-gradient(50% 35% at 100% 0%,rgba(217,207,243,.35),transparent 70%),radial-gradient(40% 35% at 0% 100%,rgba(191,230,209,.3),transparent 70%)}
+.breathing-page{background-color:var(--bg-primary)!important}
+@media (max-width:900px){.dash-hero{grid-template-columns:1fr}.dash-brain-window{max-width:340px;margin:0 auto}}
+@media (prefers-reduced-motion:reduce){.dash-breathe span,.ribbon-draw{animation:none}.ribbon-draw{stroke-dashoffset:0}}
+
+/* member sub-pages: tint of the kpi strip on warm background */
+body[data-portal="member"] .kpis{--desk-ink:#1F2D27;--desk-line:rgba(31,45,39,.14)}
+body[data-portal="member"] .kpi b{color:var(--text-primary)}
+@media (prefers-reduced-motion:reduce){.mood-blob{animation:none}}

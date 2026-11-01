@@ -183,7 +183,7 @@ export default function MoodTracker() {
                         boxShadow: isSelected ? `0 4px 14px rgba(33, 64, 47, 0.12)` : 'none'
                       }}
                     >
-                      <span style={{ fontSize: '1.8rem' }}>{config.emoji}</span>
+                      <span className="mood-blob" style={{ background: config.color || config.hex || 'var(--accent-sage-soft)' }} aria-hidden="true" />
                       <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isSelected ? 'var(--primary-dark)' : 'var(--text-secondary)' }}>
                         {config.label}
                       </span>
@@ -311,7 +311,7 @@ export default function MoodTracker() {
                 animation: 'fadeIn 0.3s ease-out'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '1.4rem' }}>{savedMoodInfo.emoji}</span>
+                  <span className="mood-blob sm" style={{ background: (savedMoodInfo && savedMoodInfo.color) || 'var(--accent-sage-soft)' }} aria-hidden="true" />
                   <div>
                     <div><strong>{savedMoodInfo.label}</strong> Check-in Recorded! (Intensity: {savedMoodInfo.intensity}/10)</div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
@@ -442,7 +442,7 @@ export default function MoodTracker() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <span style={{ fontSize: '2rem' }}>{conf.emoji}</span>
+                      <span className="mood-blob" style={{ background: conf.color || conf.hex || 'var(--accent-sage-soft)' }} aria-hidden="true" />
                       <div>
                         <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{conf.label}</div>
                         {m.note && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>"{m.note}"</div>}

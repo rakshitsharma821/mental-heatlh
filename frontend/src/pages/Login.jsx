@@ -309,6 +309,7 @@ export default function Login() {
                 <button
                   key={p.id}
                   type="button"
+                  className={`auth-tab ${isActive ? 'on' : ''}`}
                   onClick={() => {
                     setActivePortal(p.id);
                     setError('');

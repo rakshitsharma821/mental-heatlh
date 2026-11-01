@@ -83,3 +83,11 @@ body[data-portal="therapist"] #root{background:radial-gradient(60% 40% at 100% 0
 .num{font-variant-numeric:tabular-nums}.muted{color:var(--text-muted)}.small{font-size:.9rem}
 .ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--border-subtle);padding-bottom:10px;margin-bottom:22px}.ph h2{font-size:1.45rem;font-weight:450}
 .bubbles{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+
+/* mood: soft shapes instead of emoji */
+.mood-blob{display:inline-block;width:38px;height:38px;border-radius:46% 54% 58% 42% / 55% 45% 55% 45%;opacity:.85;box-shadow:inset 0 -6px 10px rgba(31,45,39,.08),0 10px 16px -12px rgba(31,45,39,.5);animation:blobw 7s ease-in-out infinite}
+.mood-blob.sm{width:22px;height:22px}
+@keyframes blobw{50%{transform:translateY(-2px) rotate(4deg) scale(1.04)}}
+
+body[data-portal="member"] .kpis{--desk-ink:#1F2D27;--desk-line:rgba(31,45,39,.14)}
+

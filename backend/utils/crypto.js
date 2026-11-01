@@ -65,6 +65,17 @@ export function decryptField(ciphertext, ivHex, authTagHex) {
 }
 
 /**
+ * Constant-time string comparison to prevent timing attacks
+ */
+export function safeCompare(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+/**
  * Hash password with unique salt using scrypt (Node.js crypto)
  */
 export function hashPassword(password, salt) {

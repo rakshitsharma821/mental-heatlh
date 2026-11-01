@@ -4,6 +4,7 @@
 // interactive mouse parallax, and multi-depth sunlit fireflies
 // ============================================
 
+import BrainCanvas from '../common/BrainCanvas';
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
@@ -589,9 +590,7 @@ export default function InnerWorldCanvas({
         }}
         title="Sanctuary Garden (Static Mode)"
       >
-        <span style={{ fontSize: '3.2rem', marginBottom: '8px' }}></span>
-        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1.05rem' }}>Your Living Sanctuary Tree</div>
-        <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Static visual mode active for sensory comfort and battery conservation.</div>
+        <div style={{ width: '100%', height: '100%', minHeight: '180px' }}><BrainCanvas calm={1} pulses={0} label="Your sanctuary — calm brain illustration (static mode)" /></div>
       </div>
     );
   }

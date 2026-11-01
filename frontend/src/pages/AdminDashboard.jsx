@@ -13,6 +13,7 @@
 // 9. Audit Logs: Append-only Admin Audit Log and Clinical Consent Trail
 // ============================================
 
+import StatusLanes from '../components/admin/StatusLanes';
 import Columns3D from '../components/common/Columns3D';
 import '../styles/admin-desk.css';
 import React, { useState, useEffect } from 'react';
@@ -487,11 +488,11 @@ export default function AdminDashboard() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: '#2b5f7d' }}>
+              <span className="eyebrow desk">
                 System Administration & Governance
               </span>
             </div>
-            <h1 style={{ fontSize: '1.85rem', color: 'var(--text-primary)', marginTop: '4px' }}>
+            <h1 className="desk-h1">
               MindCare Sanctuary Control Console
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -509,20 +510,7 @@ export default function AdminDashboard() {
                 + Provision Administrator
               </button>
             )}
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '100px',
-              background: 'rgba(43, 95, 125, 0.12)',
-              border: '1px solid rgba(43, 95, 125, 0.25)',
-              color: '#2b5f7d',
-              fontSize: '0.78rem',
-              fontWeight: 700
-            }}>
-              <span>Zero-PII Protected</span>
-            </div>
+            <span className="desk-note">Zero-PII protected</span>
             <button
               type="button"
               onClick={handleLogout}
@@ -633,10 +621,10 @@ export default function AdminDashboard() {
         {/* TAB 2: THERAPIST VERIFICATION QUEUE & DOSSIER */}
         {/* ========================================================= */}
         {activeTab === 'verification' && (
-          <div className="glass-card" style={{ padding: '24px' }}>
+          <div className="desk-sheet">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                <h3 className="sheet-title">
                   Clinician Verification Queue
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -671,6 +659,9 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {!loadingTherapists && therapists.length > 0 && (
+              <StatusLanes title="Clinicians by verification state" items={therapists} field="verification_status" label={(t) => t.name} />
+            )}
             {loadingTherapists ? (
               <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>Loading clinician records...</div>
             ) : therapists.length === 0 ? (
@@ -679,57 +670,50 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table className="ledger-table">
+                <table className="ledger">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                      <th style={{ padding: '10px' }}>Therapist ID</th>
-                      <th style={{ padding: '10px' }}>Clinician</th>
-                      <th style={{ padding: '10px' }}>Licence & Board</th>
-                      <th style={{ padding: '10px' }}>Docs Uploaded</th>
-                      <th style={{ padding: '10px' }}>External Check</th>
-                      <th style={{ padding: '10px' }}>Status</th>
-                      <th style={{ padding: '10px' }}>Actions</th>
+                    <tr>
+                      <th>Therapist ID</th>
+                      <th>Clinician</th>
+                      <th>Licence & Board</th>
+                      <th>Docs Uploaded</th>
+                      <th>External Check</th>
+                      <th>Status</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {therapists.map((th) => (
-                      <tr key={th.profile_id || th.user_id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                        <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 700 }}>
+                      <tr key={th.profile_id || th.user_id}>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>
                           {th.public_id}
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                             {th.name} {th.is_demo && <span style={{ fontSize: '0.68rem', padding: '2px 6px', background: 'rgba(246, 189, 96, 0.3)', color: '#b07d3b', borderRadius: '4px' }}>DEMO</span>}
                           </div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{th.email} • {th.city || 'India'}</div>
                         </td>
-                        <td style={{ padding: '10px', color: 'var(--text-secondary)' }}>
+                        <td style={{ color: 'var(--text-secondary)' }}>
                           <div>{th.license_number}</div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{th.licensing_board}</div>
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           <span style={{ fontWeight: 600 }}>{th.uploaded_docs_count || 0} / 4</span>
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           {th.licence_verified_externally ? (
                             <span style={{ color: 'var(--primary-dark)', fontWeight: 600 }}> Verified</span>
                           ) : (
                             <span style={{ color: 'var(--text-muted)' }}>Unverified</span>
                           )}
                         </td>
-                        <td style={{ padding: '10px' }}>
-                          <span style={{
-                            padding: '3px 10px',
-                            borderRadius: '100px',
-                            fontSize: '0.74rem',
-                            fontWeight: 700,
-                            background: th.verification_status === 'approved' ? 'rgba(82, 183, 136, 0.2)' : (th.verification_status === 'under_review' ? 'rgba(246, 189, 96, 0.25)' : (th.verification_status === 'more_info_required' ? 'rgba(235, 148, 59, 0.2)' : 'rgba(220, 53, 69, 0.15)')),
-                            color: th.verification_status === 'approved' ? 'var(--primary-dark)' : (th.verification_status === 'under_review' ? '#b07d3b' : (th.verification_status === 'more_info_required' ? '#c05621' : '#b91c1c'))
-                          }}>
+                        <td>
+                          <span className="stamp-status" data-s={th.verification_status}>
                             {th.verification_status}
                           </span>
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
                               onClick={() => handleOpenDossier(th.user_id || th.profile_id)}
@@ -786,7 +770,7 @@ export default function AdminDashboard() {
           <div style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.65)',
+            background: 'rgba(23, 32, 28, 0.42)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -842,21 +826,21 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <table className="ledger">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '8px' }}>Type</th>
-                        <th style={{ padding: '8px' }}>File</th>
-                        <th style={{ padding: '8px' }}>Preview</th>
-                        <th style={{ padding: '8px' }}>Doc Status</th>
-                        <th style={{ padding: '8px' }}>Actions</th>
+                      <tr>
+                        <th>Type</th>
+                        <th>File</th>
+                        <th>Preview</th>
+                        <th>Doc Status</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedDossier.documents.map((doc) => (
-                        <tr key={doc.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                          <td style={{ padding: '8px', fontWeight: 600 }}>{doc.doc_type}</td>
-                          <td style={{ padding: '8px' }}>
+                        <tr key={doc.id}>
+                          <td style={{ fontWeight: 600 }}>{doc.doc_type}</td>
+                          <td>
                             <div style={{ fontWeight: 600 }}>{doc.original_filename}</div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{(doc.file_size / 1024).toFixed(1)} KB</div>
                             {doc.ai_notes && (
@@ -865,7 +849,7 @@ export default function AdminDashboard() {
                               </div>
                             )}
                           </td>
-                          <td style={{ padding: '8px' }}>
+                          <td>
                             <a
                               href={doc.view_url}
                               target="_blank"
@@ -875,7 +859,7 @@ export default function AdminDashboard() {
                               Open in Secure Viewer ↗
                             </a>
                           </td>
-                          <td style={{ padding: '8px' }}>
+                          <td>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
                               {doc.ai_verified && (
                                 <span style={{
@@ -906,7 +890,7 @@ export default function AdminDashboard() {
                               </div>
                             )}
                           </td>
-                          <td style={{ padding: '8px' }}>
+                          <td>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               <button
                                 onClick={() => handleDocumentReview(doc.id, 'accepted')}
@@ -947,7 +931,7 @@ export default function AdminDashboard() {
           <div style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.65)',
+            background: 'rgba(23, 32, 28, 0.42)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1055,10 +1039,10 @@ export default function AdminDashboard() {
         {/* TAB 3: USERS & ASSIGNMENTS */}
         {/* ========================================================= */}
         {activeTab === 'users' && (
-          <div className="glass-card" style={{ padding: '24px' }}>
+          <div className="desk-sheet">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                <h3 className="sheet-title">
                   User Directory & Therapist Assignments
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -1109,41 +1093,34 @@ export default function AdminDashboard() {
               <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>Loading users...</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <table className="ledger">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                      <th style={{ padding: '10px' }}>Public ID</th>
-                      <th style={{ padding: '10px' }}>Name & Email</th>
-                      <th style={{ padding: '10px' }}>Role</th>
-                      <th style={{ padding: '10px' }}>Assigned Clinician</th>
-                      <th style={{ padding: '10px' }}>Last Login</th>
-                      <th style={{ padding: '10px' }}>Status</th>
-                      <th style={{ padding: '10px' }}>Actions</th>
+                    <tr>
+                      <th>Public ID</th>
+                      <th>Name & Email</th>
+                      <th>Role</th>
+                      <th>Assigned Clinician</th>
+                      <th>Last Login</th>
+                      <th>Status</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((u) => (
-                      <tr key={u.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                        <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 700 }}>
+                      <tr key={u.id}>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>
                           {u.public_id}
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{u.full_name}</div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{u.email}</div>
                         </td>
-                        <td style={{ padding: '10px' }}>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '100px',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            background: u.role === 'super_admin' ? 'rgba(155, 89, 182, 0.2)' : (u.role === 'admin' ? 'rgba(43, 95, 125, 0.2)' : (u.role === 'therapist' ? 'rgba(82, 183, 136, 0.2)' : 'rgba(246, 189, 96, 0.2)')),
-                            color: u.role === 'super_admin' ? '#8e44ad' : (u.role === 'admin' ? '#2b5f7d' : (u.role === 'therapist' ? 'var(--primary-dark)' : '#b07d3b'))
-                          }}>
+                        <td>
+                          <span className="stamp-status" data-s={u.role}>
                             {u.role}
                           </span>
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           {u.assigned_therapist ? (
                             <div>
                               <span style={{ fontWeight: 600 }}>{u.assigned_therapist.name}</span>
@@ -1161,10 +1138,10 @@ export default function AdminDashboard() {
                             <span style={{ color: 'var(--text-muted)' }}>None assigned</span>
                           )}
                         </td>
-                        <td style={{ padding: '10px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                        <td style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
                           {u.last_login ? new Date(u.last_login).toLocaleDateString() : '—'}
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           <select
                             className="input-field"
                             value={u.status || 'active'}
@@ -1177,7 +1154,7 @@ export default function AdminDashboard() {
                             <option value="deleted">Deleted</option>
                           </select>
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button
                               onClick={() => handleForcePasswordReset(u.id)}
@@ -1211,7 +1188,7 @@ export default function AdminDashboard() {
           <div style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.65)',
+            background: 'rgba(23, 32, 28, 0.42)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1230,20 +1207,20 @@ export default function AdminDashboard() {
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No clients currently assigned to this clinician.</div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <table className="ledger">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '8px' }}>Public ID</th>
-                        <th style={{ padding: '8px' }}>Client</th>
-                        <th style={{ padding: '8px' }}>Total Sessions</th>
+                      <tr>
+                        <th>Public ID</th>
+                        <th>Client</th>
+                        <th>Total Sessions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {assignedClientsModal.clients.map((c) => (
-                        <tr key={c.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                          <td style={{ padding: '8px', fontFamily: 'monospace' }}>{c.public_id}</td>
-                          <td style={{ padding: '8px' }}>{c.full_name}</td>
-                          <td style={{ padding: '8px' }}>{c.total_sessions || 0}</td>
+                        <tr key={c.id}>
+                          <td style={{ fontFamily: 'monospace' }}>{c.public_id}</td>
+                          <td>{c.full_name}</td>
+                          <td>{c.total_sessions || 0}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1258,10 +1235,10 @@ export default function AdminDashboard() {
         {/* TAB 4: SESSION REQUEST PIPELINE */}
         {/* ========================================================= */}
         {activeTab === 'requests' && (
-          <div className="glass-card" style={{ padding: '24px' }}>
+          <div className="desk-sheet">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                <h3 className="sheet-title">
                   Clinical Session Request Pipeline
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -1273,6 +1250,9 @@ export default function AdminDashboard() {
               </button>
             </div>
 
+            {!loadingRequests && sessionRequests.length > 0 && (
+              <StatusLanes title="Session requests by status" items={sessionRequests} field="status" label={(r) => `${r.client_name}${r.therapist_name ? ' → ' + r.therapist_name : ''}`} />
+            )}
             {loadingRequests ? (
               <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>Loading session requests...</div>
             ) : sessionRequests.length === 0 ? (
@@ -1281,29 +1261,29 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <table className="ledger">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                      <th style={{ padding: '10px' }}>Client</th>
-                      <th style={{ padding: '10px' }}>Session Type</th>
-                      <th style={{ padding: '10px' }}>Slot Time</th>
-                      <th style={{ padding: '10px' }}>Assigned Clinician</th>
-                      <th style={{ padding: '10px' }}>Status</th>
-                      <th style={{ padding: '10px' }}>Action</th>
+                    <tr>
+                      <th>Client</th>
+                      <th>Session Type</th>
+                      <th>Slot Time</th>
+                      <th>Assigned Clinician</th>
+                      <th>Status</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sessionRequests.map((req) => (
-                      <tr key={req.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                        <td style={{ padding: '10px' }}>
+                      <tr key={req.id}>
+                        <td>
                           <div style={{ fontWeight: 600 }}>{req.client_name}</div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{req.client_public_id}</div>
                         </td>
-                        <td style={{ padding: '10px' }}>{req.session_type || 'Consultation'}</td>
-                        <td style={{ padding: '10px', color: 'var(--text-secondary)' }}>
+                        <td>{req.session_type || 'Consultation'}</td>
+                        <td style={{ color: 'var(--text-secondary)' }}>
                           {new Date(req.preferred_slot).toLocaleString()}
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           {req.therapist_name ? (
                             <div>
                               <div style={{ fontWeight: 600 }}>{req.therapist_name}</div>
@@ -1313,19 +1293,12 @@ export default function AdminDashboard() {
                             <span style={{ color: '#b91c1c', fontWeight: 600 }}>Awaiting Assignment</span>
                           )}
                         </td>
-                        <td style={{ padding: '10px' }}>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '100px',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            background: req.status === 'confirmed' ? 'rgba(82, 183, 136, 0.2)' : 'rgba(246, 189, 96, 0.25)',
-                            color: req.status === 'confirmed' ? 'var(--primary-dark)' : '#b07d3b'
-                          }}>
+                        <td>
+                          <span className="stamp-status" data-s={req.status}>
                             {req.status}
                           </span>
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           <button
                             onClick={() => setAssignModal({ open: true, request: req, therapist_id: req.therapist_id || '', admin_notes: req.admin_notes || '' })}
                             className="btn-primary"
@@ -1348,7 +1321,7 @@ export default function AdminDashboard() {
           <div style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.65)',
+            background: 'rgba(23, 32, 28, 0.42)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1408,10 +1381,10 @@ export default function AdminDashboard() {
         {/* TAB 5: DECLINE REVIEWS & "ASK WHY" */}
         {/* ========================================================= */}
         {activeTab === 'declines' && (
-          <div className="glass-card" style={{ padding: '24px' }}>
+          <div className="desk-sheet">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                <h3 className="sheet-title">
                    Session Decline Reviews & Oversight
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -1431,39 +1404,32 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <table className="ledger">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                      <th style={{ padding: '10px' }}>Date</th>
-                      <th style={{ padding: '10px' }}>Clinician</th>
-                      <th style={{ padding: '10px' }}>Client</th>
-                      <th style={{ padding: '10px' }}>Decline Reason</th>
-                      <th style={{ padding: '10px' }}>Status</th>
-                      <th style={{ padding: '10px' }}>Actions</th>
+                    <tr>
+                      <th>Date</th>
+                      <th>Clinician</th>
+                      <th>Client</th>
+                      <th>Decline Reason</th>
+                      <th>Status</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {declines.map((d) => (
-                      <tr key={d.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                        <td style={{ padding: '10px', color: 'var(--text-muted)' }}>
+                      <tr key={d.id}>
+                        <td style={{ color: 'var(--text-muted)' }}>
                           {new Date(d.created_at).toLocaleDateString()}
                         </td>
-                        <td style={{ padding: '10px', fontWeight: 600 }}>{d.therapist_name}</td>
-                        <td style={{ padding: '10px' }}>{d.client_public_id || 'Client'}</td>
-                        <td style={{ padding: '10px', color: '#b91c1c' }}>{d.reason}</td>
-                        <td style={{ padding: '10px' }}>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '100px',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            background: d.status === 'closed' ? 'rgba(82, 183, 136, 0.2)' : 'rgba(246, 189, 96, 0.25)',
-                            color: d.status === 'closed' ? 'var(--primary-dark)' : '#b07d3b'
-                          }}>
+                        <td style={{ fontWeight: 600 }}>{d.therapist_name}</td>
+                        <td>{d.client_public_id || 'Client'}</td>
+                        <td style={{ color: '#b91c1c' }}>{d.reason}</td>
+                        <td>
+                          <span className="stamp-status" data-s={d.status}>
                             {d.status}
                           </span>
                         </td>
-                        <td style={{ padding: '10px' }}>
+                        <td>
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
                               onClick={() => handleOpenDeclineThread(d)}
@@ -1495,7 +1461,7 @@ export default function AdminDashboard() {
           <div style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.65)',
+            background: 'rgba(23, 32, 28, 0.42)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1565,8 +1531,8 @@ export default function AdminDashboard() {
         {activeTab === 'config' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Editable: Blocked Words & Safe Synonyms */}
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+            <div className="desk-sheet">
+              <h3 className="sheet-title">
                 Editable Blocked Words & Language Guard
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
@@ -1589,20 +1555,7 @@ export default function AdminDashboard() {
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '180px', overflowY: 'auto', padding: '10px', background: 'var(--bg-surface)', borderRadius: '10px' }}>
                 {(configData?.editable?.blockedWords || []).map((word) => (
-                  <span
-                    key={word}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '4px 10px',
-                      borderRadius: '100px',
-                      fontSize: '0.78rem',
-                      background: 'rgba(220, 53, 69, 0.1)',
-                      color: '#b91c1c',
-                      border: '1px solid rgba(220, 53, 69, 0.25)'
-                    }}
-                  >
+                  <span key={word} className="chip-word">
                     <span>{word}</span>
                     <button
                       onClick={() => handleRemoveBlockedWord(word)}
@@ -1616,11 +1569,11 @@ export default function AdminDashboard() {
             </div>
 
             {/* Read-Only: 8 Questions & Score Bands */}
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <div style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '4px', background: 'rgba(43, 95, 125, 0.15)', color: '#2b5f7d', fontSize: '0.72rem', fontWeight: 700, marginBottom: '6px' }}>
+            <div className="desk-sheet">
+              <div className="stamp-note">
                 READ-ONLY SPECIFICATION
               </div>
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+              <h3 className="sheet-title">
                 Young Adult Focus Questionnaire (Fixed 8 Questions, 0–3 Scale)
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
@@ -1629,7 +1582,7 @@ export default function AdminDashboard() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {(configData?.readOnly?.questionnaire?.questions || []).map((q, idx) => (
-                  <div key={q.id} style={{ padding: '12px 16px', background: 'var(--bg-surface)', borderRadius: '8px', fontSize: '0.85rem' }}>
+                  <div key={q.id} className="q-row">
                     <strong>{idx + 1}. {q.question}</strong>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>{q.helper}</div>
                   </div>
@@ -1644,10 +1597,10 @@ export default function AdminDashboard() {
         {/* ========================================================= */}
         {activeTab === 'safety' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="glass-card" style={{ padding: '24px' }}>
+            <div className="desk-sheet">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                  <h3 className="sheet-title">
                     Crisis-Path Triggers (Anonymized Timestamps Only)
                   </h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -1663,20 +1616,20 @@ export default function AdminDashboard() {
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No recent crisis triggers recorded.</div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <table className="ledger">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '8px' }}>Event ID</th>
-                        <th style={{ padding: '8px' }}>Trigger Classification</th>
-                        <th style={{ padding: '8px' }}>Timestamp</th>
+                      <tr>
+                        <th>Event ID</th>
+                        <th>Trigger Classification</th>
+                        <th>Timestamp</th>
                       </tr>
                     </thead>
                     <tbody>
                       {safetyReports?.recentEvents?.map((ev) => (
-                        <tr key={ev.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                          <td style={{ padding: '8px', fontFamily: 'monospace' }}>{ev.id.slice(0, 12)}...</td>
-                          <td style={{ padding: '8px', color: '#b91c1c', fontWeight: 600 }}>{ev.trigger_type}</td>
-                          <td style={{ padding: '8px', color: 'var(--text-muted)' }}>
+                        <tr key={ev.id}>
+                          <td style={{ fontFamily: 'monospace' }}>{ev.id.slice(0, 12)}...</td>
+                          <td style={{ color: '#b91c1c', fontWeight: 600 }}>{ev.trigger_type}</td>
+                          <td style={{ color: 'var(--text-muted)' }}>
                             {new Date(ev.triggered_at).toLocaleString()}
                           </td>
                         </tr>
@@ -1688,8 +1641,8 @@ export default function AdminDashboard() {
             </div>
 
             {/* Complaints Management */}
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+            <div className="desk-sheet">
+              <h3 className="sheet-title">
                 Clinician Complaints & Incident Reports
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
@@ -1700,22 +1653,22 @@ export default function AdminDashboard() {
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No complaints filed. All records in good standing.</div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <table className="ledger">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '8px' }}>Clinician</th>
-                        <th style={{ padding: '8px' }}>Category</th>
-                        <th style={{ padding: '8px' }}>Details</th>
-                        <th style={{ padding: '8px' }}>Status</th>
+                      <tr>
+                        <th>Clinician</th>
+                        <th>Category</th>
+                        <th>Details</th>
+                        <th>Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {complaints.map((c) => (
-                        <tr key={c.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                          <td style={{ padding: '8px', fontWeight: 600 }}>{c.therapist_name}</td>
-                          <td style={{ padding: '8px' }}>{c.category}</td>
-                          <td style={{ padding: '8px' }}>{c.details}</td>
-                          <td style={{ padding: '8px' }}>
+                        <tr key={c.id}>
+                          <td style={{ fontWeight: 600 }}>{c.therapist_name}</td>
+                          <td>{c.category}</td>
+                          <td>{c.details}</td>
+                          <td>
                             <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(246, 189, 96, 0.25)', color: '#b07d3b' }}>
                               {c.status}
                             </span>
@@ -1734,10 +1687,10 @@ export default function AdminDashboard() {
         {/* TAB 8: SUPER ADMIN (Provisioning & Access Codes) */}
         {/* ========================================================= */}
         {activeTab === 'super_admin' && isSuperAdmin && (
-          <div className="glass-card" style={{ padding: '24px' }}>
+          <div className="desk-sheet">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                <h3 className="sheet-title">
                   Super Administrator Security Governance
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -1754,35 +1707,35 @@ export default function AdminDashboard() {
             </div>
 
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <table className="ledger">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '10px' }}>Public ID</th>
-                    <th style={{ padding: '10px' }}>Administrator</th>
-                    <th style={{ padding: '10px' }}>Role</th>
-                    <th style={{ padding: '10px' }}>Status</th>
-                    <th style={{ padding: '10px' }}>Actions</th>
+                  <tr>
+                    <th>Public ID</th>
+                    <th>Administrator</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.filter(u => u.role === 'admin' || u.role === 'super_admin').map((adm) => (
-                    <tr key={adm.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 700 }}>{adm.public_id}</td>
-                      <td style={{ padding: '10px' }}>
+                    <tr key={adm.id}>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>{adm.public_id}</td>
+                      <td>
                         <div style={{ fontWeight: 600 }}>{adm.full_name}</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{adm.email}</div>
                       </td>
-                      <td style={{ padding: '10px' }}>
+                      <td>
                         <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(155, 89, 182, 0.2)', color: '#8e44ad' }}>
                           {adm.role}
                         </span>
                       </td>
-                      <td style={{ padding: '10px' }}>
+                      <td>
                         <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 700, background: adm.status === 'active' ? 'rgba(82, 183, 136, 0.2)' : 'rgba(220, 53, 69, 0.2)', color: adm.status === 'active' ? 'var(--primary-dark)' : '#b91c1c' }}>
                           {adm.status}
                         </span>
                       </td>
-                      <td style={{ padding: '10px' }}>
+                      <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button
                             onClick={async () => {
@@ -1832,10 +1785,10 @@ export default function AdminDashboard() {
         {/* ========================================================= */}
         {activeTab === 'audit' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="glass-card" style={{ padding: '24px' }}>
+            <div className="desk-sheet">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                  <h3 className="sheet-title">
                     System Administration Audit Log (Append-Only)
                   </h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -1853,36 +1806,36 @@ export default function AdminDashboard() {
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No administrative events logged yet.</div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <table className="ledger">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '8px' }}>Timestamp</th>
-                        <th style={{ padding: '8px' }}>Administrator</th>
-                        <th style={{ padding: '8px' }}>Action</th>
-                        <th style={{ padding: '8px' }}>Target</th>
-                        <th style={{ padding: '8px' }}>Reason</th>
-                        <th style={{ padding: '8px' }}>IP Origin</th>
+                      <tr>
+                        <th>Timestamp</th>
+                        <th>Administrator</th>
+                        <th>Action</th>
+                        <th>Target</th>
+                        <th>Reason</th>
+                        <th>IP Origin</th>
                       </tr>
                     </thead>
                     <tbody>
                       {systemAuditLogs.map((log) => (
-                        <tr key={log.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                          <td style={{ padding: '8px', color: 'var(--text-muted)' }}>
+                        <tr key={log.id}>
+                          <td style={{ color: 'var(--text-muted)' }}>
                             {new Date(log.timestamp).toLocaleString()}
                           </td>
-                          <td style={{ padding: '8px', fontWeight: 600 }}>
+                          <td style={{ fontWeight: 600 }}>
                             {log.admin_name || 'Admin'} ({log.admin_role})
                           </td>
-                          <td style={{ padding: '8px', color: 'var(--primary-dark)', fontWeight: 700 }}>
+                          <td style={{ color: 'var(--primary-dark)', fontWeight: 700 }}>
                             <code>{log.action}</code>
                           </td>
-                          <td style={{ padding: '8px', color: 'var(--text-secondary)' }}>
+                          <td style={{ color: 'var(--text-secondary)' }}>
                             {log.target_type}: {log.target_id}
                           </td>
-                          <td style={{ padding: '8px' }}>
+                          <td>
                             {log.reason || '—'}
                           </td>
-                          <td style={{ padding: '8px', color: 'var(--text-muted)' }}>
+                          <td style={{ color: 'var(--text-muted)' }}>
                             {log.ip || '127.0.0.1'}
                           </td>
                         </tr>
@@ -1894,8 +1847,8 @@ export default function AdminDashboard() {
             </div>
 
             {/* Clinical Consent Audit Logs */}
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+            <div className="desk-sheet">
+              <h3 className="sheet-title">
                  Clinical Consent Access Trail
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
@@ -1906,26 +1859,26 @@ export default function AdminDashboard() {
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No clinician access events recorded yet.</div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <table className="ledger">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '8px' }}>Timestamp</th>
-                        <th style={{ padding: '8px' }}>Clinician</th>
-                        <th style={{ padding: '8px' }}>Scope</th>
-                        <th style={{ padding: '8px' }}>IP Address</th>
+                      <tr>
+                        <th>Timestamp</th>
+                        <th>Clinician</th>
+                        <th>Scope</th>
+                        <th>IP Address</th>
                       </tr>
                     </thead>
                     <tbody>
                       {consentAuditLogs.map((log) => (
-                        <tr key={log.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                          <td style={{ padding: '8px', color: 'var(--text-muted)' }}>
+                        <tr key={log.id}>
+                          <td style={{ color: 'var(--text-muted)' }}>
                             {new Date(log.accessed_at).toLocaleString()}
                           </td>
-                          <td style={{ padding: '8px', fontWeight: 600 }}>{log.therapist_name}</td>
-                          <td style={{ padding: '8px', color: 'var(--primary-dark)' }}>
+                          <td style={{ fontWeight: 600 }}>{log.therapist_name}</td>
+                          <td style={{ color: 'var(--primary-dark)' }}>
                             <code>{log.accessed_scope}</code>
                           </td>
-                          <td style={{ padding: '8px', color: 'var(--text-muted)' }}>
+                          <td style={{ color: 'var(--text-muted)' }}>
                             {log.ip_address || '127.0.0.1'}
                           </td>
                         </tr>
@@ -1943,7 +1896,7 @@ export default function AdminDashboard() {
           <div style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.65)',
+            background: 'rgba(23, 32, 28, 0.42)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

@@ -1,0 +1,48 @@
+/* =====================================================================
+   Member + auth + admin-tab polish. Pure CSS on existing markup:
+   logic, routes and data are untouched.
+   ===================================================================== */
+
+/* ---------- Login / Register (static, distraction-free) ---------- */
+.auth-page{position:relative;overflow:hidden;
+  background:radial-gradient(60% 60% at 85% 10%,rgba(217,207,243,.55),transparent 70%),radial-gradient(50% 50% at 8% 90%,rgba(191,230,209,.55),transparent 70%),radial-gradient(40% 40% at 95% 100%,rgba(243,198,165,.4),transparent 70%),var(--bg-primary)}
+.auth-page::before,.auth-page::after{content:"";position:absolute;border-radius:50%;filter:blur(46px);opacity:.5;pointer-events:none}
+.auth-page::before{width:34vw;aspect-ratio:1;left:-8vw;top:8%;background:var(--accent-lavender-soft);animation:authdrift 24s ease-in-out infinite alternate}
+.auth-page::after{width:28vw;aspect-ratio:1;right:-6vw;bottom:4%;background:var(--accent-peach-soft);animation:authdrift 30s ease-in-out infinite alternate-reverse}
+@keyframes authdrift{to{transform:translate(6vw,-5vh) scale(1.15)}}
+.auth-page > .glass-card{position:relative;z-index:1;border-radius:20px!important;box-shadow:var(--shadow-lg);background:rgba(255,255,255,.92)}
+.auth-page h1,.auth-page h2{font-size:clamp(1.8rem,3vw,2.4rem)}
+.auth-tab{background:transparent!important;color:var(--text-secondary)!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;padding:10px 6px!important;font-weight:550!important;position:relative}
+.auth-tab span:first-child:not(:last-child){display:none} /* drop the emoji/icon above each tab label */
+.auth-tab.on{color:var(--text-primary)!important;border-bottom-color:var(--accent-forest)!important;font-weight:650!important}
+.auth-tab:hover:not(.on){color:var(--accent-forest)!important}
+.auth-page .input-field{background:#fff}
+
+/* ---------- shared "page header" feel on member pages ---------- */
+body[data-portal="member"] main > div > div > .eyebrow,body[data-portal="member"] main [class*="page"] .eyebrow{margin-bottom:6px}
+body[data-portal="member"] main h1{letter-spacing:-.025em}
+
+/* ---------- Routine / Journal / Community list items → hairline rows ---------- */
+body[data-portal="member"] .routine-item,body[data-portal="member"] .journal-entry{border-radius:0;box-shadow:none;border-left:0;border-right:0;border-top:0;border-bottom:1px solid var(--border-subtle);background:transparent}
+
+/* ---------- Questionnaire / Welcome: still, focused, light ---------- */
+body[data-portal="member"] .focus-mode .glass-card,body[data-portal="member"] [class*="questionnaire"] .glass-card{box-shadow:var(--shadow-lg)}
+
+/* ---------- Admin: every tab shares the desk look ---------- */
+body[data-portal="admin"] .glass-card{padding:22px 24px}
+body[data-portal="admin"] h2,body[data-portal="admin"] h3{font-weight:450}
+body[data-portal="admin"] select,body[data-portal="admin"] input[type="text"],body[data-portal="admin"] input[type="search"],body[data-portal="admin"] textarea{border-radius:6px;border:1px solid var(--desk-line,rgba(23,32,28,.16));background:#fff;font-family:var(--font-sans)}
+body[data-portal="admin"] [style*="border-radius: 14px"],body[data-portal="admin"] [style*="border-radius: 12px"],body[data-portal="admin"] [style*="border-radius: 16px"]{border-radius:6px!important}
+body[data-portal="admin"] [style*="box-shadow"]{box-shadow:none!important}
+body[data-portal="admin"] .glass-card{box-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 18px 30px -24px rgba(23,32,28,.5)!important}
+
+
+/* Mobile view: hide journal modules/links when specified */
+@media (max-width: 900px) {
+  .hide-on-mobile,
+  .journal-mobile-hide {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion:reduce){.auth-page::before,.auth-page::after{animation:none}}

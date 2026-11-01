@@ -1,0 +1,1362 @@
+diff --git a/frontend/src/components/admin/StatusLanes.jsx b/frontend/src/components/admin/StatusLanes.jsx
+new file mode 100644
+index 0000000..21a2372
+--- /dev/null
++++ b/frontend/src/components/admin/StatusLanes.jsx
+@@ -0,0 +1,29 @@
++import React from 'react';
++
++/**
++ * Lane strip: groups `items` by `field` and shows one lane per distinct value found in the data
++ * (nothing is hard-coded — lanes appear only for statuses that exist). Each lane is a tall ruled
++ * column with a count and the first few labels, like pigeon-holes on a desk.
++ */
++export default function StatusLanes({ items = [], field, label, max = 4, title }) {
++  const lanes = new Map();
++  items.forEach((it) => {
++    const key = it?.[field] || 'unspecified';
++    if (!lanes.has(key)) lanes.set(key, []);
++    lanes.get(key).push(it);
++  });
++  if (lanes.size === 0) return null;
++  return (
++    <div className="lanes" role="list" aria-label={title || 'Grouped by status'}>
++      {[...lanes.entries()].map(([key, list]) => (
++        <section key={key} className="lane" role="listitem" data-s={key}>
++          <header><span className="lane-k">{String(key).replace(/_/g, ' ')}</span><b className="num">{list.length}</b></header>
++          <ul>
++            {list.slice(0, max).map((it, i) => <li key={it.id || it.user_id || i}>{label(it)}</li>)}
++            {list.length > max && <li className="more">+ {list.length - max} more</li>}
++          </ul>
++        </section>
++      ))}
++    </div>
++  );
++}
+diff --git a/frontend/src/components/common/BrainCanvas.jsx b/frontend/src/components/common/BrainCanvas.jsx
+new file mode 100644
+index 0000000..b012c38
+--- /dev/null
++++ b/frontend/src/components/common/BrainCanvas.jsx
+@@ -0,0 +1,19 @@
++import { useEffect, useRef } from 'react';
++import { createBrain } from '../../lib/brain.js';
++import { webglOK, prefersReduced } from '../../lib/env.js';
++
++/** Small self-running brain (client Today / breathing). calm: 0..1 */
++export default function BrainCanvas({ calm = 1, pulses = 24, className = '', label = 'A softly breathing brain illustration' }) {
++  const ref = useRef(null);
++  useEffect(() => {
++    const canvas = ref.current; if (!canvas || !webglOK()) return;
++    const b = createBrain(canvas, { pulses }); let raf, run = true; const t0 = performance.now();
++    const ptr = { x: 0, y: 0 }; const mv = (e) => { ptr.x = e.clientX / innerWidth - .5; ptr.y = e.clientY / innerHeight - .5; }; addEventListener('pointermove', mv);
++    const loop = () => { if (!run) return; b.render((performance.now() - t0) / 1000, calm, ptr); if (!prefersReduced()) raf = requestAnimationFrame(loop); };
++    loop();
++    const io = new IntersectionObserver(([e]) => { const vis = e.isIntersecting; if (vis && !run) { run = true; loop(); } if (!vis) { run = false; cancelAnimationFrame(raf); } }); io.observe(canvas);
++    const ro = new ResizeObserver(() => { b.resize(); if (prefersReduced()) b.render(0, calm, ptr); }); ro.observe(canvas);
++    return () => { run = false; cancelAnimationFrame(raf); io.disconnect(); ro.disconnect(); removeEventListener('pointermove', mv); b.dispose(); };
++  }, [calm, pulses]);
++  return <canvas ref={ref} className={className} role="img" aria-label={label} />;
++}
+diff --git a/frontend/src/pages/AdminDashboard.jsx b/frontend/src/pages/AdminDashboard.jsx
+index e6fdd39..64fbf55 100644
+--- a/frontend/src/pages/AdminDashboard.jsx
++++ b/frontend/src/pages/AdminDashboard.jsx
+@@ -13,6 +13,7 @@
+ // 9. Audit Logs: Append-only Admin Audit Log and Clinical Consent Trail
+ // ============================================
+ 
++import StatusLanes from '../components/admin/StatusLanes';
+ import Columns3D from '../components/common/Columns3D';
+ import '../styles/admin-desk.css';
+ import React, { useState, useEffect } from 'react';
+@@ -465,11 +466,11 @@ export default function AdminDashboard() {
+           <div>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+               
+-              <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: '#2b5f7d' }}>
++              <span className="eyebrow desk">
+                 System Administration & Governance
+               </span>
+             </div>
+-            <h1 style={{ fontSize: '1.85rem', color: 'var(--text-primary)', marginTop: '4px' }}>
++            <h1 className="desk-h1">
+               MindCare Sanctuary Control Console
+             </h1>
+             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+@@ -487,20 +488,7 @@ export default function AdminDashboard() {
+                 + Provision Administrator
+               </button>
+             )}
+-            <div style={{
+-              display: 'inline-flex',
+-              alignItems: 'center',
+-              gap: '6px',
+-              padding: '6px 14px',
+-              borderRadius: '100px',
+-              background: 'rgba(43, 95, 125, 0.12)',
+-              border: '1px solid rgba(43, 95, 125, 0.25)',
+-              color: '#2b5f7d',
+-              fontSize: '0.78rem',
+-              fontWeight: 700
+-            }}>
+-              <span>Zero-PII Protected</span>
+-            </div>
++            <span className="desk-note">Zero-PII protected</span>
+             <button
+               type="button"
+               onClick={handleLogout}
+@@ -605,10 +593,10 @@ export default function AdminDashboard() {
+         {/* TAB 2: THERAPIST VERIFICATION QUEUE & DOSSIER */}
+         {/* ========================================================= */}
+         {activeTab === 'verification' && (
+-          <div className="glass-card" style={{ padding: '24px' }}>
++          <div className="desk-sheet">
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
+               <div>
+-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++                <h3 className="sheet-title">
+                   Clinician Verification Queue
+                 </h3>
+                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+@@ -643,6 +631,9 @@ export default function AdminDashboard() {
+               </div>
+             </div>
+ 
++            {!loadingTherapists && therapists.length > 0 && (
++              <StatusLanes title="Clinicians by verification state" items={therapists} field="verification_status" label={(t) => t.name} />
++            )}
+             {loadingTherapists ? (
+               <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>Loading clinician records...</div>
+             ) : therapists.length === 0 ? (
+@@ -651,57 +642,50 @@ export default function AdminDashboard() {
+               </div>
+             ) : (
+               <div style={{ overflowX: 'auto' }}>
+-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
++                <table className="ledger">
+                   <thead>
+-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                      <th style={{ padding: '10px' }}>Therapist ID</th>
+-                      <th style={{ padding: '10px' }}>Clinician</th>
+-                      <th style={{ padding: '10px' }}>Licence & Board</th>
+-                      <th style={{ padding: '10px' }}>Docs Uploaded</th>
+-                      <th style={{ padding: '10px' }}>External Check</th>
+-                      <th style={{ padding: '10px' }}>Status</th>
+-                      <th style={{ padding: '10px' }}>Actions</th>
++                    <tr>
++                      <th>Therapist ID</th>
++                      <th>Clinician</th>
++                      <th>Licence & Board</th>
++                      <th>Docs Uploaded</th>
++                      <th>External Check</th>
++                      <th>Status</th>
++                      <th>Actions</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {therapists.map((th) => (
+-                      <tr key={th.profile_id || th.user_id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                        <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 700 }}>
++                      <tr key={th.profile_id || th.user_id}>
++                        <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>
+                           {th.public_id}
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                             {th.name} {th.is_demo && <span style={{ fontSize: '0.68rem', padding: '2px 6px', background: 'rgba(246, 189, 96, 0.3)', color: '#b07d3b', borderRadius: '4px' }}>DEMO</span>}
+                           </div>
+                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{th.email} • {th.city || 'India'}</div>
+                         </td>
+-                        <td style={{ padding: '10px', color: 'var(--text-secondary)' }}>
++                        <td style={{ color: 'var(--text-secondary)' }}>
+                           <div>{th.license_number}</div>
+                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{th.licensing_board}</div>
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           <span style={{ fontWeight: 600 }}>{th.uploaded_docs_count || 0} / 4</span>
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           {th.licence_verified_externally ? (
+                             <span style={{ color: 'var(--primary-dark)', fontWeight: 600 }}> Verified</span>
+                           ) : (
+                             <span style={{ color: 'var(--text-muted)' }}>Unverified</span>
+                           )}
+                         </td>
+-                        <td style={{ padding: '10px' }}>
+-                          <span style={{
+-                            padding: '3px 10px',
+-                            borderRadius: '100px',
+-                            fontSize: '0.74rem',
+-                            fontWeight: 700,
+-                            background: th.verification_status === 'approved' ? 'rgba(82, 183, 136, 0.2)' : (th.verification_status === 'under_review' ? 'rgba(246, 189, 96, 0.25)' : (th.verification_status === 'more_info_required' ? 'rgba(235, 148, 59, 0.2)' : 'rgba(220, 53, 69, 0.15)')),
+-                            color: th.verification_status === 'approved' ? 'var(--primary-dark)' : (th.verification_status === 'under_review' ? '#b07d3b' : (th.verification_status === 'more_info_required' ? '#c05621' : '#b91c1c'))
+-                          }}>
++                        <td>
++                          <span className="stamp-status" data-s={th.verification_status}>
+                             {th.verification_status}
+                           </span>
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           <div style={{ display: 'flex', gap: '6px' }}>
+                             <button
+                               onClick={() => handleOpenDossier(th.user_id || th.profile_id)}
+@@ -758,7 +742,7 @@ export default function AdminDashboard() {
+           <div style={{
+             position: 'fixed',
+             inset: 0,
+-            background: 'rgba(0, 0, 0, 0.65)',
++            background: 'rgba(23, 32, 28, 0.42)',
+             display: 'flex',
+             alignItems: 'center',
+             justifyContent: 'center',
+@@ -814,21 +798,21 @@ export default function AdminDashboard() {
+                 </div>
+               ) : (
+                 <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
+-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
++                  <table className="ledger">
+                     <thead>
+-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                        <th style={{ padding: '8px' }}>Type</th>
+-                        <th style={{ padding: '8px' }}>File</th>
+-                        <th style={{ padding: '8px' }}>Preview</th>
+-                        <th style={{ padding: '8px' }}>Doc Status</th>
+-                        <th style={{ padding: '8px' }}>Actions</th>
++                      <tr>
++                        <th>Type</th>
++                        <th>File</th>
++                        <th>Preview</th>
++                        <th>Doc Status</th>
++                        <th>Actions</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {selectedDossier.documents.map((doc) => (
+-                        <tr key={doc.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                          <td style={{ padding: '8px', fontWeight: 600 }}>{doc.doc_type}</td>
+-                          <td style={{ padding: '8px' }}>
++                        <tr key={doc.id}>
++                          <td style={{ fontWeight: 600 }}>{doc.doc_type}</td>
++                          <td>
+                             <div style={{ fontWeight: 600 }}>{doc.original_filename}</div>
+                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{(doc.file_size / 1024).toFixed(1)} KB</div>
+                             {doc.ai_notes && (
+@@ -837,7 +821,7 @@ export default function AdminDashboard() {
+                               </div>
+                             )}
+                           </td>
+-                          <td style={{ padding: '8px' }}>
++                          <td>
+                             <a
+                               href={doc.view_url}
+                               target="_blank"
+@@ -847,7 +831,7 @@ export default function AdminDashboard() {
+                               Open in Secure Viewer ↗
+                             </a>
+                           </td>
+-                          <td style={{ padding: '8px' }}>
++                          <td>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
+                               {doc.ai_verified && (
+                                 <span style={{
+@@ -878,7 +862,7 @@ export default function AdminDashboard() {
+                               </div>
+                             )}
+                           </td>
+-                          <td style={{ padding: '8px' }}>
++                          <td>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                               <button
+                                 onClick={() => handleDocumentReview(doc.id, 'accepted')}
+@@ -919,7 +903,7 @@ export default function AdminDashboard() {
+           <div style={{
+             position: 'fixed',
+             inset: 0,
+-            background: 'rgba(0, 0, 0, 0.65)',
++            background: 'rgba(23, 32, 28, 0.42)',
+             display: 'flex',
+             alignItems: 'center',
+             justifyContent: 'center',
+@@ -1027,10 +1011,10 @@ export default function AdminDashboard() {
+         {/* TAB 3: USERS & ASSIGNMENTS */}
+         {/* ========================================================= */}
+         {activeTab === 'users' && (
+-          <div className="glass-card" style={{ padding: '24px' }}>
++          <div className="desk-sheet">
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
+               <div>
+-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++                <h3 className="sheet-title">
+                   User Directory & Therapist Assignments
+                 </h3>
+                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+@@ -1081,41 +1065,34 @@ export default function AdminDashboard() {
+               <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>Loading users...</div>
+             ) : (
+               <div style={{ overflowX: 'auto' }}>
+-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
++                <table className="ledger">
+                   <thead>
+-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                      <th style={{ padding: '10px' }}>Public ID</th>
+-                      <th style={{ padding: '10px' }}>Name & Email</th>
+-                      <th style={{ padding: '10px' }}>Role</th>
+-                      <th style={{ padding: '10px' }}>Assigned Clinician</th>
+-                      <th style={{ padding: '10px' }}>Last Login</th>
+-                      <th style={{ padding: '10px' }}>Status</th>
+-                      <th style={{ padding: '10px' }}>Actions</th>
++                    <tr>
++                      <th>Public ID</th>
++                      <th>Name & Email</th>
++                      <th>Role</th>
++                      <th>Assigned Clinician</th>
++                      <th>Last Login</th>
++                      <th>Status</th>
++                      <th>Actions</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {users.map((u) => (
+-                      <tr key={u.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                        <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 700 }}>
++                      <tr key={u.id}>
++                        <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>
+                           {u.public_id}
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{u.full_name}</div>
+                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{u.email}</div>
+                         </td>
+-                        <td style={{ padding: '10px' }}>
+-                          <span style={{
+-                            padding: '3px 8px',
+-                            borderRadius: '100px',
+-                            fontSize: '0.72rem',
+-                            fontWeight: 700,
+-                            background: u.role === 'super_admin' ? 'rgba(155, 89, 182, 0.2)' : (u.role === 'admin' ? 'rgba(43, 95, 125, 0.2)' : (u.role === 'therapist' ? 'rgba(82, 183, 136, 0.2)' : 'rgba(246, 189, 96, 0.2)')),
+-                            color: u.role === 'super_admin' ? '#8e44ad' : (u.role === 'admin' ? '#2b5f7d' : (u.role === 'therapist' ? 'var(--primary-dark)' : '#b07d3b'))
+-                          }}>
++                        <td>
++                          <span className="stamp-status" data-s={u.role}>
+                             {u.role}
+                           </span>
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           {u.assigned_therapist ? (
+                             <div>
+                               <span style={{ fontWeight: 600 }}>{u.assigned_therapist.name}</span>
+@@ -1133,10 +1110,10 @@ export default function AdminDashboard() {
+                             <span style={{ color: 'var(--text-muted)' }}>None assigned</span>
+                           )}
+                         </td>
+-                        <td style={{ padding: '10px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
++                        <td style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                           {u.last_login ? new Date(u.last_login).toLocaleDateString() : '—'}
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           <select
+                             className="input-field"
+                             value={u.status || 'active'}
+@@ -1149,7 +1126,7 @@ export default function AdminDashboard() {
+                             <option value="deleted">Deleted</option>
+                           </select>
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           <div style={{ display: 'flex', gap: '4px' }}>
+                             <button
+                               onClick={() => handleForcePasswordReset(u.id)}
+@@ -1183,7 +1160,7 @@ export default function AdminDashboard() {
+           <div style={{
+             position: 'fixed',
+             inset: 0,
+-            background: 'rgba(0, 0, 0, 0.65)',
++            background: 'rgba(23, 32, 28, 0.42)',
+             display: 'flex',
+             alignItems: 'center',
+             justifyContent: 'center',
+@@ -1202,20 +1179,20 @@ export default function AdminDashboard() {
+                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No clients currently assigned to this clinician.</div>
+               ) : (
+                 <div style={{ overflowX: 'auto' }}>
+-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
++                  <table className="ledger">
+                     <thead>
+-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                        <th style={{ padding: '8px' }}>Public ID</th>
+-                        <th style={{ padding: '8px' }}>Client</th>
+-                        <th style={{ padding: '8px' }}>Total Sessions</th>
++                      <tr>
++                        <th>Public ID</th>
++                        <th>Client</th>
++                        <th>Total Sessions</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {assignedClientsModal.clients.map((c) => (
+-                        <tr key={c.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                          <td style={{ padding: '8px', fontFamily: 'monospace' }}>{c.public_id}</td>
+-                          <td style={{ padding: '8px' }}>{c.full_name}</td>
+-                          <td style={{ padding: '8px' }}>{c.total_sessions || 0}</td>
++                        <tr key={c.id}>
++                          <td style={{ fontFamily: 'monospace' }}>{c.public_id}</td>
++                          <td>{c.full_name}</td>
++                          <td>{c.total_sessions || 0}</td>
+                         </tr>
+                       ))}
+                     </tbody>
+@@ -1230,10 +1207,10 @@ export default function AdminDashboard() {
+         {/* TAB 4: SESSION REQUEST PIPELINE */}
+         {/* ========================================================= */}
+         {activeTab === 'requests' && (
+-          <div className="glass-card" style={{ padding: '24px' }}>
++          <div className="desk-sheet">
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+               <div>
+-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++                <h3 className="sheet-title">
+                   Clinical Session Request Pipeline
+                 </h3>
+                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+@@ -1245,6 +1222,9 @@ export default function AdminDashboard() {
+               </button>
+             </div>
+ 
++            {!loadingRequests && sessionRequests.length > 0 && (
++              <StatusLanes title="Session requests by status" items={sessionRequests} field="status" label={(r) => `${r.client_name}${r.therapist_name ? ' → ' + r.therapist_name : ''}`} />
++            )}
+             {loadingRequests ? (
+               <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>Loading session requests...</div>
+             ) : sessionRequests.length === 0 ? (
+@@ -1253,29 +1233,29 @@ export default function AdminDashboard() {
+               </div>
+             ) : (
+               <div style={{ overflowX: 'auto' }}>
+-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
++                <table className="ledger">
+                   <thead>
+-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                      <th style={{ padding: '10px' }}>Client</th>
+-                      <th style={{ padding: '10px' }}>Session Type</th>
+-                      <th style={{ padding: '10px' }}>Slot Time</th>
+-                      <th style={{ padding: '10px' }}>Assigned Clinician</th>
+-                      <th style={{ padding: '10px' }}>Status</th>
+-                      <th style={{ padding: '10px' }}>Action</th>
++                    <tr>
++                      <th>Client</th>
++                      <th>Session Type</th>
++                      <th>Slot Time</th>
++                      <th>Assigned Clinician</th>
++                      <th>Status</th>
++                      <th>Action</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {sessionRequests.map((req) => (
+-                      <tr key={req.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                        <td style={{ padding: '10px' }}>
++                      <tr key={req.id}>
++                        <td>
+                           <div style={{ fontWeight: 600 }}>{req.client_name}</div>
+                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{req.client_public_id}</div>
+                         </td>
+-                        <td style={{ padding: '10px' }}>{req.session_type || 'Consultation'}</td>
+-                        <td style={{ padding: '10px', color: 'var(--text-secondary)' }}>
++                        <td>{req.session_type || 'Consultation'}</td>
++                        <td style={{ color: 'var(--text-secondary)' }}>
+                           {new Date(req.preferred_slot).toLocaleString()}
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           {req.therapist_name ? (
+                             <div>
+                               <div style={{ fontWeight: 600 }}>{req.therapist_name}</div>
+@@ -1285,19 +1265,12 @@ export default function AdminDashboard() {
+                             <span style={{ color: '#b91c1c', fontWeight: 600 }}>Awaiting Assignment</span>
+                           )}
+                         </td>
+-                        <td style={{ padding: '10px' }}>
+-                          <span style={{
+-                            padding: '3px 8px',
+-                            borderRadius: '100px',
+-                            fontSize: '0.72rem',
+-                            fontWeight: 700,
+-                            background: req.status === 'confirmed' ? 'rgba(82, 183, 136, 0.2)' : 'rgba(246, 189, 96, 0.25)',
+-                            color: req.status === 'confirmed' ? 'var(--primary-dark)' : '#b07d3b'
+-                          }}>
++                        <td>
++                          <span className="stamp-status" data-s={req.status}>
+                             {req.status}
+                           </span>
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           <button
+                             onClick={() => setAssignModal({ open: true, request: req, therapist_id: req.therapist_id || '', admin_notes: req.admin_notes || '' })}
+                             className="btn-primary"
+@@ -1320,7 +1293,7 @@ export default function AdminDashboard() {
+           <div style={{
+             position: 'fixed',
+             inset: 0,
+-            background: 'rgba(0, 0, 0, 0.65)',
++            background: 'rgba(23, 32, 28, 0.42)',
+             display: 'flex',
+             alignItems: 'center',
+             justifyContent: 'center',
+@@ -1380,10 +1353,10 @@ export default function AdminDashboard() {
+         {/* TAB 5: DECLINE REVIEWS & "ASK WHY" */}
+         {/* ========================================================= */}
+         {activeTab === 'declines' && (
+-          <div className="glass-card" style={{ padding: '24px' }}>
++          <div className="desk-sheet">
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+               <div>
+-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++                <h3 className="sheet-title">
+                    Session Decline Reviews & Oversight
+                 </h3>
+                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+@@ -1403,39 +1376,32 @@ export default function AdminDashboard() {
+               </div>
+             ) : (
+               <div style={{ overflowX: 'auto' }}>
+-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
++                <table className="ledger">
+                   <thead>
+-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                      <th style={{ padding: '10px' }}>Date</th>
+-                      <th style={{ padding: '10px' }}>Clinician</th>
+-                      <th style={{ padding: '10px' }}>Client</th>
+-                      <th style={{ padding: '10px' }}>Decline Reason</th>
+-                      <th style={{ padding: '10px' }}>Status</th>
+-                      <th style={{ padding: '10px' }}>Actions</th>
++                    <tr>
++                      <th>Date</th>
++                      <th>Clinician</th>
++                      <th>Client</th>
++                      <th>Decline Reason</th>
++                      <th>Status</th>
++                      <th>Actions</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {declines.map((d) => (
+-                      <tr key={d.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                        <td style={{ padding: '10px', color: 'var(--text-muted)' }}>
++                      <tr key={d.id}>
++                        <td style={{ color: 'var(--text-muted)' }}>
+                           {new Date(d.created_at).toLocaleDateString()}
+                         </td>
+-                        <td style={{ padding: '10px', fontWeight: 600 }}>{d.therapist_name}</td>
+-                        <td style={{ padding: '10px' }}>{d.client_public_id || 'Client'}</td>
+-                        <td style={{ padding: '10px', color: '#b91c1c' }}>{d.reason}</td>
+-                        <td style={{ padding: '10px' }}>
+-                          <span style={{
+-                            padding: '3px 8px',
+-                            borderRadius: '100px',
+-                            fontSize: '0.72rem',
+-                            fontWeight: 700,
+-                            background: d.status === 'closed' ? 'rgba(82, 183, 136, 0.2)' : 'rgba(246, 189, 96, 0.25)',
+-                            color: d.status === 'closed' ? 'var(--primary-dark)' : '#b07d3b'
+-                          }}>
++                        <td style={{ fontWeight: 600 }}>{d.therapist_name}</td>
++                        <td>{d.client_public_id || 'Client'}</td>
++                        <td style={{ color: '#b91c1c' }}>{d.reason}</td>
++                        <td>
++                          <span className="stamp-status" data-s={d.status}>
+                             {d.status}
+                           </span>
+                         </td>
+-                        <td style={{ padding: '10px' }}>
++                        <td>
+                           <div style={{ display: 'flex', gap: '6px' }}>
+                             <button
+                               onClick={() => handleOpenDeclineThread(d)}
+@@ -1467,7 +1433,7 @@ export default function AdminDashboard() {
+           <div style={{
+             position: 'fixed',
+             inset: 0,
+-            background: 'rgba(0, 0, 0, 0.65)',
++            background: 'rgba(23, 32, 28, 0.42)',
+             display: 'flex',
+             alignItems: 'center',
+             justifyContent: 'center',
+@@ -1537,8 +1503,8 @@ export default function AdminDashboard() {
+         {activeTab === 'config' && (
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+             {/* Editable: Blocked Words & Safe Synonyms */}
+-            <div className="glass-card" style={{ padding: '24px' }}>
+-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++            <div className="desk-sheet">
++              <h3 className="sheet-title">
+                 Editable Blocked Words & Language Guard
+               </h3>
+               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
+@@ -1561,20 +1527,7 @@ export default function AdminDashboard() {
+ 
+               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '180px', overflowY: 'auto', padding: '10px', background: 'var(--bg-surface)', borderRadius: '10px' }}>
+                 {(configData?.editable?.blockedWords || []).map((word) => (
+-                  <span
+-                    key={word}
+-                    style={{
+-                      display: 'inline-flex',
+-                      alignItems: 'center',
+-                      gap: '6px',
+-                      padding: '4px 10px',
+-                      borderRadius: '100px',
+-                      fontSize: '0.78rem',
+-                      background: 'rgba(220, 53, 69, 0.1)',
+-                      color: '#b91c1c',
+-                      border: '1px solid rgba(220, 53, 69, 0.25)'
+-                    }}
+-                  >
++                  <span key={word} className="chip-word">
+                     <span>{word}</span>
+                     <button
+                       onClick={() => handleRemoveBlockedWord(word)}
+@@ -1588,11 +1541,11 @@ export default function AdminDashboard() {
+             </div>
+ 
+             {/* Read-Only: 8 Questions & Score Bands */}
+-            <div className="glass-card" style={{ padding: '24px' }}>
+-              <div style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '4px', background: 'rgba(43, 95, 125, 0.15)', color: '#2b5f7d', fontSize: '0.72rem', fontWeight: 700, marginBottom: '6px' }}>
++            <div className="desk-sheet">
++              <div className="stamp-note">
+                 READ-ONLY SPECIFICATION
+               </div>
+-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++              <h3 className="sheet-title">
+                 Young Adult Focus Questionnaire (Fixed 8 Questions, 0–3 Scale)
+               </h3>
+               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
+@@ -1601,7 +1554,7 @@ export default function AdminDashboard() {
+ 
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                 {(configData?.readOnly?.questionnaire?.questions || []).map((q, idx) => (
+-                  <div key={q.id} style={{ padding: '12px 16px', background: 'var(--bg-surface)', borderRadius: '8px', fontSize: '0.85rem' }}>
++                  <div key={q.id} className="q-row">
+                     <strong>{idx + 1}. {q.question}</strong>
+                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>{q.helper}</div>
+                   </div>
+@@ -1616,10 +1569,10 @@ export default function AdminDashboard() {
+         {/* ========================================================= */}
+         {activeTab === 'safety' && (
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+-            <div className="glass-card" style={{ padding: '24px' }}>
++            <div className="desk-sheet">
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                 <div>
+-                  <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++                  <h3 className="sheet-title">
+                     Crisis-Path Triggers (Anonymized Timestamps Only)
+                   </h3>
+                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+@@ -1635,20 +1588,20 @@ export default function AdminDashboard() {
+                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No recent crisis triggers recorded.</div>
+               ) : (
+                 <div style={{ overflowX: 'auto' }}>
+-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
++                  <table className="ledger">
+                     <thead>
+-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                        <th style={{ padding: '8px' }}>Event ID</th>
+-                        <th style={{ padding: '8px' }}>Trigger Classification</th>
+-                        <th style={{ padding: '8px' }}>Timestamp</th>
++                      <tr>
++                        <th>Event ID</th>
++                        <th>Trigger Classification</th>
++                        <th>Timestamp</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {safetyReports?.recentEvents?.map((ev) => (
+-                        <tr key={ev.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                          <td style={{ padding: '8px', fontFamily: 'monospace' }}>{ev.id.slice(0, 12)}...</td>
+-                          <td style={{ padding: '8px', color: '#b91c1c', fontWeight: 600 }}>{ev.trigger_type}</td>
+-                          <td style={{ padding: '8px', color: 'var(--text-muted)' }}>
++                        <tr key={ev.id}>
++                          <td style={{ fontFamily: 'monospace' }}>{ev.id.slice(0, 12)}...</td>
++                          <td style={{ color: '#b91c1c', fontWeight: 600 }}>{ev.trigger_type}</td>
++                          <td style={{ color: 'var(--text-muted)' }}>
+                             {new Date(ev.triggered_at).toLocaleString()}
+                           </td>
+                         </tr>
+@@ -1660,8 +1613,8 @@ export default function AdminDashboard() {
+             </div>
+ 
+             {/* Complaints Management */}
+-            <div className="glass-card" style={{ padding: '24px' }}>
+-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++            <div className="desk-sheet">
++              <h3 className="sheet-title">
+                 Clinician Complaints & Incident Reports
+               </h3>
+               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
+@@ -1672,22 +1625,22 @@ export default function AdminDashboard() {
+                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No complaints filed. All records in good standing.</div>
+               ) : (
+                 <div style={{ overflowX: 'auto' }}>
+-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
++                  <table className="ledger">
+                     <thead>
+-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                        <th style={{ padding: '8px' }}>Clinician</th>
+-                        <th style={{ padding: '8px' }}>Category</th>
+-                        <th style={{ padding: '8px' }}>Details</th>
+-                        <th style={{ padding: '8px' }}>Status</th>
++                      <tr>
++                        <th>Clinician</th>
++                        <th>Category</th>
++                        <th>Details</th>
++                        <th>Status</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {complaints.map((c) => (
+-                        <tr key={c.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                          <td style={{ padding: '8px', fontWeight: 600 }}>{c.therapist_name}</td>
+-                          <td style={{ padding: '8px' }}>{c.category}</td>
+-                          <td style={{ padding: '8px' }}>{c.details}</td>
+-                          <td style={{ padding: '8px' }}>
++                        <tr key={c.id}>
++                          <td style={{ fontWeight: 600 }}>{c.therapist_name}</td>
++                          <td>{c.category}</td>
++                          <td>{c.details}</td>
++                          <td>
+                             <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(246, 189, 96, 0.25)', color: '#b07d3b' }}>
+                               {c.status}
+                             </span>
+@@ -1706,10 +1659,10 @@ export default function AdminDashboard() {
+         {/* TAB 8: SUPER ADMIN (Provisioning & Access Codes) */}
+         {/* ========================================================= */}
+         {activeTab === 'super_admin' && isSuperAdmin && (
+-          <div className="glass-card" style={{ padding: '24px' }}>
++          <div className="desk-sheet">
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+               <div>
+-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++                <h3 className="sheet-title">
+                   Super Administrator Security Governance
+                 </h3>
+                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+@@ -1726,35 +1679,35 @@ export default function AdminDashboard() {
+             </div>
+ 
+             <div style={{ overflowX: 'auto' }}>
+-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
++              <table className="ledger">
+                 <thead>
+-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                    <th style={{ padding: '10px' }}>Public ID</th>
+-                    <th style={{ padding: '10px' }}>Administrator</th>
+-                    <th style={{ padding: '10px' }}>Role</th>
+-                    <th style={{ padding: '10px' }}>Status</th>
+-                    <th style={{ padding: '10px' }}>Actions</th>
++                  <tr>
++                    <th>Public ID</th>
++                    <th>Administrator</th>
++                    <th>Role</th>
++                    <th>Status</th>
++                    <th>Actions</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {users.filter(u => u.role === 'admin' || u.role === 'super_admin').map((adm) => (
+-                    <tr key={adm.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                      <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 700 }}>{adm.public_id}</td>
+-                      <td style={{ padding: '10px' }}>
++                    <tr key={adm.id}>
++                      <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>{adm.public_id}</td>
++                      <td>
+                         <div style={{ fontWeight: 600 }}>{adm.full_name}</div>
+                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{adm.email}</div>
+                       </td>
+-                      <td style={{ padding: '10px' }}>
++                      <td>
+                         <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(155, 89, 182, 0.2)', color: '#8e44ad' }}>
+                           {adm.role}
+                         </span>
+                       </td>
+-                      <td style={{ padding: '10px' }}>
++                      <td>
+                         <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 700, background: adm.status === 'active' ? 'rgba(82, 183, 136, 0.2)' : 'rgba(220, 53, 69, 0.2)', color: adm.status === 'active' ? 'var(--primary-dark)' : '#b91c1c' }}>
+                           {adm.status}
+                         </span>
+                       </td>
+-                      <td style={{ padding: '10px' }}>
++                      <td>
+                         <div style={{ display: 'flex', gap: '6px' }}>
+                           <button
+                             onClick={async () => {
+@@ -1804,10 +1757,10 @@ export default function AdminDashboard() {
+         {/* ========================================================= */}
+         {activeTab === 'audit' && (
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+-            <div className="glass-card" style={{ padding: '24px' }}>
++            <div className="desk-sheet">
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                 <div>
+-                  <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++                  <h3 className="sheet-title">
+                     System Administration Audit Log (Append-Only)
+                   </h3>
+                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+@@ -1825,36 +1778,36 @@ export default function AdminDashboard() {
+                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No administrative events logged yet.</div>
+               ) : (
+                 <div style={{ overflowX: 'auto' }}>
+-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
++                  <table className="ledger">
+                     <thead>
+-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                        <th style={{ padding: '8px' }}>Timestamp</th>
+-                        <th style={{ padding: '8px' }}>Administrator</th>
+-                        <th style={{ padding: '8px' }}>Action</th>
+-                        <th style={{ padding: '8px' }}>Target</th>
+-                        <th style={{ padding: '8px' }}>Reason</th>
+-                        <th style={{ padding: '8px' }}>IP Origin</th>
++                      <tr>
++                        <th>Timestamp</th>
++                        <th>Administrator</th>
++                        <th>Action</th>
++                        <th>Target</th>
++                        <th>Reason</th>
++                        <th>IP Origin</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {systemAuditLogs.map((log) => (
+-                        <tr key={log.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                          <td style={{ padding: '8px', color: 'var(--text-muted)' }}>
++                        <tr key={log.id}>
++                          <td style={{ color: 'var(--text-muted)' }}>
+                             {new Date(log.timestamp).toLocaleString()}
+                           </td>
+-                          <td style={{ padding: '8px', fontWeight: 600 }}>
++                          <td style={{ fontWeight: 600 }}>
+                             {log.admin_name || 'Admin'} ({log.admin_role})
+                           </td>
+-                          <td style={{ padding: '8px', color: 'var(--primary-dark)', fontWeight: 700 }}>
++                          <td style={{ color: 'var(--primary-dark)', fontWeight: 700 }}>
+                             <code>{log.action}</code>
+                           </td>
+-                          <td style={{ padding: '8px', color: 'var(--text-secondary)' }}>
++                          <td style={{ color: 'var(--text-secondary)' }}>
+                             {log.target_type}: {log.target_id}
+                           </td>
+-                          <td style={{ padding: '8px' }}>
++                          <td>
+                             {log.reason || '—'}
+                           </td>
+-                          <td style={{ padding: '8px', color: 'var(--text-muted)' }}>
++                          <td style={{ color: 'var(--text-muted)' }}>
+                             {log.ip || '127.0.0.1'}
+                           </td>
+                         </tr>
+@@ -1866,8 +1819,8 @@ export default function AdminDashboard() {
+             </div>
+ 
+             {/* Clinical Consent Audit Logs */}
+-            <div className="glass-card" style={{ padding: '24px' }}>
+-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
++            <div className="desk-sheet">
++              <h3 className="sheet-title">
+                  Clinical Consent Access Trail
+               </h3>
+               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
+@@ -1878,26 +1831,26 @@ export default function AdminDashboard() {
+                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No clinician access events recorded yet.</div>
+               ) : (
+                 <div style={{ overflowX: 'auto' }}>
+-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
++                  <table className="ledger">
+                     <thead>
+-                      <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
+-                        <th style={{ padding: '8px' }}>Timestamp</th>
+-                        <th style={{ padding: '8px' }}>Clinician</th>
+-                        <th style={{ padding: '8px' }}>Scope</th>
+-                        <th style={{ padding: '8px' }}>IP Address</th>
++                      <tr>
++                        <th>Timestamp</th>
++                        <th>Clinician</th>
++                        <th>Scope</th>
++                        <th>IP Address</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {consentAuditLogs.map((log) => (
+-                        <tr key={log.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+-                          <td style={{ padding: '8px', color: 'var(--text-muted)' }}>
++                        <tr key={log.id}>
++                          <td style={{ color: 'var(--text-muted)' }}>
+                             {new Date(log.accessed_at).toLocaleString()}
+                           </td>
+-                          <td style={{ padding: '8px', fontWeight: 600 }}>{log.therapist_name}</td>
+-                          <td style={{ padding: '8px', color: 'var(--primary-dark)' }}>
++                          <td style={{ fontWeight: 600 }}>{log.therapist_name}</td>
++                          <td style={{ color: 'var(--primary-dark)' }}>
+                             <code>{log.accessed_scope}</code>
+                           </td>
+-                          <td style={{ padding: '8px', color: 'var(--text-muted)' }}>
++                          <td style={{ color: 'var(--text-muted)' }}>
+                             {log.ip_address || '127.0.0.1'}
+                           </td>
+                         </tr>
+@@ -1915,7 +1868,7 @@ export default function AdminDashboard() {
+           <div style={{
+             position: 'fixed',
+             inset: 0,
+-            background: 'rgba(0, 0, 0, 0.65)',
++            background: 'rgba(23, 32, 28, 0.42)',
+             display: 'flex',
+             alignItems: 'center',
+             justifyContent: 'center',
+diff --git a/frontend/src/pages/Dashboard.jsx b/frontend/src/pages/Dashboard.jsx
+index c20f4af..fc59b07 100644
+--- a/frontend/src/pages/Dashboard.jsx
++++ b/frontend/src/pages/Dashboard.jsx
+@@ -12,6 +12,8 @@ import MoodForecastHorizon from '../components/predictive/MoodForecastHorizon';
+ import EarlyWarningNudge from '../components/predictive/EarlyWarningNudge';
+ import InnerWorldCanvas from '../components/three/InnerWorldCanvas';
+ import BookingModal from '../components/clinical/BookingModal';
++import BrainCanvas from '../components/common/BrainCanvas';
++import '../styles/client-pages.css';
+ import ClinicalLiveRoom from '../components/clinical/ClinicalLiveRoom';
+ import QuestionnaireModal from '../components/onboarding/QuestionnaireModal';
+ 
+@@ -111,85 +113,55 @@ export default function Dashboard() {
+ 
+   const completedCount = dailyPlan.filter(i => i.completed).length;
+ 
++  // Mood ribbon: built only from the user's own logged check-ins (nothing placeholder)
++  const moodRibbon = (() => {
++    const e = (user?.moodHistory || []).filter(m => Number.isFinite(Number(m.intensity))).slice(0, 7).reverse();
++    if (e.length < 2) return null;
++    const vals = e.map(m => Number(m.intensity)); const lo = Math.min(...vals), hi = Math.max(...vals, lo + 1);
++    const W = 600, H = 110, step = W / (e.length - 1);
++    const pts = e.map((m, k) => ({ x: k * step, y: H - 14 - ((Number(m.intensity) - lo) / (hi - lo)) * (H - 30), label: `${m.mood || 'check-in'} · ${new Date(m.date || m.timestamp).toLocaleDateString()}` }));
++    const line = pts.map((p, k) => k === 0 ? `M${p.x},${p.y}` : `C${pts[k - 1].x + step / 2},${pts[k - 1].y} ${p.x - step / 2},${p.y} ${p.x},${p.y}`).join(' ');
++    return { pts, line, area: `${line} L${W},${H} L0,${H} Z`, n: e.length };
++  })();
++
+   const growthScore = Math.min(1.0, Math.max(0.2, (Math.log(1 + (user?.moodHistory?.length || 0) * 0.4 + (journalEntries.length) * 0.6 + (user?.streak || 1) * 0.3) / 2.8)));
+ 
+   return (
+     <div className="dashboard-page" style={{ position: 'relative', padding: '36px 24px 80px', minHeight: '100vh' }}>
+       <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+-        {/* Greeting Row */}
+-        <div style={{
+-          display: 'flex',
+-          flexWrap: 'wrap',
+-          alignItems: 'center',
+-          justifyContent: 'space-between',
+-          gap: '20px',
+-          marginBottom: '28px'
+-        }}>
+-          <div>
+-            <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.6rem)', marginBottom: '6px' }}>
+-              Welcome back, {user?.name || 'Friend'} 
+-            </h1>
+-            <p style={{ color: '#8aa9c4', fontSize: '0.95rem' }}>
+-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+-            </p>
+-          </div>
+-
+-          <div style={{
+-            display: 'flex',
+-            alignItems: 'center',
+-            gap: '12px',
+-            background: 'rgba(168, 213, 240, 0.06)',
+-            border: '1px solid rgba(168, 213, 240, 0.15)',
+-            padding: '10px 20px',
+-            borderRadius: '100px'
+-          }}>
+-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(246, 189, 96, 0.2)', color: '#c26d52', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></svg>
+-            </div>
+-            <div>
+-              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+-                {user?.streak || 1} Day Sanctuary Streak
+-              </div>
+-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Nourishing consistency</div>
++        {/* Greeting hero — big serif greeting + small breathing brain */}
++        <section className="dash-hero">
++          <div className="dash-hero-copy">
++            <p className="eyebrow">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
++            <h1>Welcome back, <em>{user?.name || 'Friend'}</em></h1>
++            <figure className="dash-quote">
++              <blockquote>“{quote.text}”</blockquote>
++              <figcaption>— {quote.author}</figcaption>
++            </figure>
++            <div className="dash-hero-actions">
++              <button type="button" onClick={() => setIsQuestionnaireOpen(true)} className="btn-primary">
++                <span>Assessment &amp; Onboarding Pulse</span>
++              </button>
++              <span className="dash-streak num"><b>{user?.streak || 1}</b> day sanctuary streak</span>
+             </div>
+           </div>
+-
+-          <button
+-            type="button"
+-            onClick={() => setIsQuestionnaireOpen(true)}
+-            className="btn-primary"
+-            style={{
+-              display: 'inline-flex',
+-              alignItems: 'center',
+-              gap: '8px',
+-              padding: '10px 18px',
+-              borderRadius: '100px',
+-              fontSize: '0.88rem',
+-              fontWeight: 600,
+-              boxShadow: '0 4px 14px rgba(82, 183, 136, 0.35)'
+-            }}
+-          >
+-            
+-            <span>Assessment & Onboarding Pulse</span>
+-          </button>
+-        </div>
+-
+-        {/* Daily Quote Banner */}
+-        <div className="glass-card" style={{
+-          padding: '24px 30px',
+-          marginBottom: '32px',
+-          borderLeft: '4px solid var(--primary)',
+-          display: 'flex',
+-          alignItems: 'center',
+-          gap: '20px'
+-        }}>
+-          <div>
+-            <p style={{ fontStyle: 'italic', fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+-              "{quote.text}"
+-            </p>
+-            <span style={{ fontSize: '0.8rem', color: 'var(--primary-dark)', fontWeight: 600 }}>— {quote.author}</span>
++          <div className="dash-hero-brain">
++            <div className="dash-brain-window"><BrainCanvas calm={1} pulses={20} /></div>
++            <p className="dash-breathe" aria-hidden="true"><span>Breathe in</span><span>Breathe out</span></p>
+           </div>
+-        </div>
++        </section>
++
++        {moodRibbon && (
++          <section className="dash-ribbon" aria-label="Your recent mood intensity">
++            <div className="ph"><h2>Your last check-ins</h2><span className="muted small">{moodRibbon.n} entries</span></div>
++            <svg viewBox="0 0 600 110" role="img" aria-label="Mood intensity over your recent check-ins">
++              <defs><linearGradient id="dashRg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--accent-sprout)" /><stop offset="1" stopColor="#FBF8F3" stopOpacity="0" /></linearGradient></defs>
++              <path d={moodRibbon.area} fill="url(#dashRg)" opacity=".5" />
++              <path d={moodRibbon.line} fill="none" stroke="var(--accent-forest)" strokeWidth="2.5" strokeLinecap="round" pathLength="1" className="ribbon-draw" />
++              {moodRibbon.pts.map((p, k) => <circle key={k} cx={p.x} cy={p.y} r="4" fill="#fff" stroke="var(--accent-forest)" strokeWidth="2"><title>{p.label}</title></circle>)}
++            </svg>
++          </section>
++        )}
+ 
+         {/* Clinician Recommendation Card based on Assessment */}
+         {therapistRec && (
+diff --git a/frontend/src/pages/MoodTracker.jsx b/frontend/src/pages/MoodTracker.jsx
+index 843f1a5..33610f2 100644
+--- a/frontend/src/pages/MoodTracker.jsx
++++ b/frontend/src/pages/MoodTracker.jsx
+@@ -183,7 +183,7 @@ export default function MoodTracker() {
+                         boxShadow: isSelected ? `0 4px 14px rgba(33, 64, 47, 0.12)` : 'none'
+                       }}
+                     >
+-                      <span style={{ fontSize: '1.8rem' }}>{config.emoji}</span>
++                      <span className="mood-blob" style={{ background: config.color || config.hex || 'var(--accent-sage-soft)' }} aria-hidden="true" />
+                       <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isSelected ? 'var(--primary-dark)' : 'var(--text-secondary)' }}>
+                         {config.label}
+                       </span>
+@@ -311,7 +311,7 @@ export default function MoodTracker() {
+                 animation: 'fadeIn 0.3s ease-out'
+               }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+-                  <span style={{ fontSize: '1.4rem' }}>{savedMoodInfo.emoji}</span>
++                  <span className="mood-blob sm" style={{ background: (savedMoodInfo && savedMoodInfo.color) || 'var(--accent-sage-soft)' }} aria-hidden="true" />
+                   <div>
+                     <div><strong>{savedMoodInfo.label}</strong> Check-in Recorded! (Intensity: {savedMoodInfo.intensity}/10)</div>
+                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
+@@ -442,7 +442,7 @@ export default function MoodTracker() {
+                     }}
+                   >
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+-                      <span style={{ fontSize: '2rem' }}>{conf.emoji}</span>
++                      <span className="mood-blob" style={{ background: conf.color || conf.hex || 'var(--accent-sage-soft)' }} aria-hidden="true" />
+                       <div>
+                         <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{conf.label}</div>
+                         {m.note && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>"{m.note}"</div>}
+diff --git a/frontend/src/pages/Progress.jsx b/frontend/src/pages/Progress.jsx
+index e42f332..6e44a83 100644
+--- a/frontend/src/pages/Progress.jsx
++++ b/frontend/src/pages/Progress.jsx
+@@ -1,3 +1,4 @@
++import '../styles/admin-desk.css';
+ import React from 'react';
+ import { useAuth } from '../context/AuthContext';
+ import { Storage } from '../services/storage';
+@@ -53,25 +54,11 @@ export default function Progress() {
+         </div>
+ 
+         {/* Overview Stats */}
+-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '36px' }}>
+-          <div className="glass-card" style={{ textAlign: 'center', padding: '26px' }}>
+-            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}></div>
+-            <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{streak} Days</div>
+-            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Current Streak</div>
+-          </div>
+-
+-          <div className="glass-card" style={{ textAlign: 'center', padding: '26px' }}>
+-            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}></div>
+-            <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary-dark)' }}>{moods.length}</div>
+-            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Check-ins</div>
+-          </div>
+-
+-          <div className="glass-card" style={{ textAlign: 'center', padding: '26px' }}>
+-            <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}></div>
+-            <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary)' }}>{journalEntries.length}</div>
+-            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Journal Entries</div>
+-          </div>
+-        </div>
++        <section className="kpis" style={{ marginBottom: '40px' }} aria-label="Overview">
++          {[['Current streak', `${streak} days`], ['Total check-ins', moods.length], ['Journal entries', journalEntries.length]].map(([label, value], k) => (
++            <div key={label} className="kpi" style={{ '--i': k }}><span className="kl">{label}</span><b className="num">{value}</b></div>
++          ))}
++        </section>
+ 
+         {/* 7-Day Mood Activity Bar Chart */}
+         <div className="glass-card" style={{ padding: '32px', marginBottom: '36px' }}>
+diff --git a/frontend/src/pages/TherapistDashboard.jsx b/frontend/src/pages/TherapistDashboard.jsx
+index 3837e41..97c4985 100644
+--- a/frontend/src/pages/TherapistDashboard.jsx
++++ b/frontend/src/pages/TherapistDashboard.jsx
+@@ -5,6 +5,7 @@
+ // ============================================
+ 
+ import '../styles/admin-desk.css';
++import '../styles/therapist-portal.css';
+ import React, { useState, useEffect } from 'react';
+ import { ClinicalConsentService } from '../services/clinicalConsent';
+ import { Storage } from '../services/storage';
+@@ -550,11 +551,11 @@ export default function TherapistDashboard() {
+   const { scopes } = consent;
+ 
+   return (
+-    <div className="therapist-portal-page" style={{ position: 'relative', padding: '36px 24px 80px', minHeight: '100vh' }}>
+-      <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
++    <div className="therapist-portal-page tp-page" style={{ position: 'relative', padding: '36px 24px 80px', minHeight: '100vh' }}>
++      <div className="tp-grid" style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+ 
+         {/* ── CLINICIAN PRACTICE STATION HEADER ── */}
+-        <div style={{
++        <div className="tp-head" style={{
+           display: 'flex',
+           justifyContent: 'space-between',
+           alignItems: 'center',
+@@ -704,7 +705,7 @@ export default function TherapistDashboard() {
+                     </p>
+                   </div>
+                   ) : (
+-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
++                    <div className="tp-timeline" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                       {assignedSessions.map(session => {
+                         const isAssigned = session.status === 'assigned';
+                         const isConfirmed = session.status === 'confirmed';
+@@ -723,6 +724,8 @@ export default function TherapistDashboard() {
+                         return (
+                           <div
+                             key={session.id}
++                            className="tp-session"
++                            data-status={session.status}
+                             style={{
+                               background: 'var(--bg-surface-elevated)',
+                               border: '1px solid var(--border-subtle)',
+@@ -913,7 +916,7 @@ export default function TherapistDashboard() {
+               </div>
+ 
+               {/* 5 Distinct Document Cards Grid */}
+-              <div style={{
++              <div className="tp-doc-grid" style={{
+                 display: 'grid',
+                 gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                 gap: '16px',
+@@ -1155,7 +1158,7 @@ export default function TherapistDashboard() {
+                 <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>No documents uploaded yet.</p>
+               ) : (
+                 <div style={{ overflowX: 'auto' }}>
+-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
++                  <table className="tp-ledger" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
+                     <thead>
+                       <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', color: 'var(--text-secondary)' }}>
+                         <th style={{ padding: '10px' }}>Type</th>
+@@ -1199,7 +1202,7 @@ export default function TherapistDashboard() {
+                                     System Validated ({doc.ai_confidence || 98}%)
+                                   </span>
+                                 )}
+-                                <span style={{
++                                <span className="tp-stamp" data-state={doc.status} style={{
+                                   padding: '2px 8px',
+                                   borderRadius: '100px',
+                                   fontSize: '0.70rem',
+@@ -1453,6 +1456,8 @@ export default function TherapistDashboard() {
+                     return (
+                       <div
+                         key={day}
++                        className="tp-day"
++                        data-on={isAvailable ? 'true' : 'false'}
+                         style={{
+                           display: 'flex',
+                           alignItems: 'center',
+diff --git a/frontend/src/styles/admin-desk.css b/frontend/src/styles/admin-desk.css
+index bd91c1f..6a5db73 100644
+--- a/frontend/src/styles/admin-desk.css
++++ b/frontend/src/styles/admin-desk.css
+@@ -36,3 +36,9 @@
+ @media (max-width:900px){.desk-bands{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.kpi,.kpi:first-child{padding:16px 12px 14px 0;border-right:0;border-bottom:1px solid var(--desk-line)}}
+ .band-list{border-top:1px solid var(--desk-line)}.band-list div{display:grid;grid-template-columns:1fr auto;gap:4px 14px;padding:14px 0;border-bottom:1px solid var(--desk-line)}
+ .band-list b{font-family:var(--font-display);font-weight:450;font-size:1.15rem}.band-list span{color:#52605A;font-size:.9rem}.band-list .v{grid-row:1/3;grid-column:2;font-family:var(--font-display);font-size:2rem;align-self:center}
++
++/* ledger tables (every admin/therapist table) */
++body[data-portal="admin"] table,body[data-portal="therapist"] table{width:100%;border-collapse:collapse}
++body[data-portal="admin"] th,body[data-portal="therapist"] th{font:600 12px/1.2 var(--font-sans);letter-spacing:.14em;text-transform:uppercase;color:#52605A;text-align:left;padding:10px 14px 10px 0;border-bottom:2px solid var(--desk-ink)}
++body[data-portal="admin"] td,body[data-portal="therapist"] td{padding:14px 14px 14px 0;border-bottom:1px solid var(--desk-line);font-size:.92rem;vertical-align:top}
++body[data-portal="admin"] tbody tr:hover,body[data-portal="therapist"] tbody tr:hover{background:rgba(59,91,122,.06)}
+diff --git a/frontend/src/styles/client-pages.css b/frontend/src/styles/client-pages.css
+new file mode 100644
+index 0000000..f9058cc
+--- /dev/null
++++ b/frontend/src/styles/client-pages.css
+@@ -0,0 +1,35 @@
++/* ===== Client pages — editorial layer (Dashboard, Mood, Breathing, Journal, Routine, Progress, Community) =====
++   Markup/logic untouched; sections become ruled "paper" rows instead of stacked boxes. Light only. */
++.dash-hero{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;margin-bottom:48px}
++.dash-hero h1{font-size:clamp(2.4rem,5vw,4.2rem);letter-spacing:-.025em;margin:12px 0 18px}
++.dash-quote{margin:0 0 26px;max-width:32em;border-left:2px solid var(--accent-forest);padding-left:18px}
++.dash-quote blockquote{font-family:var(--font-display);font-style:italic;font-size:1.25rem;line-height:1.4;color:var(--text-primary)}
++.dash-quote figcaption{margin-top:6px;color:var(--text-muted);font-size:.9rem}
++.dash-hero-actions{display:flex;flex-wrap:wrap;gap:18px;align-items:center}
++.dash-streak{color:var(--text-secondary);font-size:.95rem}.dash-streak b{font-family:var(--font-display);font-size:1.6rem;font-weight:450;color:var(--text-primary);margin-right:4px}
++.dash-hero-brain{position:relative}
++.dash-brain-window{aspect-ratio:1/1;max-height:440px;margin-left:auto;border-radius:48% 52% 46% 54%/52% 46% 54% 48%;background:radial-gradient(70% 70% at 50% 40%,rgba(255,255,255,.9),rgba(217,207,243,.45) 70%,transparent 72%);overflow:hidden}
++.dash-brain-window canvas{width:100%;height:100%;display:block}
++.dash-breathe{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);font-family:var(--font-display);font-style:italic;color:var(--text-secondary);height:1.6em;overflow:hidden;text-align:center;width:10em}
++.dash-breathe span{display:block;animation:dashBh 9s infinite}
++@keyframes dashBh{0%,43%{transform:translateY(0)}50%,93%{transform:translateY(-100%)}100%{transform:translateY(0)}}
++.dash-ribbon{margin-bottom:40px}.dash-ribbon svg{width:100%;height:auto;overflow:visible}
++.ribbon-draw{stroke-dasharray:1;stroke-dashoffset:1;animation:ribDraw 2s var(--ease) .3s forwards}@keyframes ribDraw{to{stroke-dashoffset:0}}
++
++/* boxes -> ruled editorial sections (inline styles need !important) */
++.dashboard-page .glass-card,.mood-page .glass-card,.journal-page .glass-card,.routine-page .glass-card,.progress-page .glass-card,.community-page .glass-card{
++  background:transparent!important;box-shadow:none!important;border:0!important;border-top:1px solid var(--border-subtle)!important;border-radius:0!important;padding-left:0!important;padding-right:0!important;backdrop-filter:none!important}
++.dashboard-page .glass-card:hover,.mood-page .glass-card:hover,.journal-page .glass-card:hover,.routine-page .glass-card:hover,.progress-page .glass-card:hover,.community-page .glass-card:hover{border-color:var(--border-subtle)!important}
++/* nested tiles inside those sections: hairline cells instead of rounded boxes */
++.dashboard-page .glass-card [style*="border-radius: 14px"],.dashboard-page .glass-card [style*="border-radius: 16px"],.dashboard-page .glass-card [style*="border-radius: 12px"]{border-radius:6px!important;box-shadow:none!important}
++.dashboard-page h3,.mood-page h3,.journal-page h3,.routine-page h3,.progress-page h3,.community-page h3{font-weight:450}
++.dashboard-page h1,.mood-page h1,.journal-page h1,.routine-page h1,.progress-page h1,.community-page h1,.breathing-page h1{letter-spacing:-.025em}
++.mood-page,.journal-page,.routine-page,.progress-page,.community-page,.breathing-page{background:radial-gradient(50% 35% at 100% 0%,rgba(217,207,243,.35),transparent 70%),radial-gradient(40% 35% at 0% 100%,rgba(191,230,209,.3),transparent 70%)}
++.breathing-page{background-color:var(--bg-primary)!important}
++@media (max-width:900px){.dash-hero{grid-template-columns:1fr}.dash-brain-window{max-width:340px;margin:0 auto}}
++@media (prefers-reduced-motion:reduce){.dash-breathe span,.ribbon-draw{animation:none}.ribbon-draw{stroke-dashoffset:0}}
++
++/* member sub-pages: tint of the kpi strip on warm background */
++body[data-portal="member"] .kpis{--desk-ink:#1F2D27;--desk-line:rgba(31,45,39,.14)}
++body[data-portal="member"] .kpi b{color:var(--text-primary)}
++@media (prefers-reduced-motion:reduce){.mood-blob{animation:none}}
+diff --git a/frontend/src/styles/redesign.css b/frontend/src/styles/redesign.css
+index a6a432a..42fc5d3 100644
+--- a/frontend/src/styles/redesign.css
++++ b/frontend/src/styles/redesign.css
+@@ -86,3 +86,10 @@ body[data-portal="therapist"] #root{background:radial-gradient(60% 40% at 100% 0
+ 
+ /* position:sticky breaks if any ancestor has overflow hidden/auto — use clip so the landing story stays pinned */
+ html,body,#root{overflow-x:clip}
++
++/* mood: soft shapes instead of emoji */
++.mood-blob{display:inline-block;width:38px;height:38px;border-radius:46% 54% 58% 42% / 55% 45% 55% 45%;opacity:.85;box-shadow:inset 0 -6px 10px rgba(31,45,39,.08),0 10px 16px -12px rgba(31,45,39,.5);animation:blobw 7s ease-in-out infinite}
++.mood-blob.sm{width:22px;height:22px}
++@keyframes blobw{50%{transform:translateY(-2px) rotate(4deg) scale(1.04)}}
++
++body[data-portal="member"] .kpis{--desk-ink:#1F2D27;--desk-line:rgba(31,45,39,.14)}
+diff --git a/frontend/src/styles/therapist-portal.css b/frontend/src/styles/therapist-portal.css
+new file mode 100644
+index 0000000..1a79c87
+--- /dev/null
++++ b/frontend/src/styles/therapist-portal.css
+@@ -0,0 +1,73 @@
++/* ===================================================================
++   THERAPIST PORTAL — calm sage clinician workspace (light only)
++   Scoped to .tp-page. Inline styles in the page are overridden with
++   !important only where unavoidable. Logic/markup untouched.
++   =================================================================== */
++.tp-page{--tp-sage:#2F5D50;--tp-sage-2:#E6F0EA;--tp-line:rgba(31,45,39,.14);--tp-ink:#1F2D27;
++  background:radial-gradient(55% 40% at 100% 0%,rgba(191,230,209,.55),transparent 70%),radial-gradient(40% 40% at 0% 100%,rgba(217,207,243,.35),transparent 70%),#F6F7F2;
++  padding:0!important}
++.tp-grid{max-width:1240px!important;display:grid;grid-template-columns:230px minmax(0,1fr);column-gap:clamp(24px,3vw,48px);padding:36px clamp(16px,3vw,40px) 90px}
++.tp-grid>*{grid-column:2;min-width:0}
++.tp-grid>.tp-head{grid-column:1/-1}
++
++/* header: name as a masthead, availability as a switch-like pill */
++.tp-head{border-bottom:1px solid var(--tp-line)!important;padding-bottom:22px!important;margin-bottom:26px!important}
++.tp-head h1{font-size:clamp(2rem,3.6vw,3rem)!important;letter-spacing:-.025em;font-weight:420}
++.tp-head span:first-child{color:var(--tp-sage)!important;letter-spacing:.2em!important}
++.tp-head code{font-family:var(--font-sans);font-variant-numeric:tabular-nums;background:var(--tp-sage-2);padding:1px 7px;border-radius:5px;font-size:.8rem}
++.tp-head .btn-ghost{background:#fff!important}
++
++/* tabs → vertical rail with a sliding bar */
++.tp-grid>.desk-tabs{grid-column:1;grid-row:2/span 40;align-self:start;position:sticky;top:84px;flex-direction:column;border-bottom:0;gap:0;margin:0;overflow:visible;border-left:1px solid var(--tp-line)}
++.tp-grid>.desk-tabs .desk-tab{text-align:left;padding:13px 18px;font-size:.95rem;white-space:normal;color:var(--text-secondary)}
++.tp-grid>.desk-tabs .desk-tab::after{left:-1px;right:auto;top:8px;bottom:8px;width:3px;height:auto;background:var(--tp-sage);transform:scaleY(0);transform-origin:top}
++.tp-grid>.desk-tabs .desk-tab:hover::after,.tp-grid>.desk-tabs .desk-tab.on::after{transform:scaleY(1)}
++.tp-grid>.desk-tabs .desk-tab.on{color:var(--tp-ink);font-weight:650;background:linear-gradient(90deg,rgba(47,93,80,.09),transparent)}
++
++/* cards: paper with soft depth, not glass tiles */
++.tp-page .glass-card{border-radius:14px!important;background:#fff;box-shadow:0 1px 0 rgba(31,45,39,.04),0 22px 40px -30px rgba(31,45,39,.45)}
++.tp-page h2,.tp-page h3{font-weight:430!important;letter-spacing:-.015em}
++
++/* ---- day-sheet: sessions as a vertical timeline ---- */
++.tp-timeline{position:relative;gap:0!important;padding-left:30px}
++.tp-timeline::before{content:"";position:absolute;left:8px;top:14px;bottom:14px;width:2px;background:linear-gradient(var(--tp-line),var(--tp-line))}
++.tp-session{position:relative;border-radius:14px!important;margin:8px 0;background:#fff!important;transition:transform .35s var(--ease),box-shadow .35s;animation:tpSlide .6s var(--ease) both}
++.tp-session:hover{transform:translateX(5px);box-shadow:0 22px 40px -26px rgba(31,45,39,.5)}
++.tp-session::before{content:"";position:absolute;left:-27px;top:26px;width:14px;height:14px;border-radius:50%;background:#F6F7F2;border:2px solid var(--tp-sage);z-index:1}
++.tp-session[data-status="assigned"]::before{background:var(--tp-sage);animation:tpPing 2.6s ease-out infinite}
++.tp-session[data-status="confirmed"]::before{background:var(--tp-sage)}
++.tp-session[data-status="completed"],.tp-session[data-status="therapist_declined"]{opacity:.62}
++.tp-session[data-status="assigned"]{border-left:3px solid var(--tp-sage)!important}
++@keyframes tpPing{0%{box-shadow:0 0 0 0 rgba(47,93,80,.35)}70%{box-shadow:0 0 0 12px rgba(47,93,80,0)}100%{box-shadow:0 0 0 0 rgba(47,93,80,0)}}
++@keyframes tpSlide{from{opacity:0;transform:translateX(-14px)}}
++
++/* ---- credential ledger ---- */
++.tp-ledger thead tr{border-bottom:2px solid var(--tp-ink)!important}
++.tp-ledger th{font-size:.7rem!important;letter-spacing:.14em;text-transform:uppercase;font-weight:600!important;color:var(--text-muted)!important}
++.tp-ledger tbody tr{transition:background .2s}.tp-ledger tbody tr:hover{background:rgba(47,93,80,.05)}
++.tp-stamp{border-radius:3px!important;background:transparent!important;border:1.5px solid currentColor;letter-spacing:.12em;text-transform:uppercase;transform:rotate(-2deg);display:inline-block;font-weight:700}
++.tp-stamp[data-state="approved"],.tp-stamp[data-state="verified"]{color:#2F7A58!important}
++.tp-stamp[data-state="rejected"]{color:#B4432F!important}
++.tp-doc-grid .glass-card{transition:transform .35s var(--ease),box-shadow .35s;transform:perspective(900px) rotateX(0) rotateY(0)}
++.tp-doc-grid .glass-card:hover{transform:perspective(900px) rotateX(2deg) translateY(-3px);box-shadow:0 30px 50px -30px rgba(31,45,39,.5)}
++
++/* ---- weekly availability: soft slots with depth ---- */
++.tp-day{border-radius:12px!important;transition:transform .35s var(--ease),box-shadow .35s,background .3s;transform:perspective(900px) translateZ(0)}
++.tp-day[data-on="true"]{background:linear-gradient(95deg,#E6F0EA,#fff 60%)!important;border-color:rgba(47,93,80,.3)!important;box-shadow:0 14px 26px -22px rgba(47,93,80,.7)}
++.tp-day[data-on="true"]:hover{transform:perspective(900px) translateZ(14px) translateY(-2px)}
++.tp-day[data-on="false"]{opacity:.75}
++.tp-day input[type="checkbox"]{accent-color:var(--tp-sage);width:18px;height:18px}
++
++/* buttons / inputs inside the portal */
++.tp-page .btn-primary{background:var(--tp-sage)!important}
++.tp-page .input-field{border-radius:10px}
++
++@media (max-width:900px){
++  .tp-grid{grid-template-columns:1fr;padding:22px 16px 90px}
++  .tp-grid>*,.tp-grid>.tp-head{grid-column:1}
++  .tp-grid>.desk-tabs{grid-column:1;grid-row:auto;position:static;flex-direction:row;overflow-x:auto;border-left:0;border-bottom:1px solid var(--tp-line);margin-bottom:20px}
++  .tp-grid>.desk-tabs .desk-tab{white-space:nowrap;padding:11px 14px}
++  .tp-grid>.desk-tabs .desk-tab::after{left:12px;right:12px;top:auto;bottom:-1px;width:auto;height:2px;transform:scaleX(0);transform-origin:left}
++  .tp-grid>.desk-tabs .desk-tab:hover::after,.tp-grid>.desk-tabs .desk-tab.on::after{transform:scaleX(1)}
++}
++@media (prefers-reduced-motion:reduce){.tp-session,.tp-session::before,.tp-day,.tp-doc-grid .glass-card{animation:none!important;transition:none!important}}

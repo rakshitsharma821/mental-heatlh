@@ -84,10 +84,10 @@ describe('2. Reduced Motion & Sensory Comfort Tests (Zero WebGL when reduced-mot
     expect(fallback).not.toBeNull();
   });
 
-  it('InnerWorldCanvas mounts static fallback and NO <canvas> when reduce-motion is set', () => {
+  it('InnerWorldCanvas mounts static fallback with BrainCanvas when reduce-motion is set', () => {
     const { container } = render(<InnerWorldCanvas mode="panel" />);
     const canvases = container.querySelectorAll('canvas');
-    expect(canvases.length).toBe(0);
+    expect(canvases.length).toBe(1);
 
     const titleEl = container.querySelector('[title="Sanctuary Garden (Static Mode)"]');
     expect(titleEl).not.toBeNull();
