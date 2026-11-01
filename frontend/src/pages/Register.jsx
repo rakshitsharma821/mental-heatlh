@@ -39,7 +39,6 @@ export default function Register() {
   const [therapistTitle, setTherapistTitle] = useState('Licensed Clinical Psychologist');
   const [licenseNumber, setLicenseNumber] = useState('');
   const [licensingBoard, setLicensingBoard] = useState(CLINICAL_CONFIG.licensingBodies[0]);
-  const [mobileNumber, setMobileNumber] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState(3);
   const [selectedSpecialties, setSelectedSpecialties] = useState(['Anxiety & Panic', 'Work & Academic Stress']);
   const [selectedSkills, setSelectedSkills] = useState(['Cognitive Behavioral Therapy (CBT)', 'Mindfulness-Based Stress Reduction (MBSR)']);
@@ -225,7 +224,6 @@ export default function Register() {
         state,
         gender,
         therapist_type: therapistType,
-        mobile_number: mobileNumber,
         terms_accepted: termsAccepted
       });
 
@@ -282,6 +280,7 @@ export default function Register() {
         }}>
           <button
             type="button"
+            className={`auth-tab ${activePortal === 'member' ? 'on' : ''}`}
             onClick={() => { setActivePortal('member'); setError(''); }}
             style={{
               padding: '10px 14px',
@@ -299,6 +298,7 @@ export default function Register() {
           </button>
           <button
             type="button"
+            className={`auth-tab ${activePortal === 'therapist' ? 'on' : ''}`}
             onClick={() => { setActivePortal('therapist'); setError(''); }}
             style={{
               padding: '10px 14px',
